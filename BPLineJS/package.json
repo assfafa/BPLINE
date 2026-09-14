@@ -1,0 +1,130 @@
+{
+    "name": "bplinejs",
+    "version": "0.0.101-beta.10",
+    "description": "A WebGPU-first 2D rendering library focused on line and border rendering.",
+    "type": "module",
+    "main": "./lib/index.js",
+    "module": "./lib/index.js",
+    "types": "./lib/index.d.ts",
+    "files": [
+        "lib",
+        "README.md",
+        "docs"
+    ],
+    "exports": {
+        ".": {
+            "types": "./lib/index.d.ts",
+            "import": "./lib/index.js"
+        },
+        "./Color": {
+            "types": "./lib/Color/index.d.ts",
+            "import": "./lib/Color/index.js"
+        },
+        "./Style": {
+            "types": "./lib/Style/index.d.ts",
+            "import": "./lib/Style/index.js"
+        },
+        "./Style/*": {
+            "types": "./lib/Style/*.d.ts",
+            "import": "./lib/Style/*.js"
+        },
+        "./Camera": {
+            "types": "./lib/Camera/index.d.ts",
+            "import": "./lib/Camera/index.js"
+        },
+        "./Geometry": {
+            "types": "./lib/Geometry/index.d.ts",
+            "import": "./lib/Geometry/index.js"
+        },
+        "./Geometry/*": {
+            "types": "./lib/Geometry/*.d.ts",
+            "import": "./lib/Geometry/*.js"
+        },
+        "./Group": {
+            "types": "./lib/Group/index.d.ts",
+            "import": "./lib/Group/index.js"
+        },
+        "./Material": {
+            "types": "./lib/Material/index.d.ts",
+            "import": "./lib/Material/index.js"
+        },
+        "./IMesh": {
+            "types": "./lib/IMesh/index.d.ts",
+            "import": "./lib/IMesh/index.js"
+        },
+        "./Raws": {
+            "types": "./lib/Raws/index.d.ts",
+            "import": "./lib/Raws/index.js"
+        },
+        "./Material/Material": {
+            "types": "./lib/Material/Material.d.ts",
+            "import": "./lib/Material/Material.js"
+        },
+        "./Material/baseMaterial": {
+            "types": "./lib/Material/baseMaterial.d.ts",
+            "import": "./lib/Material/baseMaterial.js"
+        },
+        "./Mesh": {
+            "types": "./lib/Mesh/index.d.ts",
+            "import": "./lib/Mesh/index.js"
+        },
+        "./Object": {
+            "types": "./lib/Object/index.d.ts",
+            "import": "./lib/Object/index.js"
+        },
+        "./Render": {
+            "types": "./lib/Render/index.d.ts",
+            "import": "./lib/Render/index.js"
+        },
+        "./Render/*": {
+            "types": "./lib/Render/*.d.ts",
+            "import": "./lib/Render/*.js"
+        },
+        "./Scene": {
+            "types": "./lib/Scene/index.d.ts",
+            "import": "./lib/Scene/index.js"
+        },
+        "./Texture": {
+            "types": "./lib/Texture/index.d.ts",
+            "import": "./lib/Texture/index.js"
+        },
+        "./package.json": "./package.json"
+    },
+    "sideEffects": false,
+    "scripts": {
+        "dev": "vite --host",
+        "build": "npm run build:app",
+        "build:app": "tsc --noEmit && vite build",
+        "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json",
+        "check": "tsc --noEmit && npm run lint",
+        "pack:check": "npm run build:lib && npm pack --dry-run",
+        "preview": "vite preview",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix"
+    },
+    "keywords": [
+        "webgpu",
+        "2d",
+        "rendering",
+        "graphics",
+        "line"
+    ],
+    "license": "UNLICENSED",
+    "publishConfig": {
+        "access": "public"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.32.0",
+        "@stylistic/eslint-plugin": "^5.2.3",
+        "@types/node": "^24.0.13",
+        "eslint": "^9.32.0",
+        "globals": "^16.3.0",
+        "typescript": "~6.0.2",
+        "typescript-eslint": "^8.38.0",
+        "vite": "^8.1.1"
+    },
+    "dependencies": {
+        "@webgpu/types": "^0.1.71",
+        "bpmatrixjs": "^0.1.101-beta.14"
+    }
+}

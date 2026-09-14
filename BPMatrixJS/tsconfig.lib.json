@@ -1,0 +1,15 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "allowImportingTsExtensions": false,
+        "noEmit": false,
+        "rootDir": "./src/scripts",
+        "outDir": "./lib",
+        "declaration": true,
+        "declarationMap": false,
+        "emitDeclarationOnly": false
+    },
+    "include": ["src/scripts"]
+}
