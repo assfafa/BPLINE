@@ -1,5 +1,7 @@
 # BPMatrixJS Working Memory
 
+- Follow root `AGENTS.md`: public documentation is limited to the root README for now. Do not recreate package README/API docs or routinely update future documentation/showcase pages; wait for an explicit documentation task around a stable release. Keep source JSDoc and necessary agent guidance.
+
 ## Package Direction
 
 - NPM package name: `bpmatrixjs`
@@ -32,6 +34,9 @@
 - `package.json` exports point at `lib`
 
 ## Geometry Notes
+
+- NGon lives in Geometry/NGon.ts and is exported through Geometry. Public option spellings are nvMode (bounding/polar) and inter (inner radius). Other options are sides>=2, hole, outer, startAngle and solid. Two sides are an open diameter with no fill; zero radius is empty; inter is clamped to outer. Equal radii have one distinct contour and no fill.
+- NGon annulus fill stitches corresponding inner/outer edges, never fans across the hole. Polar seams duplicate vertices at U=0/1. Border helpers use a normalized-radius Poly carrier before restoring coordinates to avoid fixed reference extrusion reversing small-radius triangles; inner normals and winding are flipped. Line and auxiliary point helpers merge independent loops. Tests: build:lib then node --test tests/NGon.test.mjs. No BPLineJS NGon wrapper or npm publication is included in this change.
 
 - Poly lives in Geometry/Poly/index.ts with an explicit package subpath export. Allow empty/incomplete input and self-intersections, touches and reversing edges. Empty/incomplete paths return empty arrays with finite bounds; consecutive duplicate nodes are merged. Simple concave fills use ear clipping; an untriangulatable remainder falls back to a bounded CW triangle fan, which may overlap and does not implement Canvas fill rules. No holes/multiple contours. Never throw merely because lines cross. This permissive update is not yet published as of the beta.13 source change.
 - Poly closed/solid default true. Open paths require solid=false and have butt caps. Per-node round/segments affect stroke joins only, not fill outline or independent width. Closed input normalizes CCW; output triangles are CW like Rect.

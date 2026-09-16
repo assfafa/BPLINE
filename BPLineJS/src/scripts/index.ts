@@ -4,8 +4,9 @@ import Camera from "./Camera";
 import Color from "./Color";
 import Style from "./Style";
 import Geo from "./Geometry/Geo";
-import Rect2d from "./Geometry/Rect2d";
+import Rect2D from "./Geometry/Rect2D";
 import Poly2D from "./Geometry/Poly2D";
+import NGon2D from "./Geometry/NGon2D";
 import Group from "./Group";
 import IMesh from "./IMesh";
 import BaseMaterial from "./Material/baseMaterial";
@@ -30,8 +31,9 @@ export {
     Material,
     Mesh,
     ObjectNode,
-    Rect2d,
+    Rect2D,
     Poly2D,
+    NGon2D,
     Render,
     Scene,
     Raws,
@@ -53,8 +55,9 @@ export {
 
 export type { CameraBuffersLike, CameraLike } from "./Camera";
 export type { BorderAlign, GeoBuffersLike, GeoData, GeoPartDataLike, GeometrySubscriber } from "./Geometry/Geo";
-export type { Rect2dLike, Rect2dOptions } from "./Geometry/Rect2d";
+export type { Rect2DLike, Rect2DOptions } from "./Geometry/Rect2D";
 export type { Poly2DLike, Poly2DOptions } from "./Geometry/Poly2D";
+export type { NGon2DLike, NGon2DOptions, NGonUVMode } from "./Geometry/NGon2D";
 export { JoinStyle } from "./Style";
 export type { JoinType } from "./Style";
 export type { GroupLike } from "./Group";

@@ -78,7 +78,7 @@ class Geo implements GeoData {
     public position: Float32Array | undefined;
     /** 边框连接倍率，其他顶点填一。 */
     public miterScale: Float32Array | undefined;
-    /** 宽高、圆角和实体边框宽度。 */
+    /** 几何专属四个 f32；第四项统一为实体边框宽度，其余由对应 WGSL 解释。 */
     public readonly uniformData: Float32Array<ArrayBuffer> = new Float32Array(4);
 
     /** @param style 共享样式，默认四个分区全部关闭 */

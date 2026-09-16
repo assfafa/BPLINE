@@ -124,7 +124,7 @@ class DevelopmentValidator implements DevelopmentValidatorLike {
             return;
         }
 
-        if (geometry.style.solid.enabled && geometry.type !== "Rect2d" && geometry.type !== "Poly2D") {
+        if (geometry.style.solid.enabled && !["Rect2D", "Poly2D", "NGon2D"].includes(geometry.type)) {
             this.error("UNSUPPORTED_SOLID_TYPE", mesh.id, "未提供该类型的实体面 Shader。", mesh);
         }
         if (mesh instanceof IMesh) {
@@ -132,8 +132,8 @@ class DevelopmentValidator implements DevelopmentValidatorLike {
                 this.warn("IMESH_NATIVE_LINES", mesh.id, "原生 line-list 使用逐实例顺序回退；只用三角面时才合并为一次绘制。", mesh);
             }
             for (const raw of mesh.raws.map.values()) {
-                if (geometry.type === "Poly2D" && raw.style.solid.borderWidth > 0) {
-                    this.warn("POLY_SDF_BORDER", mesh.id, "Poly2D 不使用矩形 SDF 边框，请启用 edge 分区。", mesh);
+                if (["Poly2D", "NGon2D"].includes(geometry.type) && raw.style.solid.borderWidth > 0) {
+                    this.warn("UNSUPPORTED_SDF_BORDER", mesh.id, "Poly2D/NGon2D 不使用矩形 SDF 边框，请启用 edge 分区。", mesh);
                 }
                 if (geometry.type === "Poly2D" && (raw.style.join.type !== geometry.style.join.type || raw.style.join.seg !== geometry.style.join.seg)) {
                     this.warn("IMESH_JOIN_TEMPLATE", mesh.id, "连接类型和精度由 Geometry.style.join 决定，Raw 不生成独立拓扑。", mesh);
@@ -164,8 +164,8 @@ class DevelopmentValidator implements DevelopmentValidatorLike {
             }
             return;
         }
-        if (geometry.type === "Poly2D" && material.style.solid.borderWidth > 0) {
-            this.warn("POLY_SDF_BORDER", mesh.id, "Poly2D 不使用矩形 SDF 边框，请启用 edge 分区。", mesh);
+        if (["Poly2D", "NGon2D"].includes(geometry.type) && material.style.solid.borderWidth > 0) {
+            this.warn("UNSUPPORTED_SDF_BORDER", mesh.id, "Poly2D/NGon2D 不使用矩形 SDF 边框，请启用 edge 分区。", mesh);
         }
         if (geometry.type === "Poly2D" && (geometry.style.join.type !== material.style.join.type || geometry.style.join.seg !== material.style.join.seg)) {
             this.warn("POLY_JOIN_STYLE", mesh.id, "连接拓扑由 Geometry.style.join 生成，建议几何与材质共享 Style。", mesh);

@@ -7,9 +7,7 @@
     "module": "./lib/index.js",
     "types": "./lib/index.d.ts",
     "files": [
-        "lib",
-        "README.md",
-        "docs"
+        "lib"
     ],
     "exports": {
         ".": {
@@ -90,7 +88,10 @@
         },
         "./package.json": "./package.json"
     },
-    "sideEffects": false,
+    "sideEffects": [
+        "**/Examples/**",
+        "**/*.css"
+    ],
     "scripts": {
         "dev": "vite --host",
         "build": "npm run build:app",
@@ -125,6 +126,6 @@
     },
     "dependencies": {
         "@webgpu/types": "^0.1.71",
-        "bpmatrixjs": "^0.1.101-beta.14"
+        "bpmatrixjs": "^0.1.101-beta.15"
     }
 }

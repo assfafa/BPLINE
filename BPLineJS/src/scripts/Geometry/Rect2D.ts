@@ -13,7 +13,7 @@ import type { GeoData, GeoPartDataLike } from "./Geo";
 /**
  * 矩形初始化选项；所有生成开关均默认关闭，辅助点型独立于面与边框。
  */
-interface Rect2dOptions {
+interface Rect2DOptions {
     /** 矩形宽度，默认 1，允许为 0。 */
     width?: number;
     /** 矩形高度，默认 1，允许为 0。 */
@@ -24,7 +24,7 @@ interface Rect2dOptions {
     style?: Style;
 }
 
-interface Rect2dLike extends GeoData {
+interface Rect2DLike extends GeoData {
     width: number;
     height: number;
     radius: number;
@@ -32,11 +32,11 @@ interface Rect2dLike extends GeoData {
 }
 
 
-class Rect2d extends Geo implements Rect2dLike {
+class Rect2D extends Geo implements Rect2DLike {
     /**
      * 对象类型
      */
-    public readonly type: string = "Rect2d";
+    public readonly type: string = "Rect2D";
 
     /**
      * 矩形宽度。
@@ -57,7 +57,7 @@ class Rect2d extends Geo implements Rect2dLike {
      * 创建矩形几何体并生成首个 CPU 数据版本。
      * @param options 宽高、圆角、几何生成开关与辅助点型参数
      */
-    public constructor(options: Rect2dOptions = {}) {
+    public constructor(options: Rect2DOptions = {}) {
         super(options.style);
         this._width = options.width ?? 1;
         this._height = options.height ?? 1;
@@ -108,7 +108,7 @@ class Rect2d extends Geo implements Rect2dLike {
         if (border !== undefined) parts.push({ data: border, vertexType: 0.5 });
         if (points !== undefined) parts.push({ data: points, vertexType: 1 });
         this.mergeGeometry(parts);
-        // Rect2d Shader 参数：宽度、高度、圆角半径、wide 三角面边框宽度。
+        // Rect2D Shader 参数：宽度、高度、圆角半径、wide 三角面边框宽度。
         this.uniformData.set([this._width, this._height, this._radius, this.style.edge.width]);
         super.updateGeometry();
         return this;
@@ -186,5 +186,5 @@ class Rect2d extends Geo implements Rect2dLike {
         return GetRectPerimeter(this._width, this._height, this._radius);
     }
 }
-export default Rect2d;
-export type { Rect2dLike, Rect2dOptions };
+export default Rect2D;
+export type { Rect2DLike, Rect2DOptions };

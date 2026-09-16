@@ -412,26 +412,24 @@ class Render implements RenderLike {
             return;
         }
 
-        const currentDpr: number = GetInner().dpr;
-
-        if (this._dpr !== currentDpr) {
-            this._dpr = currentDpr;
-        }
-
         if (this._resizeTimer !== null) {
             window.clearTimeout(this._resizeTimer);
         }
 
         this._resizeTimer = window.setTimeout((): void => {
-            const inner = GetInner();
-
-            if (this.canvas.width !== inner.width) {
-                this.canvas.width = inner.width;
+            // canvas 的布局尺寸跟随容器内容区；不把容器 border/padding 或 CSS transform 算入。
+            // DPR 与实际分配同时提交，比较值也必须使用物理像素，避免同尺寸重复重建。
+            const dpr: number = GetInner().dpr;
+            const limit: number = this.pipeline.device?.limits.maxTextureDimension2D ?? 8192;
+            const width: number = Math.min(limit, Math.max(1, Math.round(this.canvas.clientWidth * dpr)));
+            const height: number = Math.min(limit, Math.max(1, Math.round(this.canvas.clientHeight * dpr)));
+            if (this.canvas.width !== width) {
+                this.canvas.width = width;
             }
-            if (this.canvas.height !== inner.height) {
-                this.canvas.height = inner.height;
+            if (this.canvas.height !== height) {
+                this.canvas.height = height;
             }
-
+            this._dpr = dpr;
             this._resizeTimer = null;
         }, 100);
     }

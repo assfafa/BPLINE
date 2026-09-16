@@ -1,6 +1,6 @@
 import type { Material2d } from "../global-types";
-import lineFragmentShader from "../Material/shaders/line/fragment.shader?raw";
-import lineVertexShader from "../Material/shaders/line/vertex.shader?raw";
+import lineFragmentShader from "../Material/wgsls/line/fragment.wgsl?raw";
+import lineVertexShader from "../Material/wgsls/line/vertex.wgsl?raw";
 import type Scene from "../Scene";
 import SamplerManager from "./SamplerManager";
 import TextureManager from "./TextureManager";
@@ -163,12 +163,17 @@ class PipelineManager implements PipelineManagerLike {
             attributes: [{ shaderLocation: location, offset: 0, format: "float32x2" }],
         }));
         let renderPipeline: GPURenderPipeline | undefined;
-        if (geometryType === "Rect2d" || geometryType === "Poly2D") {
-            const polygon: boolean = geometryType === "Poly2D";
+        const shaders: Partial<Record<string, { vertex: string | undefined; fragment: string | undefined }>> = {
+            Rect2D: { vertex: material.rectVertexShader, fragment: material.rectFragmentShader },
+            Poly2D: { vertex: material.polyVertexShader, fragment: material.polyFragmentShader },
+            NGon2D: { vertex: material.ngonVertexShader, fragment: material.ngonFragmentShader },
+        };
+        const shader = shaders[geometryType];
+        if (shader !== undefined) {
             renderPipeline = CreatePipeline(
-                polygon ? "BaseMaterial Poly Pipeline" : "BaseMaterial Rect Pipeline",
-                polygon ? material.polyVertexShader : material.rectVertexShader,
-                polygon ? material.polyFragmentShader : material.rectFragmentShader,
+                "BaseMaterial " + geometryType + " Pipeline",
+                shader.vertex,
+                shader.fragment,
                 "triangle-list", [
                     ...vectorAttributes,
                     { arrayStride: 4, attributes: [{ shaderLocation: 3, offset: 0, format: "float32" }] },

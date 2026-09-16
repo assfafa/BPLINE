@@ -9,6 +9,8 @@ interface MaterialBuffersLike {
     sampler?: number;
 }
 interface ShadersLike {
+    ngonVertexShader?: string;
+    ngonFragmentShader?: string;
     polyVertexShader?: string;
     polyFragmentShader?: string;
     rectVertexShader?: string;
@@ -42,6 +44,8 @@ interface MaterialLike extends StyleSubscriber {
     rectFragmentShader: string | undefined;
     polyVertexShader: string | undefined;
     polyFragmentShader: string | undefined;
+    ngonVertexShader: string | undefined;
+    ngonFragmentShader: string | undefined;
     updateKey(): void;
     updateVersion(kind?: MaterialChangeKind): void;
     add(subscriber: MaterialSubscriber): void;
@@ -165,12 +169,12 @@ abstract class Material implements MaterialLike {
         this.updateVersion("pipeline");
     }
     /**
-     * 追加已使用的几何类型标记；Rect2d 对应 rect，重复绑定不递增版本。
+     * 追加已使用的几何类型标记；Rect2D 对应 rect，重复绑定不递增版本。
      * @param type Geometry.type
      * @returns 无返回值
      */
     public addGeometryType(type: string): void {
-        const tag: string = type === "Rect2d" ? "rect" : type === "Poly2D" ? "poly" : type;
+        const tag: string = type === "Rect2D" ? "rect" : type === "Poly2D" ? "poly" : type === "NGon2D" ? "ngon" : type;
         if (this._geometryTypes.has(tag)) {
             return;
         }
@@ -187,7 +191,7 @@ abstract class Material implements MaterialLike {
     public getPipelineKey(type: string): string {
         let key: string | undefined = this._pipelineKeys.get(type);
         if (key === undefined) {
-            key = this.key + "_" + (type === "Rect2d" ? "rect" : type === "Poly2D" ? "poly" : type);
+            key = this.key + "_" + (type === "Rect2D" ? "rect" : type === "Poly2D" ? "poly" : type === "NGon2D" ? "ngon" : type);
             this._pipelineKeys.set(type, key);
         }
         return key;
@@ -253,6 +257,23 @@ abstract class Material implements MaterialLike {
     }
 
 
+    /** 正多边形/圆环的合并三角面顶点 WGSL。 */
+    public get ngonVertexShader(): string | undefined { return this._shaders.ngonVertexShader; }
+    /** @param value NGon 顶点源码，修改后使管线缓存键失效 */
+    public set ngonVertexShader(value: string | undefined) {
+        if (this._shaders.ngonVertexShader === value) return;
+        this._shaders.ngonVertexShader = value;
+        this.updateVersion("pipeline");
+    }
+    /** 正多边形/圆环的填充、边框和点型片段 WGSL。 */
+    public get ngonFragmentShader(): string | undefined { return this._shaders.ngonFragmentShader; }
+    /** @param value NGon 片段源码，修改后使管线缓存键失效 */
+    public set ngonFragmentShader(value: string | undefined) {
+        if (this._shaders.ngonFragmentShader === value) return;
+        this._shaders.ngonFragmentShader = value;
+        this.updateVersion("pipeline");
+    }
+
     /** 原生线开关决定是否需要附加 line-list 管线，其余分区通过 Uniform 控制。 */
     public updateKey(): void {
         const key: string = JSON.stringify([
@@ -260,6 +281,7 @@ abstract class Material implements MaterialLike {
             this._style.wireframe.enabled,
             this._shaders.rectVertexShader, this._shaders.rectFragmentShader,
             this._shaders.polyVertexShader, this._shaders.polyFragmentShader,
+            this._shaders.ngonVertexShader, this._shaders.ngonFragmentShader,
         ]) + [...this._geometryTypes].sort().map((tag: string): string => "_" + tag).join("");
         if (key !== this._key) {
             this._key = key;

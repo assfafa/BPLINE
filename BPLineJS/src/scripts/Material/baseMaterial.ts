@@ -1,16 +1,18 @@
 import Material from "./Material";
 import type { MaterialLike } from "./Material";
 import type Style from "../Style";
-import rectVertexShader from "./shaders/base/rect/vertex.shader?raw";
-import rectFragmentShader from "./shaders/base/rect/fragment.shader?raw";
-import polyVertexShader from "./shaders/base/poly/vertex.shader?raw";
-import polyFragmentShader from "./shaders/base/poly/fragment.shader?raw";
+import rectVertexShader from "./wgsls/base/rect/vertex.wgsl?raw";
+import rectFragmentShader from "./wgsls/base/rect/fragment.wgsl?raw";
+import polyVertexShader from "./wgsls/base/poly/vertex.wgsl?raw";
+import polyFragmentShader from "./wgsls/base/poly/fragment.wgsl?raw";
+import ngonVertexShader from "./wgsls/base/ngon/vertex.wgsl?raw";
+import ngonFragmentShader from "./wgsls/base/ngon/fragment.wgsl?raw";
 
 interface BaseMaterialLike extends MaterialLike {
     readonly type: "BaseMaterial";
 }
 
-/** 矩形与多边形材质；按几何类型选择 Shader，四套显示参数均从 Style 获取。 */
+/** 矩形、多边形与正多边形/圆环材质；按几何类型选择 WGSL，显示参数来自 Style。 */
 class BaseMaterial extends Material implements BaseMaterialLike {
     /** 对象类型。 */
     public readonly type = "BaseMaterial" as const;
@@ -21,6 +23,8 @@ class BaseMaterial extends Material implements BaseMaterialLike {
         this.rectFragmentShader = rectFragmentShader;
         this.polyVertexShader = polyVertexShader;
         this.polyFragmentShader = polyFragmentShader;
+        this.ngonVertexShader = ngonVertexShader;
+        this.ngonFragmentShader = ngonFragmentShader;
         this.updateKey();
     }
 }

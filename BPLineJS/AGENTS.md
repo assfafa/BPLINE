@@ -18,10 +18,10 @@ BPLineJS is a WebGPU-first TypeScript 2D renderer focused on line, border, and e
 - `src/scripts/index.ts` is the package root export.
 - Each public directory owns an `index.ts` barrel.
 - `src/scripts/Examples` is local test code and must not enter the library build.
-- `src/scripts/Material/shaders` is internal WGSL source and is bundled by Vite.
+- `src/scripts/Material/wgsls` is internal WGSL source and is bundled by Vite.
 - `lib` and `dist` are generated and must not be committed.
 
-When adding a public class, update its local directory `index.ts`, the root `src/scripts/index.ts`, `package.json` exports when a new subpath is needed, and `docs/API.md`.
+When adding a public class, update its local directory `index.ts`, the root `src/scripts/index.ts`, and `package.json` exports when a new subpath is needed. Follow the root AGENTS.md documentation policy: do not recreate docs/API.md or package README files, and do not update public docs/showcase pages for routine changes unless explicitly requested.
 
 ## TypeScript Style
 
@@ -52,6 +52,10 @@ When adding a public class, update its local directory `index.ts`, the root `src
 
 ## Rendering Invariants
 
+- Geometry/NGon2D uses { outer=1, inner=0, sides=32, uvMode="bounding", startAngle=0, style? }. No public hole: inner>0 selects the BPMatrixJS hole topology. Map uvMode to nvMode and inner to inter internally. Clamp inner to outer; sides=2 has no fill. Shape parameters use the shared Geo version flow.
+- Material/wgsls/base/ngon uses ngonVertexShader/ngonFragmentShader and type-specific pipeline keys. Its geometry uniform is [outer, inner, sides, edge.width]. Fill uses actual triangles around the hole; no rectangle SDF. Border and point branches preserve packed Mesh/IMesh buffers and depth ordering. Native line-list remains shared.
+- All shader assets use Material/wgsls/**/*.wgsl?raw. Rect2D is case-sensitive everywhere, including filenames, exports and Geometry.type; do not add a Rect2d compatibility alias. Library exports stay side-effect free; package sideEffects only retains Examples and CSS so build:app does not erase the demo entry. Examples remain excluded from npm.
+
 - Material.depthTest/depthWrite default false independently; IMesh must not modify shared Material defaults. Both fixed states belong in the Pipeline key. transparent never toggles them automatically.
 - Preserve sorted Scene.drawList as layer ownership. Submit opaque tested writers in reverse order, then other tested objects forward, then untested overlays forward. No-test objects intentionally overlay depth-tested content, regardless of cross-category order.
 - DepthManager assigns prefix-sum slot ranks without rewriting packed worlds/styles. group(0)/binding(5) is a 16-byte uniform [base, count, reverse, padding] of u32. Reverse opaque IMesh storage access in BOTH vertex shaders and pass the resolved index to fragments.
@@ -72,7 +76,7 @@ When adding a public class, update its local directory `index.ts`, the root `src
 - Never commit generated `lib`, `dist`, `node_modules`, package archives, or environment files.
 - Do not rewrite user commits or use destructive reset/checkout commands.
 
-- Rect2d accepts { width, height, radius, style }. Generation switches belong exclusively to style.solid/wireframe/edge/points.enabled, default false and independent. Do not reintroduce legacy Geometry flags or Material.lineRenderMode.
+- Rect2D accepts { width, height, radius, style }. Generation switches belong exclusively to style.solid/wireframe/edge/points.enabled, default false and independent. Do not reintroduce legacy Geometry flags or Material.lineRenderMode.
 - All triangle data is merged in geometry/normal/uv/index. Do not reintroduce lineGeometry or pointsGeometry. vertexType stores 0 (solid), 0.5 (wide border), 1 (point marker), independently of Geo.type.
 - position stores point centers per vertex (zero for other types), miterScale stores border expansion factors (one for other types). Rebuild the complete merged geometry on version changes and preserve uint32 indices.
 - Color/Texture -> section -> Style -> Geometry/Material -> Mesh is a synchronous field-aware add/delete subscription chain. Subscribers only mark next-frame work, never generate CPU geometry or create GPU resources in callbacks. StyleSubscriber is structural and must also allow future IMesh. Geometry responds only to generation-affecting fields, Material to all fields; never put GPU resources in Style.
@@ -82,10 +86,10 @@ When adding a public class, update its local directory `index.ts`, the root `src
 - Each instance Style entry is eleven vec4 values (176 bytes), stored in a read-only Storage array. Keep CPU and all WGSL layouts in sync. Wireframe has its own color/opacity, no fake width or zoom switch.
 - Bind the per-Mesh style Storage array plus base/edge/point textures and their samplers together. Use explicit texture gradients calculated before vertexType-dependent fragment branches.
 - Native linePoints remain line-list. If basic lines and point markers coexist, split the merged index range around the line draw to preserve solid/line/points order; otherwise issue one triangle draw per Mesh.
-- Standard rectangle shaders live in Material/shaders/base/rect and use rectVertexShader/rectFragmentShader. Select a pipeline using material.getPipelineKey(geometry.type); do not apply rectangle SDF to other geometry types.
+- Standard rectangle shaders live in Material/wgsls/base/rect and use rectVertexShader/rectFragmentShader. Select a pipeline using material.getPipelineKey(geometry.type); do not apply rectangle SDF to other geometry types.
 - Poly2D accepts optional Float32Array coordinates (empty by default), optional Style/null and optional { closed: true }. Missing Style creates disabled sections. Empty/incomplete paths generate no drawable buffers; filling and clearing points must restore/remove GPU geometry. Preserve input coordinates; open paths cannot enable solid. Allow self-crossing/touching/reversing contours; simple concave fills use ear clipping, failed remainder uses bounded fan fallback without promising Canvas fill rules. The permissive generator change requires the local BPMatrixJS build until published; beta.13 on npm still has strict validation.
 - Style.join owns type=miter/round/bevel and seg=8. Notify Poly geometry versions, not Rect geometry. Bevel is a one-segment round join, not a disconnected corner. Join changes border topology only, not solid outline or line-list. IMesh Raw join does not override its shared geometry template.
-- Material/shaders/base/poly uses polyVertexShader/polyFragmentShader with the same packed buffers as rect; no polygon SDF. Warn about solid.borderWidth on Poly and use edge instead. Geo.mergeGeometry is the shared merger for both shapes. Examples/PolyCheck.html validates incremental and crossing paths without replacing the user's Poly.ts click example.
+- Material/wgsls/base/poly uses polyVertexShader/polyFragmentShader with the same packed buffers as rect; no polygon SDF. Warn about solid.borderWidth on Poly and use edge instead. Geo.mergeGeometry is the shared merger for both shapes. Examples/PolyCheck.html validates incremental and crossing paths without replacing the user's Poly.ts click example.
 - Mesh.data/material setters synchronize geometry type tags and Scene references. Track pointsTexture alongside baseTexture and edgeTexture during collection and destruction.
 
 - Ordinary Mesh count/capacity are 1. matrixData/styleData are preallocated Float32Arrays (12/44 floats) with independent packed-data versions. IMesh count starts at 0 and capacity at 2, doubling until 100000 then growing in 100000-slot batches. GPU buffers live in meshMatrix/meshStyle; materialUniform has been removed. destroyMesh/trim release both arrays, destroyMaterial releases matching meshStyle entries by materialId.
@@ -99,5 +103,5 @@ When adding a public class, update its local directory `index.ts`, the root `src
 - IMesh.push returns stable IDs, not indices. updateAt(index, options) replaces a full snapshot. clear retains capacity but releases CPU subscriptions. Raw versions change only for input edits, not uploads or growth. Packed matrices are world-only; no duplicate local-matrix array.
 - TextureResource is TextureLike | TextureLayers. Ordinary Style.texture remains one Texture; IMesh owns three deduplicated layer tables. Scene.textureList uploads arrays; DrawCall binds mesh.textures. The final style vec4 stores solid/edge/points layer indices plus padding. All texture views and shader bindings are 2d-array, even fallback/single-image resources.
 - Normalize array layers to group maximum width/height, rgba8unorm. Missing/loading layers are white and retain their layer index. Validate device texture/storage limits. Explicit destroyTexture(source) invalidates containing arrays; trim must remove exact unused resources only, not cascade from unused single images into referenced arrays.
-- Raw styles override appearance only, not template generation or fixed Material state. Geometry determines edge width/UV repeat and point shape/selection; Material determines shaders/blend/culling/samplers. Native line-list batches fall back to per-record ordered draws, preserving alpha composition. Merged triangles use one instanced draw.
+- Raw styles override appearance only, not template generation or fixed Material state. Geometry determines edge width/UV repeat and point shape/selection; Material determines wgsls/blend/culling/samplers. Native line-list batches fall back to per-record ordered draws, preserving alpha composition. Merged triangles use one instanced draw.
 - All examples and browser validation belong in src/scripts/Examples. Do not create a separate tests directory. Select the current example through Examples/index.ts and verify under Vite, including the user's browser when shader backend behavior differs.

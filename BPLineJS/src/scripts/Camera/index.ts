@@ -1,8 +1,9 @@
 import ObjectNode from "../Object";
 import type { ObjectNodeLike } from "../Object";
 import { Mat3 } from "bpmatrixjs/Math/Mat3";
-import type { VersionedMath } from "bpmatrixjs/Math";
-
+import { Vec2, type VersionedMath } from "bpmatrixjs/Math";
+import type { RenderLike } from "../Render";
+import { GetInner } from "bpmatrixjs/Utils";
 interface CameraBuffersLike {
     uniform?: number;
 }
@@ -22,6 +23,14 @@ interface CameraLike extends ObjectNodeLike {
     updateOrthogonalMatrix(): Mat3;
     updateViewMatrix(): Mat3;
     updateCameraMatrix(): void;
+    worldToNdc(position: Vec2): Vec2;
+    ndcToWorld(position: Vec2): Vec2;
+    ndcToScreen(position: Vec2, render?: RenderLike): Vec2;
+    screenToNdc(position: Vec2, render?: RenderLike): Vec2;
+    worldToScreen(position: Vec2, render?: RenderLike): Vec2;
+    screenToWorld(position: Vec2, render?: RenderLike): Vec2;
+    worldToWindow(position: Vec2, render: RenderLike): Vec2;
+    windowToWorld(position: Vec2, render: RenderLike): Vec2;
 }
 
 /** 正交相机：输入沿用节点单一版本，矩阵与每个 Render 独立保存处理快照。 */
@@ -180,6 +189,107 @@ class Camera extends ObjectNode implements CameraLike {
         this._orthogonalMatrix.delete(this, "orthogonalMatrix");
         this._viewMatrix.delete(this, "viewMatrix");
         super.dispose();
+    }
+    /**
+     * 世界坐标转归一化NDC坐标。
+     * @param position 世界坐标。
+     * @returns 归一化NDC坐标。
+     */
+    public worldToNdc(position: Vec2): Vec2 {
+        this.ensureCameraMatrix();
+        const view: Vec2 = position.clone().apply(this._viewMatrix);
+        const screen: Vec2 = view.apply(this._orthogonalMatrix);
+        return screen;
+    }
+    /**
+     * 归一化NDC坐标转画布坐标。
+     * @param position 归一化NDC坐标。
+     * @param render 可选渲染器，按画布实际 CSS 尺寸换算；省略时使用相机宽高 / DPR
+     * @returns 相对画布左上角的 CSS 像素坐标。
+     */
+    public ndcToScreen(position: Vec2, render?: RenderLike): Vec2 {
+        const dpr = GetInner().dpr;
+        const rect = render?.canvas.getBoundingClientRect();
+        const width = rect?.width ?? this.width / dpr;
+        const height = rect?.height ?? this.height / dpr;
+        return new Vec2((position.x + 1) * 0.5 * width, (1 - position.y) * 0.5 * height);
+    }
+    /**
+     * 世界坐标转画布坐标。
+     * @param position 世界坐标。
+     * @param render 可选渲染器，支持 resize 延迟期间的 CSS 拉伸
+     * @returns 相对画布左上角的 CSS 像素坐标。
+     */
+    public worldToScreen(position: Vec2, render?: RenderLike): Vec2 {
+        const ndc: Vec2 = this.worldToNdc(position);
+        const screen: Vec2 = this.ndcToScreen(ndc, render);
+        return screen;
+    }
+    /**
+     * 画布坐标转归一化NDC坐标。
+     * @param position 相对画布左上角的 CSS 像素坐标
+     * @param render 可选渲染器，省略时使用相机宽高 / DPR
+     * @returns 归一化NDC坐标。
+     * */
+    public screenToNdc(position: Vec2, render?: RenderLike): Vec2 {
+        const dpr = GetInner().dpr;
+        const rect = render?.canvas.getBoundingClientRect();
+        const width = rect?.width ?? this.width / dpr;
+        const height = rect?.height ?? this.height / dpr;
+        if (width <= 0 || height <= 0) throw new RangeError("Cannot convert coordinates on a zero-size canvas.");
+        const x = position.x / width * 2 - 1;
+        const y = 1 - position.y / height * 2;
+        const ndc: Vec2 = new Vec2(x, y);
+        return ndc;
+    }
+    /**
+     * 归一化ndc坐标转世界坐标
+     * @param position 归一化NDC坐标。
+     * @returns 世界坐标。
+     * */
+    public ndcToWorld(position: Vec2): Vec2 {
+        this.ensureCameraMatrix();
+        const view: Vec2 = position.clone().apply(this._orthogonalMatrix.clone().invert());
+        const world: Vec2 = view.apply(this._viewMatrix.clone().invert());
+        return world;
+    }
+    /**
+     * 画布坐标转世界坐标
+     * @param position 相对画布左上角的 CSS 像素坐标
+     * @param render 可选渲染器，按画布实际 CSS 尺寸换算
+     * @returns 世界坐标。
+     * */
+    public screenToWorld(position: Vec2, render?: RenderLike): Vec2 {
+        const ndc: Vec2 = this.screenToNdc(position, render);
+        const world: Vec2 = this.ndcToWorld(ndc);
+        return world;
+    }
+    /**
+     * 世界坐标转浏览器视口坐标，适用于 DOM 定位；支持 CSS 平移/轴向缩放，不含旋转/倾斜。
+     * @param position 世界坐标。
+     * @param render 提供实际画布位置和尺寸的渲染器
+     * @returns clientX/clientY 坐标，不含页面滚动偏移。
+     * */
+    public worldToWindow(position: Vec2, render: RenderLike): Vec2 {
+        const screen: Vec2 = this.worldToScreen(position, render);
+        const rect: DOMRect = render.canvas.getBoundingClientRect();
+        screen.x += rect.left;
+        screen.y += rect.top;
+        return screen;
+    }
+    /**
+     * 浏览器视口坐标转世界坐标。
+     * @param position MouseEvent.clientX/clientY，不是 pageX/pageY
+     * @param render 提供实际画布位置和尺寸的渲染器
+     * @returns 世界坐标。
+     * */
+    public windowToWorld(position: Vec2, render: RenderLike): Vec2 {
+        const screen: Vec2 = position.clone();
+        const rect: DOMRect = render.canvas.getBoundingClientRect();
+        screen.x -= rect.left;
+        screen.y -= rect.top;
+        const world: Vec2 = this.screenToWorld(screen, render);
+        return world;
     }
 }
 export default Camera;
