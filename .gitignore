@@ -17,6 +17,9 @@ dist-ssr
 BPLineJS/src/scripts/Examples/
 *.local
 
+# Local HTTPS certificates and private keys
+.certs/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

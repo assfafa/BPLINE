@@ -7,16 +7,20 @@ import polyVertexShader from "./wgsls/base/poly/vertex.wgsl?raw";
 import polyFragmentShader from "./wgsls/base/poly/fragment.wgsl?raw";
 import ngonVertexShader from "./wgsls/base/ngon/vertex.wgsl?raw";
 import ngonFragmentShader from "./wgsls/base/ngon/fragment.wgsl?raw";
-
 interface BaseMaterialLike extends MaterialLike {
     readonly type: "BaseMaterial";
 }
-
 /** 矩形、多边形与正多边形/圆环材质；按几何类型选择 WGSL，显示参数来自 Style。 */
 class BaseMaterial extends Material implements BaseMaterialLike {
     /** 对象类型。 */
     public readonly type = "BaseMaterial" as const;
-    /** @param style 共享样式，通常与对应 Geometry 使用同一对象 */
+    /**
+     * 创建对象并建立初始状态及依赖关联。
+     * @param style 共享样式，通常与对应 Geometry 使用同一对象
+     * @example
+     * const baseMaterial = new BaseMaterial(style);
+     * @returns 创建的 BaseMaterial 对象。
+     */
     public constructor(style?: Style) {
         super(style);
         this.rectVertexShader = rectVertexShader;

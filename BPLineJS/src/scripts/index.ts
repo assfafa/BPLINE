@@ -1,5 +1,4 @@
 /// <reference types="@webgpu/types" preserve="true" />
-
 import Camera from "./Camera";
 import Color from "./Color";
 import Style from "./Style";
@@ -18,7 +17,6 @@ import Scene from "./Scene";
 import Raws from "./Raws";
 import Texture from "./Texture";
 import { GETID } from "./ID";
-
 export {
     BaseMaterial,
     Camera,
@@ -52,9 +50,16 @@ export {
     SamplerManager,
     TextureManager,
 } from "./Render";
-
 export type { CameraBuffersLike, CameraLike } from "./Camera";
-export type { BorderAlign, GeoBuffersLike, GeoData, GeoPartDataLike, GeometrySubscriber } from "./Geometry/Geo";
+export { CameraControl } from "./Control";
+export type { CameraControlOptions } from "./Control";
+export type {
+    BorderAlign,
+    GeoBuffersLike,
+    GeoData,
+    GeoPartDataLike,
+    GeometrySubscriber,
+} from "./Geometry/Geo";
 export type { Rect2DLike, Rect2DOptions } from "./Geometry/Rect2D";
 export type { Poly2DLike, Poly2DOptions } from "./Geometry/Poly2D";
 export type { NGon2DLike, NGon2DOptions, NGonUVMode } from "./Geometry/NGon2D";
@@ -62,7 +67,15 @@ export { JoinStyle } from "./Style";
 export type { JoinType } from "./Style";
 export type { GroupLike } from "./Group";
 export type { BaseMaterialLike } from "./Material/baseMaterial";
-export type { MaterialBuffersLike, MaterialChange, MaterialChangeKind, MaterialLike, MaterialSubscriber, PixelAligned, ShadersLike } from "./Material/Material";
+export type {
+    MaterialBuffersLike,
+    MaterialChange,
+    MaterialChangeKind,
+    MaterialLike,
+    MaterialSubscriber,
+    PixelAligned,
+    ShadersLike,
+} from "./Material/Material";
 export type { MeshLike } from "./Mesh";
 export type { AddObject, Geometry2d, Material2d } from "./global-types";
 export type { ObjectNodeLike } from "./Object";
@@ -90,7 +103,6 @@ export type {
 } from "./Render";
 export type { DrawList, GeometryList, MaterialList, SceneLike, TextureList } from "./Scene";
 export type { TextureLike, TextureSource, TextureSubscriber } from "./Texture";
-
 export { SolidStyle, WireframeStyle, EdgeStyle, PointsStyle, WriteStyleData, STYLE_STRIDE } from "./Style";
 export type { ColorSubscriber } from "./Color";
 export type { StyleArea, StyleChange, StyleSubscriber, PartSubscriber } from "./Style";

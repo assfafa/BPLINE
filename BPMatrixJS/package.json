@@ -1,12 +1,13 @@
 {
     "name": "bpmatrixjs",
-    "version": "0.1.101-beta.15",
+    "version": "0.1.102",
     "type": "module",
     "main": "./lib/index.js",
     "module": "./lib/index.js",
     "types": "./lib/index.d.ts",
     "files": [
-        "lib"
+        "lib",
+        "releases"
     ],
     "exports": {
         ".": {

@@ -14,6 +14,8 @@ export default defineConfig({
                 "Color/index": resolve(import.meta.dirname, "src/scripts/Color/index.ts"),
                 "Style/index": resolve(import.meta.dirname, "src/scripts/Style/index.ts"),
                 "Camera/index": resolve(import.meta.dirname, "src/scripts/Camera/index.ts"),
+                "Control/index": resolve(import.meta.dirname, "src/scripts/Control/index.ts"),
+                "Control/CameraControl/index": resolve(import.meta.dirname, "src/scripts/Control/CameraControl/index.ts"),
                 "Geometry/index": resolve(import.meta.dirname, "src/scripts/Geometry/index.ts"),
                 "Group/index": resolve(import.meta.dirname, "src/scripts/Group/index.ts"),
                 "IMesh/index": resolve(import.meta.dirname, "src/scripts/IMesh/index.ts"),

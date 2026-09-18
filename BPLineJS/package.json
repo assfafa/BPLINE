@@ -1,13 +1,14 @@
 {
     "name": "bplinejs",
-    "version": "0.0.101-beta.10",
+    "version": "0.0.102",
     "description": "A WebGPU-first 2D rendering library focused on line and border rendering.",
     "type": "module",
     "main": "./lib/index.js",
     "module": "./lib/index.js",
     "types": "./lib/index.d.ts",
     "files": [
-        "lib"
+        "lib",
+        "releases"
     ],
     "exports": {
         ".": {
@@ -29,6 +30,14 @@
         "./Camera": {
             "types": "./lib/Camera/index.d.ts",
             "import": "./lib/Camera/index.js"
+        },
+        "./Control": {
+            "types": "./lib/Control/index.d.ts",
+            "import": "./lib/Control/index.js"
+        },
+        "./Control/CameraControl": {
+            "types": "./lib/Control/CameraControl/index.d.ts",
+            "import": "./lib/Control/CameraControl/index.js"
         },
         "./Geometry": {
             "types": "./lib/Geometry/index.d.ts",
@@ -126,6 +135,6 @@
     },
     "dependencies": {
         "@webgpu/types": "^0.1.71",
-        "bpmatrixjs": "^0.1.101-beta.15"
+        "bpmatrixjs": "^0.1.102"
     }
 }

@@ -1,4 +1,3 @@
-
 import {
     CreateRectBorderGeometry,
     CreateRectGeometry,
@@ -9,7 +8,6 @@ import {
 import Geo from "./Geo";
 import type Style from "../Style";
 import type { GeoData, GeoPartDataLike } from "./Geo";
-
 /**
  * 矩形初始化选项；所有生成开关均默认关闭，辅助点型独立于面与边框。
  */
@@ -23,39 +21,35 @@ interface Rect2DOptions {
     /** 共享样式；未传入时全部生成分区关闭。 */
     style?: Style;
 }
-
 interface Rect2DLike extends GeoData {
     width: number;
     height: number;
     radius: number;
     readonly perimeter: number;
 }
-
-
 class Rect2D extends Geo implements Rect2DLike {
     /**
      * 对象类型
      */
     public readonly type: string = "Rect2D";
-
     /**
      * 矩形宽度。
      */
     private _width: number;
-
     /**
      * 矩形高度。
      */
     private _height: number;
-
     /**
      * 矩形圆角半径。
      */
     private _radius: number;
-
     /**
      * 创建矩形几何体并生成首个 CPU 数据版本。
      * @param options 宽高、圆角、几何生成开关与辅助点型参数
+     * @example
+     * const rect2D = new Rect2D(options);
+     * @returns 创建的 Rect2D 对象。
      */
     public constructor(options: Rect2DOptions = {}) {
         super(options.style);
@@ -64,122 +58,179 @@ class Rect2D extends Geo implements Rect2DLike {
         this._radius = options.radius ?? 1;
         this.updateGeometry();
     }
-
     /**
      * 重新生成矩形三角面、UV、索引与 Shader 参数。
      * 完成后提交 CPU 数据版本，通知所有 Render 更新缓存。
+     * @example
+     * rect2D.updateGeometry();
      * @returns 当前矩形几何体
      */
     public updateGeometry(): this {
         // 参数规范化不依赖填充面，边框独立生成时也使用相同的合法尺寸。
-        this._width = Number.isFinite(this._width) ? Math.max(0, this._width) : 0;
-        this._height = Number.isFinite(this._height) ? Math.max(0, this._height) : 0;
-        this._radius = Number.isFinite(this._radius)
-            ? Math.max(0, Math.min(this._radius, this._width * 0.5, this._height * 0.5))
-            : 0;
-        const geometry = this.style.solid.enabled
-            ? CreateRectGeometry(this._width, this._height, this._radius)
-            : undefined;
-
-        this.linePoints = this.style.wireframe.enabled
-            ? CreateRectLineGeometry(this._width, this._height, this._radius, 1)
-            : undefined;
-        const border = this.style.edge.enabled && this.style.edge.width > 0
-            ? CreateRectBorderGeometry(
+        if (Number.isFinite(this._width)) {
+            this._width = Math.max(0, this._width);
+        } else {
+            this._width = 0;
+        }
+        // 校验数值有效性，防止非有限值进入几何或 GPU 数据。
+        if (Number.isFinite(this._height)) {
+            this._height = Math.max(0, this._height);
+        } else {
+            this._height = 0;
+        }
+        // 校验数值有效性，防止非有限值进入几何或 GPU 数据。
+        if (Number.isFinite(this._radius)) {
+            this._radius = Math.max(0, Math.min(this._radius, this._width * 0.5, this._height * 0.5));
+        } else {
+            this._radius = 0;
+        }
+        let geometry;
+        // 只为启用的样式区域生成数据，关闭区域不占用额外几何。
+        if (this.style.solid.enabled) {
+            geometry = CreateRectGeometry(this._width, this._height, this._radius);
+        } else {
+            geometry = undefined;
+        }
+        // 只为启用的样式区域生成数据，关闭区域不占用额外几何。
+        if (this.style.wireframe.enabled) {
+            this.linePoints = CreateRectLineGeometry(this._width, this._height, this._radius, 1);
+        } else {
+            this.linePoints = undefined;
+        }
+        let border;
+        // 只为启用的样式区域生成数据，关闭区域不占用额外几何。
+        if (this.style.edge.enabled && this.style.edge.width > 0) {
+            border = CreateRectBorderGeometry(
                 this._width,
                 this._height,
                 this._radius,
                 this.style.edge.width,
                 this.style.edge.uvRepeat,
                 this.style.edge.borderAlign,
-            )
-            : undefined;
+            );
+        } else {
+            border = undefined;
+        }
         // 两个点位开关都关闭时不调用生成器，避免触发其参数校验。
-        const points = this.style.points.enabled && (this.style.points.vertices || this.style.points.midpoints)
-            ? CreateRectPointGeometry(
-                this._width, this._height, this._radius,
-                this.style.points.radius, this.style.points.segments,
-                this.style.points.vertices, this.style.points.midpoints,
-                this.style.points.minPointsLength, this.style.points.minEdgePointsLength,
-            )
-            : undefined;
-        const parts: { data: GeoPartDataLike; vertexType: number }[] = [];
-        if (geometry !== undefined) parts.push({ data: geometry, vertexType: 0 });
-        if (border !== undefined) parts.push({ data: border, vertexType: 0.5 });
-        if (points !== undefined) parts.push({ data: points, vertexType: 1 });
+        let points;
+        // 只为启用的样式区域生成数据，关闭区域不占用额外几何。
+        if (this.style.points.enabled && (this.style.points.vertices || this.style.points.midpoints)) {
+            points = CreateRectPointGeometry(
+                this._width,
+                this._height,
+                this._radius,
+                this.style.points.radius,
+                this.style.points.segments,
+                this.style.points.vertices,
+                this.style.points.midpoints,
+                this.style.points.minPointsLength,
+                this.style.points.minEdgePointsLength,
+            );
+        } else {
+            points = undefined;
+        }
+        const parts: {
+            data: GeoPartDataLike;
+            vertexType: number;
+        }[] = [];
+        // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
+        if (geometry !== undefined) {
+            parts.push({ data: geometry, vertexType: 0 });
+        }
+        // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
+        if (border !== undefined) {
+            parts.push({ data: border, vertexType: 0.5 });
+        }
+        // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
+        if (points !== undefined) {
+            parts.push({ data: points, vertexType: 1 });
+        }
         this.mergeGeometry(parts);
         // Rect2D Shader 参数：宽度、高度、圆角半径、wide 三角面边框宽度。
         this.uniformData.set([this._width, this._height, this._radius, this.style.edge.width]);
         super.updateGeometry();
         return this;
     }
-
     /**
      * 设置矩形宽度并递增几何体版本。
      * @param width 矩形宽度
+     * @example
+     * rect2D.width = width;
+     * @returns 无返回值。
      */
     public set width(width: number) {
-        if (this._width === width) {
+        // 尺寸改变后才更新输入版本，重复设置相同尺寸不触发重建。
+        if (this._width !== width) {
+            this._width = width;
+            this.updateVersion();
+        } else {
             return;
         }
-
-        this._width = width;
-        this.updateVersion();
     }
-
     /**
      * 获取矩形宽度。
+     * @example
+     * const value = rect2D.width;
      * @returns 矩形宽度
      */
     public get width(): number {
         return this._width;
     }
-
     /**
      * 设置矩形高度并递增几何体版本。
      * @param height 矩形高度
+     * @example
+     * rect2D.height = height;
+     * @returns 无返回值。
      */
     public set height(height: number) {
-        if (this._height === height) {
+        // 尺寸改变后才更新输入版本，重复设置相同尺寸不触发重建。
+        if (this._height !== height) {
+            this._height = height;
+            this.updateVersion();
+        } else {
             return;
         }
-
-        this._height = height;
-        this.updateVersion();
     }
-
     /**
      * 获取矩形高度。
+     * @example
+     * const value = rect2D.height;
      * @returns 矩形高度
      */
     public get height(): number {
         return this._height;
     }
-
     /**
      * 设置圆角半径并递增几何体版本。
      * @param radius 圆角半径
+     * @example
+     * rect2D.radius = radius;
+     * @returns 无返回值。
      */
     public set radius(radius: number) {
-        if (this._radius === radius) {
+        // 区分直角、圆角或零尺寸，避免生成退化圆弧。
+        if (this._radius !== radius) {
+            this._radius = radius;
+            this.updateVersion();
+        } else {
             return;
         }
-
-        this._radius = radius;
-        this.updateVersion();
     }
-
     /**
      * 获取圆角半径。
+     * @example
+     * const value = rect2D.radius;
      * @returns 圆角半径
      */
     public get radius(): number {
         return this._radius;
     }
-
     /**
      * 获取矩形实际离散轮廓的只读周长。
      * 结果使用与矩形几何体相同的圆角限制和分段规则。
+     * @example
+     * const value = rect2D.perimeter;
      * @returns 矩形轮廓周长
      */
     public get perimeter(): number {
