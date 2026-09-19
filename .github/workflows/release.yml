@@ -1,0 +1,90 @@
+name: Publish BPLineJS Release
+
+# 只发布 line 库的 GitHub Release；矩阵库标签和普通提交不触发。
+on:
+    push:
+        tags:
+            - "bplinejs-v*"
+
+permissions:
+    contents: read
+
+concurrency:
+    group: bplinejs-release-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+            contents: write
+
+        steps:
+            - name: Checkout tagged source
+              # actions/checkout v7，固定提交避免上游标签变动改变发布行为。
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+              with:
+                  persist-credentials: false
+
+            - name: Validate version and release notes
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  # 限制标签形态，避免把错误版本或路径当作发布说明读取。
+                  if [[ "$GITHUB_REF_NAME" =~ ^bplinejs-v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+                      version="${GITHUB_REF_NAME#bplinejs-v}"
+                  else
+                      echo "Invalid BPLineJS release tag: $GITHUB_REF_NAME"
+                      exit 1
+                  fi
+
+                  package_version="$(node -p "require('./BPLineJS/package.json').version")"
+                  notes="BPLineJS/releases/${version}.md"
+
+                  # 标签必须指向这个版本的源码，不能给旧提交误打新版本标签。
+                  if [ "$version" = "$package_version" ]; then
+                      echo "Release version: $version"
+                  else
+                      echo "Tag version $version does not match package version $package_version"
+                      exit 1
+                  fi
+
+                  # 缺少说明或空文件时停止，禁止创建空白 Release。
+                  if [ -s "$notes" ]; then
+                      echo "Release notes: $notes"
+                  else
+                      echo "Missing or empty release notes: $notes"
+                      exit 1
+                  fi
+
+            - name: Publish GitHub release
+              shell: bash
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  GH_REPO: ${{ github.repository }}
+              run: |
+                  set -euo pipefail
+
+                  version="${GITHUB_REF_NAME#bplinejs-v}"
+                  notes="BPLineJS/releases/${version}.md"
+                  options=()
+
+                  # beta 等预发布版本不占用正式 latest 标记。
+                  if [[ "$version" == *-* ]]; then
+                      options+=(--prerelease --latest=false)
+                  else
+                      options+=(--latest)
+                  fi
+
+                  # 重跑工作流时不覆盖已发布的说明，也不重复创建同名 Release。
+                  if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+                      echo "Release already exists: $GITHUB_REF_NAME"
+                  else
+                      gh release create "$GITHUB_REF_NAME" \
+                          --verify-tag \
+                          --title "BPLineJS ${version}" \
+                          --notes-file "$notes" \
+                          "${options[@]}"
+                  fi
