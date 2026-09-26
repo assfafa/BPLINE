@@ -1,0 +1,8 @@
+import{n as e}from"./index-DFaRmisn.js";import t from"./reference-DK6VgIiC.js";import{t as n}from"./types-DQN6DUYN.js";var r={title:`Mesh`,intro:{cn:`把几何、材质和可选样式组合为场景节点；继承 ObjectNode 的位置、旋转与缩放。`,en:`Combine geometry, material, and optional style in a scene node. Mesh inherits position, rotation, and scale from ObjectNode.`},code:`import { BaseMaterial, Mesh, Rect2D, Style } from "bplinejs";
+
+const geometry = new Rect2D({ width: 180, height: 110, radius: 18 });
+const material = new BaseMaterial();
+const style = new Style();
+style.solid.enabled = true;
+const mesh = new Mesh(geometry, material, style);
+mesh.rotation = Math.PI / 8;`,properties:[n(`data: Geometry2d | undefined`,`当前几何体，可替换。`,`Current replaceable geometry.`),n(`material: Material2d | undefined`,`当前材质，可替换。`,`Current replaceable material.`),n(`style: Style | undefined`,`网格体的外观样式。`,`Appearance style for the mesh.`),n(`position: Vec2; rotation: number; scale: Vec2`,`继承自 ObjectNode 的局部变换。`,`Local transform inherited from ObjectNode.`)],methods:[n(`new Mesh(data: Geometry2d, material: Material2d, style?: Style | boolean)`,`组合几何与材质，并可传入样式。`,`Combine geometry and material with an optional style.`),n(`init(data: Geometry2d, material: Material2d): this`,`重新绑定几何与材质。`,`Rebind geometry and material.`),n(`dispose(): void`,`解除几何、材质和样式关联。`,`Release geometry, material, and style subscriptions.`)]},i=e(),a=()=>(0,i.jsx)(t,{config:r});export{a as default};

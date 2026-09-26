@@ -8,19 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-lib
-dist
-!/Example/dist/
-!/Example/dist/**
 dist-ssr
-*.tgz
-
-# Local demos and stress-test assets
-BPLineJS/src/scripts/Examples/
 *.local
-
-# Local HTTPS certificates and private keys
-.certs/
 
 # Editor directories and files
 .vscode/*

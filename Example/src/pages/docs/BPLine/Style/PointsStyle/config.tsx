@@ -1,0 +1,26 @@
+import { entry } from "@/pages/docs/reference/types.ts";
+import type { ReferenceConfig } from "@/pages/docs/reference/types.ts";
+
+export const config: ReferenceConfig = {
+    title: "PointsStyle",
+    intro: {
+        cn: "绘制轮廓顶点或边中点标记；阈值可减少圆角和短边上的密集点。",
+        en: "Draw vertex or edge midpoint markers. Length thresholds reduce dense markers on rounded corners and short edges.",
+    },
+    code: `import { Style } from "bplinejs";
+
+const style = new Style();
+style.points.enabled = true;
+style.points.vertices = true;
+style.points.midpoints = false;
+style.points.minPointsLength = 32;`,
+    properties: [
+        entry("enabled: boolean; color: Color; opacity: number", "点型开关、颜色与透明度。", "Marker switch, color, and opacity."),
+        entry("vertices: boolean; midpoints: boolean", "显示顶点和边中点。", "Show vertices and edge midpoints."),
+        entry("radius: number; segments: number", "点型半径与圆形细分段数。", "Marker radius and circular segment count."),
+        entry("minPointsLength: number", "顶点两侧边长合计的显示阈值。", "Minimum combined adjacent-edge length for a vertex marker."),
+        entry("minEdgePointsLength: number", "边中点所在边的长度阈值。", "Minimum edge length for a midpoint marker."),
+        entry("pixelAligned: PixelAligned", "固定像素或随相机缩放。", "Fixed pixels or camera zoom units."),
+    ],
+    methods: [entry("new PointsStyle()", "创建默认关闭的辅助点样式。", "Create a point style that starts disabled.")],
+};
