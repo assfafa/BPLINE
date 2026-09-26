@@ -42,7 +42,7 @@ npm run check
 npm run build
 ~~~
 
-网站的静态产物位于 Example/dist，供 GitHub Pages 使用。网站使用 Hash 路由，页面地址以 /#/ 开始。
+网站的静态产物位于仓库根目录的 docs/，GitHub Pages 可直接选择当前分支的 /docs 发布。网站使用 Hash 路由，页面地址以 /#/ 开始。
 
 构建 npm 库并检查包内容时，在 BPMatrixJS 或 BPLineJS 目录执行：
 

@@ -1,0 +1,6 @@
+import{n as e}from"./index-CMmBvX-I.js";import t from"./reference-BkLbgLef.js";import{t as n}from"./types-DQN6DUYN.js";var r={title:`EdgeStyle`,intro:{cn:`以实体三角面绘制有宽度的边框，独立于原生线框和 SDF 边框。`,en:`Draw a wide border from triangles, independently of native wireframe and the SDF border.`},code:`import { Style } from "bplinejs";
+
+const style = new Style();
+style.edge.enabled = true;
+style.edge.width = 6;
+style.edge.color.setHex("#8bd5ff");`,properties:[n(`enabled: boolean; color: Color; opacity: number`,`边框开关、颜色与透明度。`,`Border switch, color, and opacity.`),n(`width: number; borderAlign: BorderAlign`,`线宽与 inset、normal、outset 对齐。`,`Width and inset, normal, or outset alignment.`),n(`pixelAligned: PixelAligned`,`使用固定像素或随相机缩放的宽度。`,`Use fixed-pixel or zoom-scaled width.`),n(`uvRepeat: number`,`贴图沿轮廓的重复次数。`,`Texture repetitions along the contour.`),n(`texture: Texture | undefined`,`可选边框贴图。`,`Optional border texture.`),n(`addressModeU / addressModeV: GPUAddressMode`,`贴图寻址模式。`,`Texture address modes.`)],methods:[n(`new EdgeStyle()`,`创建默认关闭的实体边框样式。`,`Create a wide-edge style that starts disabled.`)]},i=e(),a=()=>(0,i.jsx)(t,{config:r});export{a as default};

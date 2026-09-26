@@ -19,6 +19,10 @@ if (existsSync(certificatePath) && existsSync(privateKeyPath)) {
 
 export default defineConfig({
     base: "./",
+    build: {
+        outDir: "../docs",
+        emptyOutDir: true,
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
         alias: {

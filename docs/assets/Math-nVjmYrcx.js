@@ -1,0 +1,4 @@
+import{a as e,i as t,n,r}from"./index-CMmBvX-I.js";import{t as i}from"./CodeBlock-BqiOFpBb.js";var a=`import { Mat3, Vec2 } from "bpmatrixjs/Math";
+
+const vector = new Vec2(3, 4);
+const transform = new Mat3();`,o=n(),s=()=>{let{language:n}=t();return(0,o.jsxs)(`article`,{className:`mx-auto max-w-4xl space-y-6 p-8`,children:[(0,o.jsx)(`h1`,{className:`text-3xl font-semibold`,children:r.translate(n,`docs.mathTitle`)}),(0,o.jsx)(`p`,{className:`text-muted-foreground`,children:r.translate(n,`docs.mathIntro`)}),(0,o.jsx)(`div`,{className:`overflow-hidden rounded-lg border border-border`,children:(0,o.jsx)(i,{code:a})}),(0,o.jsx)(e,{to:`/docs/math/vec2`,className:`inline-flex rounded-md border border-border px-4 py-2 text-sm hover:bg-muted`,children:r.translate(n,`menu.vec2`)}),(0,o.jsx)(e,{to:`/docs/math/mat3`,className:`ml-2 inline-flex rounded-md border border-border px-4 py-2 text-sm hover:bg-muted`,children:r.translate(n,`menu.mat3`)})]})};export{s as default};
