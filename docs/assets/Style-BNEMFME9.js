@@ -1,0 +1,7 @@
+import{n as e}from"./index-CMmBvX-I.js";import t from"./reference-BkLbgLef.js";import{t as n}from"./types-DQN6DUYN.js";var r={title:`Style`,intro:{cn:`一个 Style 包含独立的实体面、原生线框、实体边框、辅助点和连接样式。各显示分区默认关闭，按需启用。`,en:`A Style contains separate solid, native wireframe, edge, point, and join settings. Display parts start disabled and are enabled as needed.`},code:`import { Style } from "bplinejs";
+
+const style = new Style();
+style.solid.enabled = true;
+style.solid.color.setHex("#5577ee");
+style.edge.enabled = true;
+style.edge.width = 6;`,properties:[n(`solid: SolidStyle`,`实体面和 SDF 边框设置。`,`Solid fill and SDF border settings.`),n(`wireframe: WireframeStyle`,`原生 line-list 线框设置。`,`Native line-list wireframe settings.`),n(`edge: EdgeStyle`,`实体三角面边框设置。`,`Triangle-based edge settings.`),n(`points: PointsStyle`,`顶点和边中点标记设置。`,`Vertex and edge midpoint marker settings.`),n(`join: JoinStyle`,`边框节点连接类型和精度。`,`Border join type and precision.`)],methods:[n(`new Style()`,`创建全部显示分区默认关闭的样式。`,`Create a style with all display parts disabled.`),n(`dispose(): void`,`所有使用者停止引用后解除关联。`,`Release subscriptions after all users stop referencing the style.`)],links:[{label:`SolidStyle`,to:`/docs/bpline/style/solid-style`},{label:`WireframeStyle`,to:`/docs/bpline/style/wireframe-style`},{label:`EdgeStyle`,to:`/docs/bpline/style/edge-style`},{label:`PointsStyle`,to:`/docs/bpline/style/points-style`},{label:`JoinStyle`,to:`/docs/bpline/style/join-style`}]},i=e(),a=()=>(0,i.jsx)(t,{config:r});export{a as default};

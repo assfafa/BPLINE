@@ -14,10 +14,10 @@ RUN apt-get update \
 COPY --from=node /usr/local /usr/local
 
 RUN useradd -m -s /bin/bash pigeon \
-    && mkdir -p /home/pigeon/projects/BPLine \
-    && chown -R pigeon:pigeon /home/pigeon
+    && mkdir -p /workspace \
+    && chown pigeon:pigeon /workspace
 
-WORKDIR /home/pigeon/projects/BPLine
+WORKDIR /workspace
 
 EXPOSE 12111 12112 12113 12114 12115 12116 12117 12118 12119
 
