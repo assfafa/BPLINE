@@ -1,20 +1,20 @@
-# BPLineJS · BPMatrixJS
+# BPLineJS and BPMatrixJS
 
 BPLineJS is a TypeScript WebGPU 2D renderer for editable geometry and text. It supports filled shapes, borders, point markers, textures, instanced meshes, and camera controls.
 
-- [在线文档](https://assfafa.github.io/BPLINE/#/docs/bpline)：BPLineJS 与 BPMatrixJS 的公开 API。
-- [交互案例](https://assfafa.github.io/BPLINE/#/example/basic-mesh/rectangle)：网格体、实例化、贴图和控制器案例。
-- [网站首页](https://assfafa.github.io/BPLINE/)：文档与案例入口。
+- [API documentation](https://assfafa.github.io/BPLINE/#/docs/bpline): public BPLineJS and BPMatrixJS APIs.
+- [Interactive examples](https://assfafa.github.io/BPLINE/#/example/basic-mesh/rectangle): geometry, text, instancing, textures, and camera controls.
+- [Website](https://assfafa.github.io/BPLINE/): documentation and example entry point.
 
-| 目录 | npm 包或用途 | 本地端口 |
+| Directory | npm package or purpose | Local port |
 | --- | --- | --- |
-| BPMatrixJS | bpmatrixjs：二维数学与几何 | 12111 |
-| BPLineJS | bplinejs：WebGPU 2D 渲染 | 12112 |
-| Example | 文档和交互案例网站 | 12113 |
+| BPMatrixJS | bpmatrixjs: 2D math and geometry | 12111 |
+| BPLineJS | bplinejs: WebGPU 2D rendering | 12112 |
+| Example | Documentation and interactive examples | 12113 |
 
 ## Docker
 
-在项目根目录创建开发容器；已有 BPLine 容器时无需重复创建：
+Create the development container from the repository root. Reuse an existing `BPLine` container if one is already running:
 
 ~~~bash
 docker build -t bpline-dev .
@@ -22,9 +22,9 @@ docker run -d --name BPLine -p 12111:12111 -p 12112:12112 -p 12113:12113 -v "$PW
 docker exec -it -u pigeon BPLine bash
 ~~~
 
-## 本地开发与打包
+## Local development and builds
 
-以下命令在容器内执行。每个项目分别安装依赖：
+Run the following commands inside the container. Install dependencies for each project separately:
 
 ~~~bash
 cd /workspace/BPMatrixJS && npm ci
@@ -32,9 +32,9 @@ cd /workspace/BPLineJS && npm ci
 cd /workspace/Example && npm ci
 ~~~
 
-启动开发服务时，在各自目录执行 `npm run dev`；三个服务分别占用上表所列端口。
+Run `npm run dev` in each project directory to start its development server on the port listed above.
 
-构建文档与案例网站：
+Build the documentation and example website:
 
 ~~~bash
 cd /workspace/Example
@@ -42,16 +42,16 @@ npm run check
 npm run build
 ~~~
 
-网站的静态产物位于仓库根目录的 docs/，GitHub Pages 可直接选择当前分支的 /docs 发布。网站使用 Hash 路由，页面地址以 /#/ 开始。
+The static site is written to `docs/` at the repository root. GitHub Pages can serve `/docs` from the current branch. The site uses hash routing, so page URLs contain `/#/`.
 
-构建 npm 库并检查包内容时，在 BPMatrixJS 或 BPLineJS 目录执行：
+To build either npm library and inspect its package contents, run these commands in `BPMatrixJS` or `BPLineJS`:
 
 ~~~bash
 npm run build:lib
 npm pack --dry-run
 ~~~
 
-npm pack --dry-run 只检查打包内容，不发布。外部项目可通过 npm install bplinejs 或 npm install bpmatrixjs 安装。BPLineJS/src/scripts/Examples 是本地验证代码，不进入 Git 或 npm 包。
+`npm pack --dry-run` inspects the package without publishing it. Other projects can install the libraries with `npm install bplinejs` or `npm install bpmatrixjs`. `BPLineJS/src/scripts/Examples` contains local verification examples and is excluded from Git and the npm package.
 
 ## Font parsing
 
