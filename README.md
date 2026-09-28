@@ -1,6 +1,6 @@
 # BPLineJS · BPMatrixJS
 
-BPLineJS 是基于 WebGPU 的 TypeScript 二维图形渲染库，支持几何体、样式、贴图、实例化网格和相机控制。BPMatrixJS 提供二维向量、矩阵、几何生成与工具函数。
+BPLineJS is a TypeScript WebGPU 2D renderer for editable geometry and text. It supports filled shapes, borders, point markers, textures, instanced meshes, and camera controls.
 
 - [在线文档](https://assfafa.github.io/BPLINE/#/docs/bpline)：BPLineJS 与 BPMatrixJS 的公开 API。
 - [交互案例](https://assfafa.github.io/BPLINE/#/example/basic-mesh/rectangle)：网格体、实例化、贴图和控制器案例。
@@ -52,3 +52,7 @@ npm pack --dry-run
 ~~~
 
 npm pack --dry-run 只检查打包内容，不发布。外部项目可通过 npm install bplinejs 或 npm install bpmatrixjs 安装。BPLineJS/src/scripts/Examples 是本地验证代码，不进入 Git 或 npm 包。
+
+## Font parsing
+
+The text geometry pipeline uses [fontkit](https://github.com/foliojs/fontkit) to parse TTF, OTF, WOFF, and WOFF2 files, lay out glyphs, and read their vector outlines. fontkit is licensed under [MIT](https://github.com/foliojs/fontkit/blob/master/package.json); its copyright and permission notices must be retained when redistributing copies of its code.
