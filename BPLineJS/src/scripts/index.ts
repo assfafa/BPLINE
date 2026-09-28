@@ -16,6 +16,7 @@ import Render from "./Render";
 import Scene from "./Scene";
 import Raws from "./Raws";
 import Texture from "./Texture";
+import { Font, Text } from "./Text";
 import { GETID } from "./ID";
 export {
     BaseMaterial,
@@ -36,6 +37,8 @@ export {
     Scene,
     Raws,
     Texture,
+    Font,
+    Text,
 };
 export {
     BufferManager,
@@ -103,6 +106,8 @@ export type {
 } from "./Render";
 export type { DrawList, GeometryList, MaterialList, SceneLike, TextureList } from "./Scene";
 export type { TextureLike, TextureSource, TextureSubscriber } from "./Texture";
+export type { TextGeometryFactory } from "./Text";
+export type { Text2DLike, Text2DOptions, TextWritingMode } from "./Text";
 export { SolidStyle, WireframeStyle, EdgeStyle, PointsStyle, WriteStyleData, STYLE_STRIDE } from "./Style";
 export type { ColorSubscriber } from "./Color";
 export type { StyleArea, StyleChange, StyleSubscriber, PartSubscriber } from "./Style";

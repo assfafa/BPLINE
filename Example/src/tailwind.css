@@ -3,7 +3,7 @@
 @import "shadcn/tailwind.css";
 @font-face {
     font-family: "MiSans";
-    src: url("./assets/ttf/MiSans-Normal.ttf") format("truetype");
+    src: url("./assets/ttf/MiSans-Normal.woff2") format("woff2");
     font-style: normal;
     font-weight: 400;
     font-display: swap;

@@ -263,17 +263,17 @@ class DevelopmentValidator implements DevelopmentValidatorLike {
         // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
         if (geometry !== undefined && material !== undefined) {
             // 只为启用的样式区域生成数据，关闭区域不占用额外几何。
-            if (geometry.style.solid.enabled && !["Rect2D", "Poly2D", "NGon2D"].includes(geometry.type)) {
+            if (geometry.style.solid.enabled && !["Rect2D", "Poly2D", "NGon2D", "Text"].includes(geometry.type)) {
                 this.error("UNSUPPORTED_SOLID_TYPE", mesh.id, "未提供该类型的实体面 Shader。", mesh);
             }
             // 区分输入数据形态，使用与实际类型匹配的处理方式。
             if (!(mesh instanceof IMesh)) {
                 // 按几何或图元类型选择对应实现，不混用不同模板的规则。
-                if (["Poly2D", "NGon2D"].includes(geometry.type) && material.style.solid.borderWidth > 0) {
+                if (["Poly2D", "NGon2D", "Text"].includes(geometry.type) && material.style.solid.borderWidth > 0) {
                     this.warn(
                         "UNSUPPORTED_SDF_BORDER",
                         mesh.id,
-                        "Poly2D/NGon2D 不使用矩形 SDF 边框，请启用 edge 分区。",
+                        "Poly2D/NGon2D/Text 不使用矩形 SDF 边框，请启用 edge 分区。",
                         mesh,
                     );
                 }
@@ -329,11 +329,11 @@ class DevelopmentValidator implements DevelopmentValidatorLike {
                 // 遍历当前缓存条目，按实际引用关系处理资源。
                 for (const raw of mesh.raws.map.values()) {
                     // 按几何或图元类型选择对应实现，不混用不同模板的规则。
-                    if (["Poly2D", "NGon2D"].includes(geometry.type) && raw.style.solid.borderWidth > 0) {
+                    if (["Poly2D", "NGon2D", "Text"].includes(geometry.type) && raw.style.solid.borderWidth > 0) {
                         this.warn(
                             "UNSUPPORTED_SDF_BORDER",
                             mesh.id,
-                            "Poly2D/NGon2D 不使用矩形 SDF 边框，请启用 edge 分区。",
+                            "Poly2D/NGon2D/Text 不使用矩形 SDF 边框，请启用 edge 分区。",
                             mesh,
                         );
                     }

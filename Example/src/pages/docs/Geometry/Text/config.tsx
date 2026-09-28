@@ -1,0 +1,47 @@
+import { entry } from "@/pages/docs/reference/types.ts";
+import type { ReferenceConfig } from "@/pages/docs/reference/types.ts";
+
+export const config: ReferenceConfig = {
+    title: "Text (BPMatrixJS)",
+    intro: {
+        cn: "将已注册的字体字形轮廓转换为填充三角面，并按需生成边框、轮廓线和关键点。可见文字包围盒始终以局部 (0, 0) 为中心。",
+        en: "Triangulate glyph outlines from a registered font, with optional border, outline, and point geometry. The visible bounds stay centered at local (0, 0).",
+    },
+    detail: {
+        cn: "字体可使用 TTF、OTF、WOFF 或 WOFF2 字节；浏览器中先下载字体，再调用 RegisterTextFont。textAlign 控制多行对齐并返回水平锚点，baseline 只选择返回的垂直锚点，不移动几何。",
+        en: "Register TTF, OTF, WOFF, or WOFF2 bytes before creating geometry. textAlign aligns lines and selects a horizontal anchor; baseline selects a vertical anchor without shifting geometry.",
+    },
+    code: `import { RegisterTextFont, Text } from "bpmatrixjs/Geometry/Text";
+
+const response = await fetch(fontUrl);
+RegisterTextFont("MiSans", await response.arrayBuffer());
+const text = new Text("你好\\n世界", 48, "MiSans", {
+    lineSpacing: 8,
+    letterSpacing: 2,
+    textAlign: "center",
+    baseline: "middle",
+});
+const fill = text.data;
+const border = text.createBorderGeometry(3);
+const lines = text.createLineGeometry();
+const points = text.createPointGeometry(2, 4, true, false);`,
+    properties: [
+        entry("data: TextGeometryData", "填充顶点、法线、UV、索引和排版度量。", "Fill vertices, normals, UVs, indices, and layout metrics."),
+        entry("width; height; advanceWidth: number", "可见包围盒宽高，以及最大排版行宽。", "Visible bounds and maximum advance width."),
+        entry("data.anchorX; data.anchorY: number", "按对齐和基线选择的局部锚点；几何仍居中。", "Local alignment anchors; geometry remains centered."),
+        entry("text; fontSize; fontFamily; lineSpacing; letterSpacing; textAlign; baseline", "当前文字、字体和排版参数。", "Current text, font, and layout settings."),
+        entry("borderData; lineData; pointData", "最近一次生成的附加几何数据。", "Most recently generated auxiliary geometry."),
+    ],
+    methods: [
+        entry("RegisterTextFont(fontFamily, data): void", "按名称注册字体字节。", "Register font bytes under a name."),
+        entry("HasTextFont(fontFamily): boolean; UnregisterTextFont(fontFamily): boolean", "查询或移除已注册字体。", "Check or remove a registered font."),
+        entry("new Text(text, fontSize, fontFamily, options?)", "创建支持换行、额外行距和字距的文字几何。", "Create multiline geometry with extra line and letter spacing."),
+        entry("set(text, fontSize?, fontFamily?, options?): this", "更新文字与排版，并清除附加几何缓存。", "Update text and layout, clearing auxiliary geometry caches."),
+        entry("createBorderGeometry(lineWidth?, uvRepeat?, align?)", "生成 inset、normal 或 outset 边框载体。", "Build an inset, normal, or outset border carrier."),
+        entry("createLineGeometry(uvRepeat?)", "生成可见字形轮廓的 line-list。", "Build a line-list for visible glyph contours."),
+        entry("createPointGeometry(pointRadius?, sides?, vertexPoints?, midpointPoints?, vertexThreshold?, midpointThreshold?)", "生成轮廓顶点和边中点标记。", "Build contour vertex and edge midpoint markers."),
+        entry("getPerimeter(): number", "返回可见字形边界总周长。", "Return total visible glyph perimeter."),
+        entry("CreateTextGeometry / CreateTextBorderGeometry / CreateTextLineGeometry / CreateTextPointGeometry / GetTextPerimeter", "独立函数可直接生成对应数据。", "Standalone helpers create the same geometry and metrics."),
+    ],
+    links: [{ label: "BPLineJS Text", to: "/docs/bpline/geometry/text" }],
+};

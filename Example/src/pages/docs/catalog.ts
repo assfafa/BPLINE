@@ -52,6 +52,7 @@ export const matrixDocumentation: readonly DocumentationItem[] = [
         page("NGon", "/docs/geometry/ngon", "Geometry/NGon"),
         page("Rect", "/docs/geometry/rect", "Geometry/Rect"),
         page("Poly", "/docs/geometry/poly", "Geometry/Poly"),
+        page("Text", "/docs/geometry/text", "Geometry/Text"),
     ]),
     page("Utils", "/docs/utils", "Utils", [
         page("Inner", "/docs/utils/inner", "Utils/Inner"),
@@ -73,6 +74,7 @@ export const lineDocumentation: readonly DocumentationItem[] = [
         page("Rect2D", "/docs/bpline/geometry/rect2d", "BPLine/Geometry/Rect2D"),
         page("Poly2D", "/docs/bpline/geometry/poly2d", "BPLine/Geometry/Poly2D"),
         page("NGon2D", "/docs/bpline/geometry/ngon2d", "BPLine/Geometry/NGon2D"),
+        page("Text", "/docs/bpline/geometry/text", "BPLine/Geometry/Text"),
     ]),
     page("Group", "/docs/bpline/group", "BPLine/Group"),
     page("IMesh", "/docs/bpline/imesh", "BPLine/IMesh"),
@@ -85,6 +87,7 @@ export const lineDocumentation: readonly DocumentationItem[] = [
     page("Raws", "/docs/bpline/raws", "BPLine/Raws"),
     page("Render", "/docs/bpline/render", "BPLine/Render"),
     page("Scene", "/docs/bpline/scene", "BPLine/Scene"),
+    page("Font", "/docs/bpline/font", "BPLine/Font"),
     group("Style", [
         page("Style", "/docs/bpline/style/style", "BPLine/Style/Style"),
         page("SolidStyle", "/docs/bpline/style/solid-style", "BPLine/Style/SolidStyle"),

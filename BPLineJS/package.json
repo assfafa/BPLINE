@@ -1,6 +1,6 @@
 {
     "name": "bplinejs",
-    "version": "0.0.102",
+    "version": "0.0.103-beta.11",
     "description": "A WebGPU-first 2D rendering library focused on line and border rendering.",
     "type": "module",
     "main": "./lib/index.js",
@@ -95,6 +95,10 @@
             "types": "./lib/Texture/index.d.ts",
             "import": "./lib/Texture/index.js"
         },
+        "./Text": {
+            "types": "./lib/Text/index.d.ts",
+            "import": "./lib/Text/index.js"
+        },
         "./package.json": "./package.json"
     },
     "sideEffects": [
@@ -135,6 +139,6 @@
     },
     "dependencies": {
         "@webgpu/types": "^0.1.71",
-        "bpmatrixjs": "^0.1.102"
+        "bpmatrixjs": "0.1.103-beta.11"
     }
 }

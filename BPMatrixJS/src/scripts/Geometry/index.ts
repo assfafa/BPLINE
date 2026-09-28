@@ -42,3 +42,25 @@ export {
     GetNGonPerimeter,
 } from "./NGon.js";
 export type { NGonOptions, NGonLike, NGonUVMode } from "./NGon.js";
+export {
+    Text,
+    RegisterTextFont,
+    HasTextFont,
+    UnregisterTextFont,
+    CreateTextGeometry,
+    CreateTextBorderGeometry,
+    CreateTextLineGeometry,
+    CreateTextPointGeometry,
+    GetTextPerimeter,
+} from "./Text/index.js";
+export type {
+    TextAlign,
+    TextBaseline,
+    TextOptions,
+    TextBorderAlign,
+    TextGeometryData,
+    TextBorderGeometryData,
+    TextLineGeometryData,
+    TextPointGeometryData,
+    TextLike,
+} from "./Text/index.js";

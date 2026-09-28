@@ -123,6 +123,13 @@ const Left = ({ section: activeSection, onNavigate }: LeftProps): JSX.Element =>
                 >
                     {translator.translate(language, "menu.ngon")}
                 </NavLink>
+                <NavLink
+                    to="/example/basic-mesh/text"
+                    onClick={onNavigate}
+                    className="block py-2 pr-4 pl-8 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+                >
+                    {translator.translate(language, "menu.text")}
+                </NavLink>
                 <span className="mt-3 block border-t border-border px-4 py-2 text-sm font-semibold text-foreground">
                     {translator.translate(language, "menu.instancing")}
                 </span>

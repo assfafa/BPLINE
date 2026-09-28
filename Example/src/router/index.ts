@@ -97,6 +97,17 @@ const loadNGonPage = async () => {
 };
 
 /**
+ * Load the font-backed text example only when selected.
+ * @example
+ * await loadTextPage();
+ * @returns Text route component.
+ */
+const loadTextPage = async () => {
+    const page = await import("@/pages/example/BasicMesh/Text/index.tsx");
+    return { Component: page.default };
+};
+
+/**
  * Load the instanced mesh example on demand.
  * @example
  * await loadInstancePage();
@@ -181,6 +192,10 @@ export const router = createHashRouter([
             {
                 path: "example/basic-mesh/ngon",
                 lazy: loadNGonPage,
+            },
+            {
+                path: "example/basic-mesh/text",
+                lazy: loadTextPage,
             },
             {
                 path: "example/instancing/imesh",

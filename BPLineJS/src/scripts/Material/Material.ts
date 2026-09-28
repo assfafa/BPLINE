@@ -387,7 +387,7 @@ abstract class Material implements MaterialLike {
             tag = "rect";
         } else {
             // 按几何或图元类型选择对应实现，不混用不同模板的规则。
-            if (type === "Poly2D") {
+            if (type === "Poly2D" || type === "Text") {
                 tag = "poly";
             } else {
                 // 按几何或图元类型选择对应实现，不混用不同模板的规则。
@@ -422,7 +422,7 @@ abstract class Material implements MaterialLike {
             // 按几何或图元类型选择对应实现，不混用不同模板的规则。
             if (type === "Rect2D") {
                 tag = "rect";
-            } else if (type === "Poly2D") {
+            } else if (type === "Poly2D" || type === "Text") {
                 // 按几何或图元类型选择对应实现，不混用不同模板的规则。
                 tag = "poly";
             } else if (type === "NGon2D") {

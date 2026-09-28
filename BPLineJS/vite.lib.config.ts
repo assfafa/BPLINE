@@ -26,6 +26,7 @@ export default defineConfig({
                 "Scene/index": resolve(import.meta.dirname, "src/scripts/Scene/index.ts"),
                 "Raws/index": resolve(import.meta.dirname, "src/scripts/Raws/index.ts"),
                 "Texture/index": resolve(import.meta.dirname, "src/scripts/Texture/index.ts"),
+                "Text/index": resolve(import.meta.dirname, "src/scripts/Text/index.ts"),
             },
             preserveEntrySignatures: "strict",
             output: {

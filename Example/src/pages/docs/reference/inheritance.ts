@@ -23,6 +23,7 @@ const publicClasses: readonly PublicClass[] = [
     { label: "Rect2D", path: "/docs/bpline/geometry/rect2d", parent: "/docs/bpline/geometry/geo" },
     { label: "Poly2D", path: "/docs/bpline/geometry/poly2d", parent: "/docs/bpline/geometry/geo" },
     { label: "NGon2D", path: "/docs/bpline/geometry/ngon2d", parent: "/docs/bpline/geometry/geo" },
+    { label: "Text", path: "/docs/bpline/geometry/text", parent: "/docs/bpline/geometry/geo" },
     { label: "Material", path: "/docs/bpline/material/material" },
     { label: "BaseMaterial", path: "/docs/bpline/material/base-material", parent: "/docs/bpline/material/material" },
 ];

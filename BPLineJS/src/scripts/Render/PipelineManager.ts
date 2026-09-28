@@ -257,6 +257,7 @@ class PipelineManager implements PipelineManagerLike {
             > = {
                 Rect2D: { vertex: material.rectVertexShader, fragment: material.rectFragmentShader },
                 Poly2D: { vertex: material.polyVertexShader, fragment: material.polyFragmentShader },
+                Text: { vertex: material.polyVertexShader, fragment: material.polyFragmentShader },
                 NGon2D: { vertex: material.ngonVertexShader, fragment: material.ngonFragmentShader },
             };
             const shader = shaders[geometryType];
