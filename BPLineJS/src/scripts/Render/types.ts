@@ -143,6 +143,21 @@ interface PipelineTemplateLike {
     lineRenderPipeline?: GPURenderPipeline;
     defaultBindGroupLayout: GPUBindGroupLayout;
     materialBindGroupLayout: GPUBindGroupLayout;
+    customBindGroupLayout?: GPUBindGroupLayout;
+}
+/** 同一材质在一个 Render 中持有的具名数值缓冲与绑定组。 */
+interface CustomValueBufferLike {
+    buffer: GPUBuffer;
+    byteLength: number;
+    value: unknown;
+    valueVersion: number;
+    storeVersion: number;
+}
+interface CustomValueResourcesLike {
+    buffers: Map<string, CustomValueBufferLike>;
+    bindGroup?: GPUBindGroup;
+    layout?: GPUBindGroupLayout;
+    resources?: readonly unknown[];
 }
 interface PipelineLike {
     adapter?: GPUAdapter;
@@ -158,6 +173,7 @@ interface PipelineLike {
     depthTexture?: DepthTextureLike;
     sceneResources: Map<number, SceneResourcesLike>;
     buffers: PipelineBuffersLike;
+    customValues: Map<number, CustomValueResourcesLike>;
 }
 interface RenderLike {
     readonly id: number;

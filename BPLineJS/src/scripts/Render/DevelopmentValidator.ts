@@ -263,7 +263,7 @@ class DevelopmentValidator implements DevelopmentValidatorLike {
         // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
         if (geometry !== undefined && material !== undefined) {
             // 只为启用的样式区域生成数据，关闭区域不占用额外几何。
-            if (geometry.style.solid.enabled && !["Rect2D", "Poly2D", "NGon2D", "Text"].includes(geometry.type)) {
+            if (geometry.style.solid.enabled && !["Rect2D", "Poly2D", "NGon2D", "Text", "Base2D"].includes(geometry.type)) {
                 this.error("UNSUPPORTED_SOLID_TYPE", mesh.id, "未提供该类型的实体面 Shader。", mesh);
             }
             // 区分输入数据形态，使用与实际类型匹配的处理方式。

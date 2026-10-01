@@ -160,9 +160,43 @@ class PipelineManager implements PipelineManagerLike {
             defaultBindGroupLayout !== undefined &&
             materialBindGroupLayout !== undefined
         ) {
-            const layout: GPUPipelineLayout = device.createPipelineLayout({
-                bindGroupLayouts: [defaultBindGroupLayout, materialBindGroupLayout],
-            });
+            const customEntries: GPUBindGroupLayoutEntry[] = [];
+            // 每个具名值使用固定槽位；Texture 占纹理和采样器两个槽位。
+            for (const entry of material.values?.entries ?? []) {
+                // 纹理需要连续的视图与采样器槽位。
+                if (entry.kind === "texture") {
+                    customEntries.push({
+                        binding: entry.binding,
+                        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+                        texture: { sampleType: "float", viewDimension: "2d-array" },
+                    });
+                    customEntries.push({
+                        binding: entry.binding + 1,
+                        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+                        sampler: { type: "filtering" },
+                    });
+                } else {
+                    const storage = entry.kind === "array<f32>";
+                    let bufferType: GPUBufferBindingType = "uniform";
+                    // 可变长度数组使用只读 storage，其余数值使用 uniform。
+                    if (storage) {
+                        bufferType = "read-only-storage";
+                    }
+                    customEntries.push({
+                        binding: entry.binding,
+                        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+                        buffer: { type: bufferType },
+                    });
+                }
+            }
+            let customBindGroupLayout: GPUBindGroupLayout | undefined;
+            const layouts: GPUBindGroupLayout[] = [defaultBindGroupLayout, materialBindGroupLayout];
+            // 没有自定义值时沿用原来的两个 BindGroup。
+            if (customEntries.length > 0) {
+                customBindGroupLayout = device.createBindGroupLayout({ entries: customEntries });
+                layouts.push(customBindGroupLayout);
+            }
+            const layout: GPUPipelineLayout = device.createPipelineLayout({ bindGroupLayouts: layouts });
             let blend: GPUBlendState | undefined;
             // 区分深度和透明状态，保持当前阶段的遮挡与混合约定。
             if (material.transparent) {
@@ -245,40 +279,22 @@ class PipelineManager implements PipelineManagerLike {
                 attributes: [{ shaderLocation: location, offset: 0, format: "float32x2" }],
             });
             const vectorAttributes: GPUVertexBufferLayout[] = [0, 1, 2].map(CreateVectorAttribute);
-            let renderPipeline: GPURenderPipeline | undefined;
-            const shaders: Partial<
-                Record<
-                    string,
+            const shader = material.getShaderSource(geometryType);
+            const renderPipeline = CreatePipeline(
+                "BaseMaterial " + geometryType + " Pipeline",
+                shader.vertex,
+                shader.fragment,
+                "triangle-list",
+                [
+                    ...vectorAttributes,
+                    { arrayStride: 4, attributes: [{ shaderLocation: 3, offset: 0, format: "float32" }] },
                     {
-                        vertex: string | undefined;
-                        fragment: string | undefined;
-                    }
-                >
-            > = {
-                Rect2D: { vertex: material.rectVertexShader, fragment: material.rectFragmentShader },
-                Poly2D: { vertex: material.polyVertexShader, fragment: material.polyFragmentShader },
-                Text: { vertex: material.polyVertexShader, fragment: material.polyFragmentShader },
-                NGon2D: { vertex: material.ngonVertexShader, fragment: material.ngonFragmentShader },
-            };
-            const shader = shaders[geometryType];
-            // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
-            if (shader !== undefined) {
-                renderPipeline = CreatePipeline(
-                    "BaseMaterial " + geometryType + " Pipeline",
-                    shader.vertex,
-                    shader.fragment,
-                    "triangle-list",
-                    [
-                        ...vectorAttributes,
-                        { arrayStride: 4, attributes: [{ shaderLocation: 3, offset: 0, format: "float32" }] },
-                        {
-                            arrayStride: 8,
-                            attributes: [{ shaderLocation: 4, offset: 0, format: "float32x2" }],
-                        },
-                        { arrayStride: 4, attributes: [{ shaderLocation: 5, offset: 0, format: "float32" }] },
-                    ],
-                );
-            }
+                        arrayStride: 8,
+                        attributes: [{ shaderLocation: 4, offset: 0, format: "float32x2" }],
+                    },
+                    { arrayStride: 4, attributes: [{ shaderLocation: 5, offset: 0, format: "float32" }] },
+                ],
+            );
             const lineRenderPipeline = CreatePipeline(
                 "Line Pipeline",
                 lineVertexShader,
@@ -292,6 +308,7 @@ class PipelineManager implements PipelineManagerLike {
                 lineRenderPipeline,
                 defaultBindGroupLayout,
                 materialBindGroupLayout,
+                customBindGroupLayout,
             };
         } else {
             return undefined;

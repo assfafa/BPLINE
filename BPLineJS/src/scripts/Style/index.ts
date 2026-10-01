@@ -6,6 +6,8 @@ import JoinStyle from "./JoinStyle";
 import type { PartSubscriber, StyleArea, StyleSubscriber } from "./types";
 /** 共享样式；四个显示分区与节点连接样式独立持有参数，通过订阅链通知使用者。 */
 class Style implements PartSubscriber {
+    /** 对象类型。 */
+    public readonly type: string = "Style";
     private readonly _solid: SolidStyle;
     private readonly _wireframe: WireframeStyle;
     private readonly _edge: EdgeStyle;
@@ -13,6 +15,7 @@ class Style implements PartSubscriber {
     private readonly _join: JoinStyle;
     private readonly _subscribers = new Set<StyleSubscriber>();
     private _version: number = 0;
+    private _key: string = "wireframe:0";
     /**
      * 构建四个关闭的显示分区及默认尖角连接，并订阅它们的变化。
      * @example
@@ -86,6 +89,15 @@ class Style implements PartSubscriber {
         return this._version;
     }
     /**
+     * 仅描述会改变材质管线选择的样式状态，显示数值不参与 Pipeline 缓存键。
+     * @example
+     * const key = style.key;
+     * @returns 可由等效 Style 共享的管线状态键。
+     */
+    public get key(): string {
+        return this._key;
+    }
+    /**
      * 关联消费者，使后续版本变化能通知该对象。
      * @param subscriber 几何、材质或未来实现通知协议的 IMesh
      * @example
@@ -130,6 +142,15 @@ class Style implements PartSubscriber {
      */
     public onPartChange(area: Exclude<StyleArea, "whole">, field: string): void {
         this._version++;
+        // 原生线框开关改变管线组成；颜色和几何生成参数只需各自更新数据。
+        if (area === "wireframe" && field === "enabled") {
+            // Pipeline key 只记录影响固定渲染状态的样式字段。
+            if (this._wireframe.enabled) {
+                this._key = "wireframe:1";
+            } else {
+                this._key = "wireframe:0";
+            }
+        }
         const change = Object.freeze({ source: this, area, field });
         // 按订阅快照逐项通知或解绑，避免回调修改集合干扰当前遍历。
         for (const subscriber of [...this._subscribers]) {

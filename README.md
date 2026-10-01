@@ -12,6 +12,17 @@ BPLineJS is a TypeScript WebGPU 2D renderer for editable geometry and text. It s
 | BPLineJS | bplinejs: WebGPU 2D rendering | 12112 |
 | Example | Documentation and interactive examples | 12113 |
 
+## Install from npm
+
+Install the math and geometry library directly, or install the renderer for WebGPU scenes:
+
+~~~bash
+npm install bpmatrixjs@0.1.103
+npm install bplinejs@0.1.103
+~~~
+
+`bplinejs` depends on `bpmatrixjs`; install both explicitly when importing from both packages. See the [BPMatrixJS](BPMatrixJS/README.md) and [BPLineJS](BPLineJS/README.md) quick starts for short usage examples.
+
 ## Docker
 
 Create the development container from the repository root. Reuse an existing `BPLine` container if one is already running:
@@ -51,7 +62,7 @@ npm run build:lib
 npm pack --dry-run
 ~~~
 
-`npm pack --dry-run` inspects the package without publishing it. Other projects can install the libraries with `npm install bplinejs` or `npm install bpmatrixjs`. `BPLineJS/src/scripts/Examples` contains local verification examples and is excluded from Git and the npm package.
+`npm pack --dry-run` inspects the package without publishing it. `BPLineJS/src/scripts/Examples` contains local verification examples and is excluded from Git and the npm package.
 
 ## Font parsing
 

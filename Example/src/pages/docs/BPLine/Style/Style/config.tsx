@@ -20,6 +20,8 @@ style.edge.width = 6;`,
         entry("edge: EdgeStyle", "实体三角面边框设置。", "Triangle-based edge settings."),
         entry("points: PointsStyle", "顶点和边中点标记设置。", "Vertex and edge midpoint marker settings."),
         entry("join: JoinStyle", "边框节点连接类型和精度。", "Border join type and precision."),
+        entry("readonly type: string", "对象类型为 Style。", "Object type is Style."),
+        entry("readonly key: string", "影响 Pipeline 选择的样式状态键；颜色等显示数值不会产生新管线。", "Style state key for pipeline selection; color changes do not create a new pipeline."),
     ],
     methods: [
         entry("new Style()", "创建全部显示分区默认关闭的样式。", "Create a style with all display parts disabled."),

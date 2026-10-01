@@ -106,6 +106,7 @@ class Render implements RenderLike {
             textures: new Map<number, GPUTextureResourceLike>(),
             samplers: new Map<string, GPUSampler>(),
             sceneResources: new Map<number, SceneResourcesLike>(),
+            customValues: new Map(),
             buffers: {
                 meshMatrix: new Map(),
                 meshDepth: new Map(),

@@ -1,7 +1,7 @@
 import { STYLE_STRIDE } from "../Style";
 import type Camera from "../Camera";
-import type { Mat3 } from "bpmatrixjs/Math";
-import type { GeoPartDataLike } from "../Geometry/Geo";
+import { Mat3, Vec2 } from "bpmatrixjs/Math";
+import type { GeoData, GeoPartDataLike } from "../Geometry/Geo";
 import type Scene from "../Scene";
 import type { Material2d } from "../global-types";
 import DepthManager from "./DepthManager";
@@ -73,6 +73,7 @@ class BufferManager implements BufferManagerLike {
             this.drawCameraBuffers(device, camera, dpr);
             this.drawGeometryBuffers(device, scene, renderMode);
             this.prepareMaterials(scene, renderMode);
+            this.drawCustomValueBuffers(device, scene);
             this.drawMeshBuffers(device, scene, renderMode);
             this.depthManager.prepare(scene);
         } else {
@@ -103,6 +104,101 @@ class BufferManager implements BufferManagerLike {
             }
         } else {
             return;
+        }
+    }
+    /**
+     * 上传材质具名数值；同尺寸字段只更新原有 GPUBuffer，不改变绑定。
+     * @param device 当前设备
+     * @param scene 当前场景
+     * @example
+     * this.drawCustomValueBuffers(device, scene);
+     * @returns 无返回值。
+     */
+    private drawCustomValueBuffers(device: GPUDevice, scene: Scene): void {
+        // 仅场景当前引用的材质需要持有具名值缓冲。
+        for (const material of scene.materialList) {
+            const values = material.values;
+            // 普通材质没有 group(2) 的传值。
+            if (values === undefined) {
+                continue;
+            }
+            let resources = this.pipeline.customValues.get(material.id);
+            // 每个材质持有独立数值缓冲，但同布局可以共享 Pipeline。
+            if (resources === undefined) {
+                resources = { buffers: new Map() };
+                this.pipeline.customValues.set(material.id, resources);
+            }
+            const activeNames = new Set<string>();
+            // 只上传数值字段；贴图由 TextureManager 准备。
+            for (const entry of values.entries) {
+                // 纹理字段无需 GPUBuffer。
+                if (entry.kind === "texture") {
+                    continue;
+                }
+                activeNames.add(entry.name);
+                const existing = resources.buffers.get(entry.name);
+                let objectVersion = 0;
+                // 数学对象有自身版本，原地修改也能被观察到。
+                if (entry.value instanceof Vec2 || entry.value instanceof Mat3) {
+                    objectVersion = entry.value.version;
+                }
+                let byteLength = 4;
+                // 先比较大小和版本，稳定帧避免创建临时数组。
+                if (entry.value instanceof Vec2) {
+                    byteLength = 8;
+                }
+                // Mat3 的 WGSL uniform 每列需要 16 字节。
+                if (entry.value instanceof Mat3) {
+                    byteLength = 48;
+                }
+                // Float32Array 使用自身的紧凑 storage 长度。
+                if (entry.value instanceof Float32Array) {
+                    byteLength = entry.value.byteLength;
+                }
+                // 长度变化需要新 GPUBuffer 和 BindGroup。
+                // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- 显式检查使 else 分支保持 existing 的类型收窄。
+                if (existing === undefined || existing.byteLength !== byteLength) {
+                    existing?.buffer.destroy();
+                    let usage = GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST;
+                    // 数组使用只读 storage 绑定。
+                    if (entry.kind === "array<f32>") {
+                        usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
+                    }
+                    const data = values.getBufferData(entry);
+                    const buffer = this.createBuffer(
+                        device,
+                        "Material " + String(material.id) + " Value " + entry.name,
+                        data,
+                        usage,
+                    );
+                    resources.buffers.set(entry.name, {
+                        buffer,
+                        byteLength,
+                        value: entry.value,
+                        valueVersion: objectVersion,
+                        storeVersion: values.version,
+                    });
+                    resources.bindGroup = undefined;
+                } else {
+                    // 同尺寸且值变化时只写入原缓冲，不更换绑定。
+                    if (existing.value !== entry.value || existing.valueVersion !== objectVersion || existing.storeVersion !== values.version) {
+                        const data = values.getBufferData(entry);
+                        device.queue.writeBuffer(existing.buffer, 0, data);
+                        existing.value = entry.value;
+                        existing.valueVersion = objectVersion;
+                        existing.storeVersion = values.version;
+                    }
+                }
+            }
+            // 移除已从 raw.value 中删除的字段缓冲。
+            for (const [name, resource] of resources.buffers) {
+                // 保留当前布局仍在使用的字段。
+                if (!activeNames.has(name)) {
+                    resource.buffer.destroy();
+                    resources.buffers.delete(name);
+                    resources.bindGroup = undefined;
+                }
+            }
         }
     }
     /**
@@ -337,6 +433,11 @@ class BufferManager implements BufferManagerLike {
                 if (renderMode === "development") {
                     this.developmentValidator.validateGeometry(geometry);
                 }
+                // 动态裸顶点保持容量时只写入已有 Buffer，骨骼动画无需逐帧重新分配。
+                if (geometry.type === "Base2D" && cachedGeometry !== undefined &&
+                    this.updateBase2DBuffers(device, geometry, cachedGeometry)) {
+                    continue;
+                }
                 // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
                 if (cachedGeometry !== undefined) {
                     this.destroyGeometryBuffer(cachedGeometry);
@@ -410,6 +511,66 @@ class BufferManager implements BufferManagerLike {
                 continue;
             }
         }
+    }
+    /**
+     * 同尺寸更新 Base2D 的全部顶点属性及几何参数。
+     * @param device 当前 WebGPU 设备
+     * @param geometry 裸顶点几何
+     * @param cached 已分配的 GPU 缓冲
+     * @example
+     * this.updateBase2DBuffers(device, geometry, cached);
+     * @returns 是否成功复用了已有缓冲。
+     */
+    private updateBase2DBuffers(device: GPUDevice, geometry: GeoData, cached: GeometryBufferLike): boolean {
+        const part = cached.geometry;
+        const vertices = geometry.geometry;
+        const normal = geometry.normal;
+        const uv = geometry.uv;
+        const index = geometry.index;
+        const vertexType = geometry.vertexType;
+        const position = geometry.position;
+        const miterScale = geometry.miterScale;
+        // 裸顶点几何当前只复用单组三角面缓冲。
+        if (part === undefined || geometry.linePoints !== undefined || cached.linePoints !== undefined ||
+            vertices === undefined || normal === undefined || uv === undefined || index === undefined ||
+            vertexType === undefined || position === undefined || miterScale === undefined ||
+            part.vertexType === undefined || part.position === undefined || part.miterScale === undefined) {
+            return false;
+        }
+        let indexFormat: GPUIndexFormat = "uint16";
+        // 用户可能切换到 32 位索引，其绑定格式必须对应更新。
+        if (index instanceof Uint32Array) {
+            indexFormat = "uint32";
+        }
+        const indexBytes = Math.ceil(index.byteLength / 4) * 4;
+        // 任一属性尺寸变化都需要重新分配完整的一组缓冲。
+        if (part.vertex.size !== vertices.byteLength || part.normal.size !== normal.byteLength ||
+            part.uv.size !== uv.byteLength || part.index.size !== indexBytes ||
+            part.vertexType.size !== vertexType.byteLength || part.position.size !== position.byteLength ||
+            part.miterScale.size !== miterScale.byteLength || part.indexFormat !== indexFormat) {
+            return false;
+        }
+        const alignedIndex = new Uint8Array(indexBytes);
+        alignedIndex.set(new Uint8Array(index.buffer, index.byteOffset, index.byteLength));
+        device.queue.writeBuffer(part.vertex, 0, new Float32Array(vertices));
+        device.queue.writeBuffer(part.normal, 0, new Float32Array(normal));
+        device.queue.writeBuffer(part.uv, 0, new Float32Array(uv));
+        device.queue.writeBuffer(part.index, 0, alignedIndex);
+        device.queue.writeBuffer(part.vertexType, 0, new Float32Array(vertexType));
+        device.queue.writeBuffer(part.position, 0, new Float32Array(position));
+        device.queue.writeBuffer(part.miterScale, 0, new Float32Array(miterScale));
+        device.queue.writeBuffer(cached.uniform, 0, new Float32Array(geometry.uniformData));
+        part.pointsFirstIndex = this.getPointsFirstIndex({
+            geometry: vertices,
+            normal,
+            uv,
+            index,
+            vertexType,
+            position,
+            miterScale,
+        });
+        cached.version = geometry.version;
+        return true;
     }
     /**
      * 创建单种几何绘制模式的顶点、二维轮廓法线、UV 和索引缓冲。

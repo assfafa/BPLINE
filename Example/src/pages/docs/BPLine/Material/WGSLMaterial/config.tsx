@@ -1,0 +1,37 @@
+import { entry } from "@/pages/docs/reference/types.ts";
+import type { ReferenceConfig } from "@/pages/docs/reference/types.ts";
+
+export const config: ReferenceConfig = {
+    title: "WGSLMaterial",
+    intro: {
+        cn: "直接替换完整的顶点或片元 WGSL 模块，同时沿用 Mesh、几何属性和 WebGPU 资源管理。",
+        en: "Replace complete vertex or fragment WGSL modules while retaining Mesh, geometry attributes, and WebGPU resource management.",
+    },
+    detail: {
+        cn: "未指定顶点源码时使用几何类型的内置顶点变换；未指定片元源码时输出白色。自定义顶点入口须符合现有 Mesh 和 Geometry 的绑定约定。raw.value 在两个阶段声明 group(2) 具名值；同名同类型 Texture 替换只更换绑定，不改变 Pipeline 键。",
+        en: "The default vertex stage uses the geometry's built-in transform; the default fragment stage returns white. A custom vertex entry must follow the existing Mesh and Geometry binding contract. raw.value declares group(2) named values in both stages; replacing a Texture at the same name and type changes only its binding.",
+    },
+    code: `import { WGSLMaterial } from "bplinejs";
+
+const material = new WGSLMaterial();
+material.raw.value = { blue: 0.75 };
+material.raw.fragmentShader = \`@fragment
+fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
+    return vec4f(uv, value_blue, 1.0);
+}\`;`,
+    properties: [
+        entry("raw.vertexShader: string", "完整的 @vertex main WGSL；空值使用内置顶点阶段。", "Complete @vertex main WGSL; empty uses the built-in vertex stage."),
+        entry("raw.fragmentShader: string", "完整的 @fragment main WGSL；空值输出白色。", "Complete @fragment main WGSL; empty returns white."),
+        entry("raw.value: Record<string, ShaderValue>", "number、Vec2、Mat3、Float32Array、多个 Texture 的具名值。", "Named values of number, Vec2, Mat3, Float32Array, or multiple Textures."),
+    ],
+    methods: [
+        entry("new WGSLMaterial(style?: Style)", "创建可分别设置两个着色器阶段的材质。", "Create a material with independent shader-stage sources."),
+        entry("raw.touchValue(name: string): void", "原地修改 Float32Array 后通知下一帧上传。", "Schedule an upload after in-place Float32Array changes."),
+    ],
+    links: [
+        { label: "Material", to: "/docs/bpline/material/material" },
+        { label: "CompositeMaterial", to: "/docs/bpline/material/composite-material" },
+        { label: "Base2D", to: "/docs/bpline/geometry/base2d" },
+        { label: "Custom shader example", to: "/example/material/custom" },
+    ],
+};

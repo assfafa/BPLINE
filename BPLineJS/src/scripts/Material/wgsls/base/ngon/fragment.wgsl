@@ -55,6 +55,18 @@ struct FragmentInput {
     @location(3) @interpolate(flat) instanceIndex: u32,
 };
 
+fn SolidShader(input: FragmentInput, materialUniform: MaterialUniform) -> vec4f {
+    return vec4f(1.0);
+}
+
+fn EdgeShader(input: FragmentInput, materialUniform: MaterialUniform) -> vec4f {
+    return vec4f(1.0);
+}
+
+fn PointShader(input: FragmentInput, materialUniform: MaterialUniform) -> vec4f {
+    return vec4f(1.0);
+}
+
 // 内孔由 CPU 索引连接保证，不在片段中裁掉整块圆盘；边框走 vertexType=0.5。
 fn ShadeNGon(textureColor: vec4f, materialUniform: MaterialUniform) -> vec4f {
     var color = textureColor * materialUniform.solidColor;
@@ -76,17 +88,17 @@ fn main(input: FragmentInput) -> @location(0) vec4f {
     let uvDy = dpdy(input.uv);
     if (input.vertexType == 0.0) {
         if (materialUniform.enabled.x == 0.0) { discard; }
-        return ShadeNGon(textureSampleGrad(textureMap, textureSampler, fillUv, i32(materialUniform.textureLayers.x), fillDx, fillDy), materialUniform);
+        return ShadeNGon(textureSampleGrad(textureMap, textureSampler, fillUv, i32(materialUniform.textureLayers.x), fillDx, fillDy) * SolidShader(input, materialUniform), materialUniform);
     }
     var color: vec4f;
     var opacity: f32;
     if (input.vertexType == 0.5) {
         if (materialUniform.enabled.z == 0.0) { discard; }
-        color = textureSampleGrad(edgeTexture, edgeSampler, input.uv, i32(materialUniform.textureLayers.y), uvDx, uvDy) * materialUniform.edgeColor;
+        color = textureSampleGrad(edgeTexture, edgeSampler, input.uv, i32(materialUniform.textureLayers.y), uvDx, uvDy) * EdgeShader(input, materialUniform) * materialUniform.edgeColor;
         opacity = materialUniform.edge.x;
     } else {
         if (materialUniform.enabled.w == 0.0) { discard; }
-        color = textureSampleGrad(pointsTexture, pointsSampler, input.uv, i32(materialUniform.textureLayers.z), uvDx, uvDy) * materialUniform.pointsColor;
+        color = textureSampleGrad(pointsTexture, pointsSampler, input.uv, i32(materialUniform.textureLayers.z), uvDx, uvDy) * PointShader(input, materialUniform) * materialUniform.pointsColor;
         opacity = materialUniform.points.x;
     }
     let alpha = color.a * opacity;

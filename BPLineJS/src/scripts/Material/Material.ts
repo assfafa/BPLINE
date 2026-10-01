@@ -2,6 +2,7 @@
 import { GETID } from "../ID";
 import Style from "../Style";
 import type { StyleChange, StyleSubscriber, BorderAlign, PixelAligned } from "../Style";
+import type ShaderValues from "./ShaderValues";
 interface MaterialBuffersLike {
     uniform?: number;
     texture?: number;
@@ -44,6 +45,15 @@ interface MaterialLike extends StyleSubscriber {
     depthTest: boolean;
     depthWrite: boolean;
     cullMode: GPUCullMode;
+    readonly values: ShaderValues | undefined;
+    /**
+     * 获取指定几何类型最终使用的顶点和片元 WGSL。
+     * @param geometryType 几何类型
+     * @example
+     * material.getShaderSource("Rect2D");
+     * @returns 对应的着色器源码。
+     */
+    getShaderSource(geometryType: string): { vertex: string | undefined; fragment: string | undefined };
     /**
      * 追加已使用的几何类型标记；Rect2D 对应 rect，重复绑定不递增版本。
      * @param type Geometry.type
@@ -125,6 +135,8 @@ abstract class Material implements MaterialLike {
     private _cullMode: GPUCullMode = "back";
     private readonly _geometryTypes = new Set<string>();
     private readonly _shaders: ShadersLike = {};
+    protected _values: ShaderValues | undefined;
+    protected _customShaderKey: string = "";
     /**
      * 创建对象并建立初始状态及依赖关联。
      * @param style 共享样式，默认各分区关闭
@@ -251,6 +263,52 @@ abstract class Material implements MaterialLike {
      */
     public get key(): string {
         return this._key;
+    }
+    /**
+     * 自定义材质可提供的具名 GPU 传值。
+     * @example
+     * const values = material.values;
+     * @returns 传值容器，普通材质为 undefined。
+     */
+    public get values(): ShaderValues | undefined {
+        return this._values;
+    }
+    /**
+     * 更新完整自定义着色器的源码标识。
+     * @param key 新源码标识
+     * @example
+     * this.setCustomShaderKey(source);
+     * @returns 无返回值。
+     */
+    protected setCustomShaderKey(key: string): void {
+        // 源码相同时保留已经缓存的 Pipeline。
+        if (this._customShaderKey !== key) {
+            this._customShaderKey = key;
+            this.updateVersion("pipeline");
+        }
+    }
+    /**
+     * 按几何类型选择完整着色器源码。
+     * @param geometryType 几何类型
+     * @example
+     * material.getShaderSource("Base2D");
+     * @returns 顶点和片元源码。
+     */
+    public getShaderSource(geometryType: string): { vertex: string | undefined; fragment: string | undefined } {
+        // 矩形使用带 SDF 的片元模板。
+        if (geometryType === "Rect2D") {
+            return { vertex: this.rectVertexShader, fragment: this.rectFragmentShader };
+        }
+        // N 边形使用环形拓扑对应的模板。
+        if (geometryType === "NGon2D") {
+            return { vertex: this.ngonVertexShader, fragment: this.ngonFragmentShader };
+        }
+        // 普通多边形、文字和裸三角面共享基础顶点布局。
+        if (geometryType === "Poly2D" || geometryType === "Text" || geometryType === "Base2D") {
+            return { vertex: this.polyVertexShader, fragment: this.polyFragmentShader };
+        } else {
+            return { vertex: undefined, fragment: undefined };
+        }
     }
     /**
      * 递增单一版本并通知消费者，颜色变化不会改变 key。
@@ -422,7 +480,7 @@ abstract class Material implements MaterialLike {
             // 按几何或图元类型选择对应实现，不混用不同模板的规则。
             if (type === "Rect2D") {
                 tag = "rect";
-            } else if (type === "Poly2D" || type === "Text") {
+            } else if (type === "Poly2D" || type === "Text" || type === "Base2D") {
                 // 按几何或图元类型选择对应实现，不混用不同模板的规则。
                 tag = "poly";
             } else if (type === "NGon2D") {
@@ -591,14 +649,6 @@ abstract class Material implements MaterialLike {
      * @returns 无返回值。
      */
     public updateKey(): void {
-        /**
-         * 为已经排序的几何标签增加统一分隔符。
-         * @param tag 已经注册的几何类型标签
-         * @example
-         * FormatGeometryTag(tag);
-         * @returns 带下划线前缀的几何标签。
-         */
-        const FormatGeometryTag = (tag: string): string => "_" + tag;
         const key: string =
             JSON.stringify([
                 this.type,
@@ -606,14 +656,16 @@ abstract class Material implements MaterialLike {
                 this._cullMode,
                 this._depthTest,
                 this._depthWrite,
-                this._style.wireframe.enabled,
+                this._style.key,
+                this._values?.schemaKey,
+                this._customShaderKey,
                 this._shaders.rectVertexShader,
                 this._shaders.rectFragmentShader,
                 this._shaders.polyVertexShader,
                 this._shaders.polyFragmentShader,
                 this._shaders.ngonVertexShader,
                 this._shaders.ngonFragmentShader,
-            ]) + [...this._geometryTypes].sort().map(FormatGeometryTag).join("");
+            ]);
         // 管线状态真正变化时清空派生键缓存，否则复用原键。
         if (key !== this._key) {
             this._key = key;

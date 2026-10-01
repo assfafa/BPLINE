@@ -71,6 +71,7 @@ export const lineDocumentation: readonly DocumentationItem[] = [
     ]),
     group("Geometry", [
         page("Geo", "/docs/bpline/geometry/geo", "BPLine/Geometry/Geo"),
+        page("Base2D", "/docs/bpline/geometry/base2d", "BPLine/Geometry/Base2D"),
         page("Rect2D", "/docs/bpline/geometry/rect2d", "BPLine/Geometry/Rect2D"),
         page("Poly2D", "/docs/bpline/geometry/poly2d", "BPLine/Geometry/Poly2D"),
         page("NGon2D", "/docs/bpline/geometry/ngon2d", "BPLine/Geometry/NGon2D"),
@@ -81,6 +82,8 @@ export const lineDocumentation: readonly DocumentationItem[] = [
     group("Material", [
         page("Material", "/docs/bpline/material/material", "BPLine/Material/Material"),
         page("BaseMaterial", "/docs/bpline/material/base-material", "BPLine/Material/BaseMaterial"),
+        page("CompositeMaterial", "/docs/bpline/material/composite-material", "BPLine/Material/CompositeMaterial"),
+        page("WGSLMaterial", "/docs/bpline/material/wgsl-material", "BPLine/Material/WGSLMaterial"),
     ]),
     page("Mesh", "/docs/bpline/mesh", "BPLine/Mesh"),
     page("Object", "/docs/bpline/object", "BPLine/Object"),

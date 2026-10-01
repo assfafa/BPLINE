@@ -3,12 +3,15 @@ import Camera from "./Camera";
 import Color from "./Color";
 import Style from "./Style";
 import Geo from "./Geometry/Geo";
+import Base2D from "./Geometry/Base2D";
 import Rect2D from "./Geometry/Rect2D";
 import Poly2D from "./Geometry/Poly2D";
 import NGon2D from "./Geometry/NGon2D";
 import Group from "./Group";
 import IMesh from "./IMesh";
 import BaseMaterial from "./Material/baseMaterial";
+import CompositeMaterial from "./Material/CompositeMaterial";
+import WGSLMaterial from "./Material/WGSLMaterial";
 import Material from "./Material/Material";
 import Mesh from "./Mesh";
 import ObjectNode from "./Object";
@@ -20,10 +23,13 @@ import { Font, Text } from "./Text";
 import { GETID } from "./ID";
 export {
     BaseMaterial,
+    CompositeMaterial,
+    WGSLMaterial,
     Camera,
     Color,
     Style,
     Geo,
+    Base2D,
     GETID,
     Group,
     IMesh,
@@ -66,10 +72,14 @@ export type {
 export type { Rect2DLike, Rect2DOptions } from "./Geometry/Rect2D";
 export type { Poly2DLike, Poly2DOptions } from "./Geometry/Poly2D";
 export type { NGon2DLike, NGon2DOptions, NGonUVMode } from "./Geometry/NGon2D";
+export type { Base2DLike, Base2DOptions } from "./Geometry/Base2D";
 export { JoinStyle } from "./Style";
 export type { JoinType } from "./Style";
 export type { GroupLike } from "./Group";
 export type { BaseMaterialLike } from "./Material/baseMaterial";
+export type { CompositeMaterialLike } from "./Material/CompositeMaterial";
+export type { WGSLMaterialLike } from "./Material/WGSLMaterial";
+export type { ShaderValue, ShaderValueRecord } from "./Material/ShaderValues";
 export type {
     MaterialBuffersLike,
     MaterialChange,

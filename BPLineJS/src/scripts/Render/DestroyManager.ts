@@ -183,6 +183,16 @@ class DestroyManager implements DestroyManagerLike {
                 continue;
             }
         }
+        const custom = this.pipeline.customValues.get(materialId);
+        // 材质私有数值缓冲不能由其他材质复用。
+        if (custom !== undefined) {
+            // 每个具名数值都有独立 GPUBuffer。
+            for (const resource of custom.buffers.values()) {
+                resource.buffer.destroy();
+            }
+            this.pipeline.customValues.delete(materialId);
+            destroyed = true;
+        }
         // 区分输入数据形态，使用与实际类型匹配的处理方式。
         if (typeof material !== "number") {
             const textureIds: Set<number> = new Set<number>();
@@ -204,7 +214,16 @@ class DestroyManager implements DestroyManagerLike {
                 material.style.points.texture !== undefined &&
                 !textureIds.has(material.style.points.texture.id)
             ) {
+                textureIds.add(material.style.points.texture.id);
                 destroyed = this.destroyTexture(material.style.points.texture) || destroyed;
+            }
+            // 显式销毁材质时释放它的具名纹理引用。
+            for (const texture of material.values?.textures ?? []) {
+                // 共享同一贴图的多个字段只销毁一次。
+                if (!textureIds.has(texture.id)) {
+                    textureIds.add(texture.id);
+                    destroyed = this.destroyTexture(texture) || destroyed;
+                }
             }
         }
         return destroyed;
@@ -334,6 +353,13 @@ class DestroyManager implements DestroyManagerLike {
                 this.destroyMesh(meshId);
             }
         }
+        // 清理不再被场景引用的材质传值缓冲。
+        for (const materialId of this.pipeline.customValues.keys()) {
+            // 当前场景仍使用的材质保留资源。
+            if (!usedResources.materialIds.has(materialId)) {
+                this.destroyMaterial(materialId);
+            }
+        }
         // 遍历当前缓存条目，按实际引用关系处理资源。
         for (const [textureId, texture] of this.pipeline.textures) {
             // trim 只清理这个资源；源图单层缓存闲置不代表其他层组也闲置。
@@ -382,6 +408,13 @@ class DestroyManager implements DestroyManagerLike {
         for (const materialBuffer of this.pipeline.buffers.meshStyle.values()) {
             materialBuffer.buffer.destroy();
         }
+        // Render 销毁时释放全部具名数值缓冲。
+        for (const custom of this.pipeline.customValues.values()) {
+            // 每个字段的 GPUBuffer 属于当前 Render。
+            for (const resource of custom.buffers.values()) {
+                resource.buffer.destroy();
+            }
+        }
         // 遍历当前缓存条目，按实际引用关系处理资源。
         for (const cameraBuffer of this.pipeline.buffers.cameraUniform) {
             cameraBuffer.destroy();
@@ -393,6 +426,7 @@ class DestroyManager implements DestroyManagerLike {
         this.pipeline.fallbackTexture?.texture.destroy();
         this.pipeline.buffers.geometry.clear();
         this.pipeline.buffers.meshStyle.clear();
+        this.pipeline.customValues.clear();
         this.pipeline.buffers.cameraUniform.length = 0;
         this.pipeline.textures.clear();
         this.pipeline.samplers.clear();
@@ -455,6 +489,13 @@ class DestroyManager implements DestroyManagerLike {
             const binding = entry.bindGroup;
             // 绑定依赖的资源身份变化后使 BindGroup 失效，下一次绘制重新绑定。
             if (binding?.baseView === view || binding?.edgeView === view || binding?.pointsView === view) {
+                entry.bindGroup = undefined;
+            }
+        }
+        // 旧纹理视图不能继续留在自定义 BindGroup 中。
+        for (const entry of this.pipeline.customValues.values()) {
+            // 当前绑定组可能含多个具名纹理视图。
+            if (entry.resources?.includes(view)) {
                 entry.bindGroup = undefined;
             }
         }

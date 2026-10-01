@@ -479,7 +479,9 @@ const GetMeshTextures = (mesh: MeshLike): TextureResource[] => {
      */
     const IsTextureResource = (texture: TextureResource | undefined): texture is TextureResource =>
         texture !== undefined;
-    return mesh.textures.filter(IsTextureResource);
+    const textures = mesh.textures.filter(IsTextureResource);
+    const customTextures = mesh.material?.values?.textures ?? [];
+    return [...textures, ...customTextures];
 };
 /**
  * 比较两个贴图列表是否包含相同 ID。

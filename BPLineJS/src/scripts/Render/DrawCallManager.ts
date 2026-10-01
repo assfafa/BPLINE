@@ -1,4 +1,5 @@
 import type { Material2d } from "../global-types";
+import Texture from "../Texture";
 import IMesh from "../IMesh";
 import type { MeshLike } from "../Mesh";
 import type Scene from "../Scene";
@@ -256,6 +257,15 @@ class DrawCallManager implements DrawCallManagerLike {
                     }
                     renderPass.setBindGroup(0, binding.group);
                     renderPass.setBindGroup(1, materialBindGroup);
+                    // 具名值按材质布局绑定到第三组。
+                    if (pipelineTemplate.customBindGroupLayout !== undefined) {
+                        const customGroup = this.createCustomBindGroup(device, material, pipelineTemplate);
+                        // 数值或纹理资源未就绪时跳过当前绘制。
+                        if (customGroup === undefined) {
+                            return;
+                        }
+                        renderPass.setBindGroup(2, customGroup);
+                    }
                     const individualStyles: boolean = mesh instanceof IMesh;
                     const hasLine: boolean =
                         geometry.style.wireframe.enabled &&
@@ -362,6 +372,79 @@ class DrawCallManager implements DrawCallManagerLike {
         } else {
             return;
         }
+    }
+    /**
+     * 绑定 group(2) 的具名数值和多张贴图；同名贴图更换只重建 BindGroup。
+     * @param device 当前 WebGPU 设备
+     * @param material 自定义材质
+     * @param template 管线布局
+     * @example
+     * this.createCustomBindGroup(device, material, template);
+     * @returns 自定义绑定组，数值资源未准备好时为 undefined。
+     */
+    private createCustomBindGroup(
+        device: GPUDevice,
+        material: Material2d,
+        template: PipelineTemplateLike,
+    ): GPUBindGroup | undefined {
+        const layout = template.customBindGroupLayout;
+        const values = material.values;
+        const resources = this.pipeline.customValues.get(material.id);
+        // 材质声明和值缓存都就绪后才能创建 group(2)。
+        if (layout === undefined || values === undefined || resources === undefined) {
+            return undefined;
+        }
+        const entries: GPUBindGroupEntry[] = [];
+        const identities: unknown[] = [layout];
+        // 保持 ShaderValues 声明和 Layout 相同的排序。
+        for (const entry of values.entries) {
+            // 一个 Texture 字段占纹理视图及采样器两个绑定。
+            if (entry.kind === "texture" && entry.value instanceof Texture) {
+                const view = this.pipeline.textures.get(entry.value.id)?.view ?? this.pipeline.fallbackTexture?.view;
+                const sampler = this.samplerManager.get("clamp-to-edge", "clamp-to-edge");
+                // 首帧纹理未上传时允许先使用 Render 的白色回退视图。
+                if (view === undefined || sampler === undefined) {
+                    return undefined;
+                }
+                entries.push({ binding: entry.binding, resource: view });
+                entries.push({ binding: entry.binding + 1, resource: sampler });
+                identities.push(view, sampler);
+            } else {
+                const buffer = resources.buffers.get(entry.name)?.buffer;
+                // 数值缓冲由 BufferManager 在绘制前上传。
+                if (buffer === undefined) {
+                    return undefined;
+                }
+                entries.push({ binding: entry.binding, resource: { buffer } });
+                identities.push(buffer);
+            }
+        }
+        let changed = resources.bindGroup === undefined || resources.layout !== layout;
+        // 已缓存的组只在资源身份变化时需要重建。
+        if (!changed && resources.resources !== undefined) {
+            // 数量变化意味着声明布局发生变化。
+            if (resources.resources.length !== identities.length) {
+                changed = true;
+            } else {
+                // 比较 Layout、Buffer、TextureView 与 Sampler 的实际引用。
+                for (let index = 0; index < identities.length; index += 1) {
+                    // 任一资源被重新分配时创建新的 BindGroup。
+                    if (resources.resources[index] === identities[index]) {
+                        // 保持当前绑定身份。
+                    } else {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+        }
+        // GPUBuffer 内容写入不触发这里的资源身份变化。
+        if (changed) {
+            resources.bindGroup = device.createBindGroup({ layout, entries });
+            resources.layout = layout;
+            resources.resources = identities;
+        }
+        return resources.bindGroup;
     }
     /**
      * 一次绑定 Mesh 实例样式 Storage 与三种几何的贴图，Sampler 各自独立。

@@ -108,6 +108,13 @@ class TextureManager implements TextureManagerLike {
                     entry.bindGroup = undefined;
                 }
             }
+            // 自定义材质的具名贴图也可能引用旧视图。
+            for (const entry of this.pipeline.customValues.values()) {
+                // 只有引用旧视图的绑定组需要重建。
+                if (entry.resources?.includes(resource.view)) {
+                    entry.bindGroup = undefined;
+                }
+            }
             resource.texture.destroy();
         } else {
             return;

@@ -108,6 +108,17 @@ const loadTextPage = async () => {
 };
 
 /**
+ * Load the custom material example only when selected.
+ * @example
+ * await loadCustomMaterialPage();
+ * @returns Custom material route component.
+ */
+const loadCustomMaterialPage = async () => {
+    const page = await import("@/pages/example/Material/Custom/index.tsx");
+    return { Component: page.default };
+};
+
+/**
  * Load the instanced mesh example on demand.
  * @example
  * await loadInstancePage();
@@ -196,6 +207,10 @@ export const router = createHashRouter([
             {
                 path: "example/basic-mesh/text",
                 lazy: loadTextPage,
+            },
+            {
+                path: "example/material/custom",
+                lazy: loadCustomMaterialPage,
             },
             {
                 path: "example/instancing/imesh",
