@@ -1,0 +1,5 @@
+import{n as e}from"./index-J8u9icNN.js";import t from"./reference-DhmTcxX_.js";import{t as n}from"./types-DQN6DUYN.js";var r={title:`ObjectNode`,intro:{cn:`场景树节点的变换基类。Mesh、Group、Camera 都继承它；通常通过子类使用。`,en:`Transform base for scene nodes. Mesh, Group, and Camera inherit it; use it through those classes in most cases.`},code:`import { ObjectNode } from "bplinejs";
+
+const node = new ObjectNode(10, 20);
+node.position.set(30, 40);
+node.rotation = Math.PI / 4;`,properties:[n(`position: Vec2; rotation: number; scale: Vec2`,`局部位置、弧度旋转和缩放。`,`Local position, rotation in radians, and scale.`),n(`parent: AddObject | null`,`父节点；分组操作会维护此关系。`,`Parent node, maintained by grouping operations.`),n(`order: number`,`同层绘制顺序。`,`Draw order among siblings.`),n(`matrix: Mat3; worldMatrix: Mat3`,`局部变换矩阵和组合父级后的世界矩阵。`,`Local and parent-composed world transform matrices.`)],methods:[n(`new ObjectNode(x: number, y: number)`,`创建位于指定坐标的节点。`,`Create a node at the selected coordinates.`),n(`dispose(): void`,`解除变换订阅与父级关联。`,`Release transform subscriptions and parent linkage.`)]},i=e(),a=()=>(0,i.jsx)(t,{config:r});export{a as default};

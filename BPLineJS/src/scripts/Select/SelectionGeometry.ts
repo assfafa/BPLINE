@@ -1,3 +1,4 @@
+import { CreateRectLineGeometry } from "bpmatrixjs/Geometry/Rect";
 import { Vec2 } from "bpmatrixjs/Math";
 import type { Mat3 } from "bpmatrixjs/Math";
 import type Camera from "../Camera";
@@ -6,7 +7,6 @@ import Poly2D from "../Geometry/Poly2D";
 import Rect2D from "../Geometry/Rect2D";
 import type Mesh from "../Mesh";
 import type Render from "../Render";
-import { CreateRectFootprint, CreateWorldOutline } from "./RectSelectTool/RectSelectGeometry";
 import type { SelectPoint } from "./RectSelectTool/RectSelectGeometry";
 
 interface SelectableVertex {
@@ -120,7 +120,7 @@ const CreateFillTriangles = (mesh: Mesh): SelectTriangle[] => {
 };
 
 /**
- * 生成保留原始顶点编号的轮廓，矩形圆角的边使用采样路径。
+ * 生成保留轮廓顶点编号的世界坐标路径。
  * @param mesh 待查询的普通 Mesh。
  * @example
  * const contours = CreateContours(mesh);
@@ -129,16 +129,19 @@ const CreateFillTriangles = (mesh: Mesh): SelectTriangle[] => {
 const CreateContours = (mesh: Mesh): SelectableContour[] => {
     const geometry = mesh.data;
     const contours: SelectableContour[] = [];
-    // 各几何类型的编辑轮廓不同，先处理有原始边界定义的形状。
+    // 各几何类型的轮廓来源不同，矩形直接复用其生成的 line-list 路径。
     if (geometry instanceof Rect2D) {
-        const footprint = CreateRectFootprint(mesh);
-        // 退化矩形没有有效的可选择轮廓。
-        if (footprint !== undefined) {
-            const outline = CreateWorldOutline(footprint);
+        const line = CreateRectLineGeometry(geometry.width, geometry.height, geometry.radius);
+        const vertexCount = line.index.length / 2;
+        // line-list 的最后一个坐标是闭合接缝，不能重复报告首点。
+        if (vertexCount > 0) {
+            const matrix = mesh.ensureWorldMatrix();
             const vertices: SelectableVertex[] = [];
-            // 圆角按轮廓段编号，直角矩形直接得到四条边。
-            for (let index = 0; index < outline.length; index += 1) {
-                vertices.push({ index, contourIndex: 0, position: outline[index] });
+            // 顶点和边都沿用实际几何的分段数及顺序。
+            for (let index = 0; index < vertexCount; index += 1) {
+                const offset = index * 2;
+                const position = TransformPoint(matrix, line.geometry[offset], line.geometry[offset + 1]);
+                vertices.push({ index, contourIndex: 0, position });
             }
             contours.push({ vertices, closed: true });
         }
@@ -216,49 +219,28 @@ const CreateContours = (mesh: Mesh): SelectableContour[] => {
 };
 
 /**
- * 提取可编辑关键顶点，重复索引只返回一次。
+ * 提取轮廓顶点，重复索引只返回一次。
  * @param mesh 待查询的普通 Mesh。
  * @example
  * const vertices = CreateSelectableVertices(mesh);
  * @returns 带顶点编号和世界坐标的列表。
  */
 const CreateSelectableVertices = (mesh: Mesh): SelectableVertex[] => {
-    const geometry = mesh.data;
-    // 圆角矩形的编辑关键点仍是四个原始矩形角，不是圆角采样点。
-    if (geometry instanceof Rect2D) {
-        const matrix = mesh.ensureWorldMatrix();
-        const halfWidth = geometry.width * 0.5;
-        const halfHeight = geometry.height * 0.5;
-        const localCorners = [
-            [-halfWidth, -halfHeight],
-            [halfWidth, -halfHeight],
-            [halfWidth, halfHeight],
-            [-halfWidth, halfHeight],
-        ];
-        const corners: SelectableVertex[] = [];
-        // 四个角按原始矩形顺序编号。
-        for (let index = 0; index < localCorners.length; index += 1) {
-            const local = localCorners[index];
-            corners.push({ index, contourIndex: 0, position: TransformPoint(matrix, local[0], local[1]) });
-        }
-        return corners;
-    } else {
-        const vertices: SelectableVertex[] = [];
-        const seen = new Set<number>();
-        // 多个三角形共享的顶点按原始编号只报告一次。
-        for (const contour of CreateContours(mesh)) {
-            // 单个轮廓的顶点保留它在原始几何中的身份。
-            for (const vertex of contour.vertices) {
-                if (seen.has(vertex.index)) {
-                    // 已经报告过的索引保持第一次出现的轮廓编号。
-                } else {
-                    seen.add(vertex.index);
-                    vertices.push(vertex);
-                }
+    const vertices: SelectableVertex[] = [];
+    const seen = new Set<number>();
+    // 多个三角形共享的顶点按原始编号只报告一次。
+    for (const contour of CreateContours(mesh)) {
+        // 单个轮廓的顶点保留它在原始几何中的身份。
+        for (const vertex of contour.vertices) {
+            if (seen.has(vertex.index)) {
+                // 已经报告过的索引保持第一次出现的轮廓编号。
+            } else {
+                seen.add(vertex.index);
+                vertices.push(vertex);
             }
         }
-        return vertices;
     }
+    return vertices;
 };
 
 /**

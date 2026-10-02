@@ -4,8 +4,8 @@ import type { ReferenceConfig } from "@/pages/docs/reference/types.ts";
 export const config: ReferenceConfig = {
     title: "Select",
     intro: {
-        cn: "统一查询普通 Mesh 的实体面、轮廓边和关键顶点，并按当前绘制层级整理结果。",
-        en: "Query faces, contour edges, and key vertices on ordinary Mesh objects, then sort matches by draw order.",
+        cn: "统一查询普通 Mesh 的实体面、轮廓边和轮廓顶点，并按当前绘制层级整理结果。",
+        en: "Query faces, contour edges, and contour vertices on ordinary Mesh objects, then sort matches by draw order.",
     },
     detail: {
         cn: "SelectPicker 使用鼠标事件的 clientX/clientY；Selector 接收可不在场景中的 Rect2D、Poly2D 或 NGon2D Mesh 作为选择区域。left/right 的拖框方向由调用方设置；选择器本身不跟踪拖动。当前不处理 IMesh 实例。",

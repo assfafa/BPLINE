@@ -15,7 +15,7 @@ interface PointSelection {
     readonly distance: number;
 }
 
-/** 普通 Mesh 原始关键顶点的屏幕半径点选工具。 */
+/** 普通 Mesh 轮廓顶点的屏幕半径点选工具。 */
 class PointSelectTool {
     private readonly scene: Scene;
     private readonly render: Render;
@@ -70,7 +70,7 @@ class PointSelectTool {
     }
 
     /**
-     * 查询指针半径内的关键顶点，靠上的 Mesh 排在前面。
+     * 查询指针半径内的轮廓顶点，靠上的 Mesh 排在前面。
      * @param event 浏览器鼠标事件，使用 clientX/clientY。
      * @example
      * const vertices = select.SelectPicker(event);
@@ -95,7 +95,7 @@ class PointSelectTool {
                         const dx = point.x - projected.x;
                         const dy = point.y - projected.y;
                         const distanceSquared = dx * dx + dy * dy;
-                        // 只返回屏幕误差半径内的原始顶点。
+                        // 只返回屏幕误差半径内的实际轮廓顶点。
                         if (distanceSquared <= radiusSquared) {
                             matches.push({
                                 mesh,

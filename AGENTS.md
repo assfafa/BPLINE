@@ -8,11 +8,6 @@
 - Preserve useful source comments/JSDoc and local verification examples; these are not public documentation. Keep agent notes concise and update them only for durable working rules, not as a per-task changelog.
 - Never publish npm packages, deploy GitHub Pages or push Git commits without an explicit request.
 
-## Next Release Reminder (Temporary)
-
-- `Mesh.bounding` and `Mesh.boundingBox` belong to the current unreleased changes. During the next release, include their behavior and usage in the release notes and update the corresponding API explanation and example in the `Example` project.
-- After that release and its example updates are complete, remove this temporary section from `AGENTS.md`.
-
 ## Readability
 
 - Prefer explicit, multiline control flow over compact expressions. Do not use ternaries or negated exit guards; keep the normal work in the `if` branch and use `else` for exits when necessary.

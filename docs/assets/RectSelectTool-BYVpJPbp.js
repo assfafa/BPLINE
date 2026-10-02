@@ -1,0 +1,1 @@
+import{n as e}from"./index-J8u9icNN.js";import t from"./reference-DhmTcxX_.js";import{o as n}from"./toolConfigs-Czgg6QUh.js";var r=e(),i=()=>(0,r.jsx)(t,{config:n});export{i as default};

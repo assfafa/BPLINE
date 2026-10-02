@@ -66,7 +66,7 @@ export const baseConfig = createAreaConfig("BaseSelectTool", "Base2D", "直接�
 export const lineConfig: ReferenceConfig = {
     title: "LineSelectTool",
     intro: { cn: "按屏幕像素误差半径点选普通 Mesh 的轮廓边。", en: "Pick contour edges on ordinary meshes within a screen-pixel tolerance." },
-    detail: { cn: "每条边单独返回 mesh、edgeIndex、contourIndex、世界端点与像素距离；没有面积框选方法。", en: "Each edge result contains mesh, edgeIndex, contourIndex, world endpoints, and pixel distance. There is no area-selection method." },
+    detail: { cn: "每条边单独返回 mesh、edgeIndex、contourIndex、世界端点与像素距离。Rect2D 使用与生成几何一致的圆角线段；没有面积框选方法。", en: "Each edge result contains mesh, edgeIndex, contourIndex, world endpoints, and pixel distance. Rect2D uses the same rounded segments as its generated geometry. There is no area-selection method." },
     code: `import { LineSelectTool } from "bplinejs";
 
 const tool = new LineSelectTool(scene, render, camera, 10);
@@ -84,8 +84,8 @@ const edges = tool.SelectPicker(mouseEvent);`,
 
 export const pointConfig: ReferenceConfig = {
     title: "PointSelectTool",
-    intro: { cn: "按屏幕像素误差半径点选普通 Mesh 的关键顶点。", en: "Pick key vertices on ordinary meshes within a screen-pixel tolerance." },
-    detail: { cn: "每个顶点单独返回 mesh、vertexIndex、contourIndex、世界位置与像素距离；没有面积框选方法。", en: "Each vertex result contains mesh, vertexIndex, contourIndex, world position, and pixel distance. There is no area-selection method." },
+    intro: { cn: "按屏幕像素误差半径点选普通 Mesh 的轮廓顶点。", en: "Pick contour vertices on ordinary meshes within a screen-pixel tolerance." },
+    detail: { cn: "每个顶点单独返回 mesh、vertexIndex、contourIndex、世界位置与像素距离。Rect2D 的圆角采样顶点也可选；没有面积框选方法。", en: "Each vertex result contains mesh, vertexIndex, contourIndex, world position, and pixel distance. Rounded Rect2D vertices are included. There is no area-selection method." },
     code: `import { PointSelectTool } from "bplinejs";
 
 const tool = new PointSelectTool(scene, render, camera, 10);
@@ -96,7 +96,7 @@ const vertices = tool.SelectPicker(mouseEvent);`,
     ],
     methods: [
         entry("new PointSelectTool(scene: Scene, render: Render, camera: Camera, radius?: number)", "创建顶点选择器。", "Create a vertex selector."),
-        entry("SelectPicker(event: MouseEvent): PointSelection[]", "返回半径内的关键顶点，包含 Mesh、编号、世界位置和距离。", "Return vertices within the radius, including mesh, indices, world position, and distance."),
+        entry("SelectPicker(event: MouseEvent): PointSelection[]", "返回半径内的轮廓顶点，包含 Mesh、编号、世界位置和距离。", "Return contour vertices within the radius, including mesh, indices, world position, and distance."),
     ],
     links: [{ label: "Select", to: "/docs/bpline/select" }],
 };
