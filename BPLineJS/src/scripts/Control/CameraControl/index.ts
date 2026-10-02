@@ -21,6 +21,7 @@ interface CameraControlOptions {
     render: Render; // 渲染器
     is: boolean; //控制器总开关
     drag: boolean; // 是否开启拖动相机控制
+    leftDrag: boolean; // 是否允许鼠标左键拖动，不影响触屏，同时受 drag 控制
     rightDrag: boolean; // 是否允许右键拖动，同时受 drag 控制
     inertia: boolean; // 是否启用松手后的动量动画
     damp: number; // 每 100ms 保留的动量比例，范围 0 到 1，不包含 1
@@ -41,6 +42,8 @@ class CameraControl implements CameraControlOptions {
     startEvent: Vec2;
     startCamera: Vec2;
     drag: boolean;
+    /** 是否允许鼠标左键拖动，默认开启；不影响触屏手势。 */
+    public leftDrag: boolean = true;
     /** 是否允许右键像左键一样拖动，默认开启；drag 是拖动总开关。 */
     public rightDrag: boolean = true;
     /** 是否启用平移、旋转、缩放惯性，默认开启；关闭后下次 update 立即停止。 */
@@ -155,7 +158,10 @@ class CameraControl implements CameraControlOptions {
     private _startMove(e: MouseEvent): void {
         this.focus.set(e.clientX, e.clientY);
         // 拖动激活时维护鼠标下的世界坐标，避免缩放后跳位。
-        if (this.isActive && this.drag && (this._mouseButton === 0 || this.rightDrag)) {
+        const leftMouseDrag = this._mouseButton === 0 && this.leftDrag;
+        const rightMouseDrag = this._mouseButton === 2 && this.rightDrag;
+        // 左右键各自受开关控制，触屏路径不读取这两个鼠标开关。
+        if (this.isActive && this.drag && (leftMouseDrag || rightMouseDrag)) {
             this._moveToAnchor(this.focus, this._dragWorld);
         }
     }
@@ -193,8 +199,9 @@ class CameraControl implements CameraControlOptions {
                 this._beginMotion();
             }
             this._scheduleTouch();
-        } else if ((e.button === 0 || (e.button === 2 && this.rightDrag)) && this._touches.size === 0) {
-            // 右键复用左键拖动，其他鼠标按键不接管。
+        } else if (this._touches.size === 0 &&
+            ((e.button === 0 && this.leftDrag) || (e.button === 2 && this.rightDrag))) {
+            // 鼠标左右键独立接管拖动，其他按键仍交给浏览器。
             this._mouseKey = e.pointerId;
             this._mouseButton = e.button;
             this.render.container.setPointerCapture(e.pointerId);

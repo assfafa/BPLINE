@@ -1,0 +1,1 @@
+import{a as e,c as t,d as n,l as r,o as i,s as a,u as o}from"./lil-gui.esm-BEHuxiGy.js";var s=class extends n{type=`BaseMaterial`;constructor(n){super(n),this.rectVertexShader=o,this.rectFragmentShader=r,this.polyVertexShader=t,this.polyFragmentShader=a,this.ngonVertexShader=i,this.ngonFragmentShader=e,this.updateKey()}};export{s as t};

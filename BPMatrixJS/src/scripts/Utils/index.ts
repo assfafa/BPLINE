@@ -14,5 +14,13 @@ export { ConvertEventToCanvasCoord, GetDevicePixelRatio, GetInner } from "./Inne
 export { UUID } from "./UUID.js";
 export { Clamp };
 export { Time } from "./Time.js";
+export {
+    ContainsTrianglePoint,
+    HasSeparatingAxis,
+    SegmentDistanceSquared,
+    SignedDoubleArea,
+    TriangleOverlapArea,
+} from "./PlanarGeometry.js";
+export type { Point2D, Triangle2D } from "./PlanarGeometry.js";
 export type { CanvasCoord, InnerSize } from "./Inner.js";
 export type { TimeLike, TimeUpdateFn } from "./Time.js";

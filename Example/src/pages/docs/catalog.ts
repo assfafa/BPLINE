@@ -69,8 +69,7 @@ export const lineDocumentation: readonly DocumentationItem[] = [
     group("Control", [
         page("CameraControl", "/docs/bpline/control/camera-control", "BPLine/Control/CameraControl"),
     ]),
-    group("Geometry", [
-        page("Geo", "/docs/bpline/geometry/geo", "BPLine/Geometry/Geo"),
+    page("Geometry", "/docs/bpline/geometry", "BPLine/Geometry/Geo", [
         page("Base2D", "/docs/bpline/geometry/base2d", "BPLine/Geometry/Base2D"),
         page("Rect2D", "/docs/bpline/geometry/rect2d", "BPLine/Geometry/Rect2D"),
         page("Poly2D", "/docs/bpline/geometry/poly2d", "BPLine/Geometry/Poly2D"),
@@ -79,8 +78,7 @@ export const lineDocumentation: readonly DocumentationItem[] = [
     ]),
     page("Group", "/docs/bpline/group", "BPLine/Group"),
     page("IMesh", "/docs/bpline/imesh", "BPLine/IMesh"),
-    group("Material", [
-        page("Material", "/docs/bpline/material/material", "BPLine/Material/Material"),
+    page("Material", "/docs/bpline/material", "BPLine/Material/Material", [
         page("BaseMaterial", "/docs/bpline/material/base-material", "BPLine/Material/BaseMaterial"),
         page("CompositeMaterial", "/docs/bpline/material/composite-material", "BPLine/Material/CompositeMaterial"),
         page("WGSLMaterial", "/docs/bpline/material/wgsl-material", "BPLine/Material/WGSLMaterial"),
@@ -90,9 +88,16 @@ export const lineDocumentation: readonly DocumentationItem[] = [
     page("Raws", "/docs/bpline/raws", "BPLine/Raws"),
     page("Render", "/docs/bpline/render", "BPLine/Render"),
     page("Scene", "/docs/bpline/scene", "BPLine/Scene"),
+    page("Select", "/docs/bpline/select", "BPLine/Select", [
+        page("RectSelectTool", "/docs/bpline/select/rect", "BPLine/Select/RectSelectTool"),
+        page("NGonSelectTool", "/docs/bpline/select/ngon", "BPLine/Select/NGonSelectTool"),
+        page("PolySelectTool", "/docs/bpline/select/poly", "BPLine/Select/PolySelectTool"),
+        page("BaseSelectTool", "/docs/bpline/select/base", "BPLine/Select/BaseSelectTool"),
+        page("LineSelectTool", "/docs/bpline/select/line", "BPLine/Select/LineSelectTool"),
+        page("PointSelectTool", "/docs/bpline/select/point", "BPLine/Select/PointSelectTool"),
+    ]),
     page("Font", "/docs/bpline/font", "BPLine/Font"),
-    group("Style", [
-        page("Style", "/docs/bpline/style/style", "BPLine/Style/Style"),
+    page("Style", "/docs/bpline/style", "BPLine/Style/Style", [
         page("SolidStyle", "/docs/bpline/style/solid-style", "BPLine/Style/SolidStyle"),
         page("WireframeStyle", "/docs/bpline/style/wireframe-style", "BPLine/Style/WireframeStyle"),
         page("EdgeStyle", "/docs/bpline/style/edge-style", "BPLine/Style/EdgeStyle"),

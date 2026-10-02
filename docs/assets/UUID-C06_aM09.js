@@ -1,3 +1,0 @@
-import{n as e}from"./index-DY15zU6K.js";import t from"./reference-Gwz-cIfE.js";import{t as n}from"./types-DQN6DUYN.js";var r={title:`UUID`,intro:{cn:`生成标识字符串，适合为对象和本地记录分配 ID。`,en:`Generate an identifier string for objects and local records.`},code:`import { UUID } from "bpmatrixjs/Utils";
-
-const id = UUID();`,methods:[n(`UUID(): string`,`返回新生成的 UUID 字符串。`,`Return a newly generated UUID string.`)]},i=e(),a=()=>(0,i.jsx)(t,{config:r});export{a as default};

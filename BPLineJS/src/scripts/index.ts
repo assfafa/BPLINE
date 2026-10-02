@@ -17,6 +17,13 @@ import Mesh from "./Mesh";
 import ObjectNode from "./Object";
 import Render from "./Render";
 import Scene from "./Scene";
+import Select from "./Select";
+import RectSelectTool from "./Select/RectSelectTool";
+import NGonSelectTool from "./Select/NGonSelectTool";
+import PolySelectTool from "./Select/PolySelectTool";
+import BaseSelectTool from "./Select/BaseSelectTool";
+import LineSelectTool from "./Select/LineSelectTool";
+import PointSelectTool from "./Select/PointSelectTool";
 import Raws from "./Raws";
 import Texture from "./Texture";
 import { Font, Text } from "./Text";
@@ -41,6 +48,13 @@ export {
     NGon2D,
     Render,
     Scene,
+    Select,
+    RectSelectTool,
+    NGonSelectTool,
+    PolySelectTool,
+    BaseSelectTool,
+    LineSelectTool,
+    PointSelectTool,
     Raws,
     Texture,
     Font,
@@ -89,7 +103,7 @@ export type {
     PixelAligned,
     ShadersLike,
 } from "./Material/Material";
-export type { MeshLike } from "./Mesh";
+export type { MeshBoundingBox, MeshBoundingRect, MeshLike } from "./Mesh";
 export type { AddObject, Geometry2d, Material2d } from "./global-types";
 export type { ObjectNodeLike } from "./Object";
 export type {
@@ -115,6 +129,10 @@ export type {
     TextureManagerLike,
 } from "./Render";
 export type { DrawList, GeometryList, MaterialList, SceneLike, TextureList } from "./Scene";
+export type { RectSelectionMode } from "./Select/RectSelectTool";
+export type { SelectResult, SelectSortDirection } from "./Select";
+export type { LineSelection } from "./Select/LineSelectTool";
+export type { PointSelection } from "./Select/PointSelectTool";
 export type { TextureLike, TextureSource, TextureSubscriber } from "./Texture";
 export type { TextGeometryFactory } from "./Text";
 export type { Text2DLike, Text2DOptions, TextWritingMode } from "./Text";

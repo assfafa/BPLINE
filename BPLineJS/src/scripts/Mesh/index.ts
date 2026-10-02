@@ -6,12 +6,30 @@ import type { GroupLike } from "../Group";
 import type { GeoData, GeometrySubscriber } from "../Geometry/Geo";
 import type { MaterialChange, MaterialSubscriber } from "../Material/Material";
 import type { TextureResource } from "../Texture/Layers";
+import type { Mat3 } from "bpmatrixjs/Math/Mat3";
 import type { VersionedMath } from "bpmatrixjs/Math";
+
+/** 左下角坐标及轴向尺寸，局部和世界边界均使用此结构。 */
+interface MeshBoundingRect {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+}
+
+/** Mesh 自身几何在局部空间和世界空间中的轴向包围盒。 */
+interface MeshBoundingBox {
+    readonly local: MeshBoundingRect;
+    readonly world: MeshBoundingRect;
+}
+
 interface MeshLike extends GroupLike, GeometrySubscriber, MaterialSubscriber {
     data: Geometry2d | undefined;
     material: Material2d | undefined;
     order: number;
     style: Style | undefined;
+    bounding: boolean;
+    readonly boundingBox: MeshBoundingBox | null;
     readonly count: number;
     readonly capacity: number;
     readonly textures: readonly (TextureResource | undefined)[];
@@ -66,6 +84,12 @@ class Mesh extends Group implements MeshLike {
      */
     private _material: Material2d | undefined;
     private _style: Style | undefined;
+    private _bounding: boolean = false;
+    private _boundingBox: MeshBoundingBox | null = null;
+    private _boundingGeometry: Geometry2d | undefined;
+    private _boundingGeometryVersion: number = -1;
+    private _boundingWorldMatrix: Mat3 | undefined;
+    private _boundingWorldMatrixVersion: number = -1;
     protected _matrixVersion: number = 0;
     protected _styleVersion: number = 0;
     protected _stylePending: boolean = true;
@@ -161,6 +185,142 @@ class Mesh extends Group implements MeshLike {
             this.updateResources();
         } else {
             return;
+        }
+    }
+    /**
+     * 是否启用自身几何的包围盒计算，默认关闭。
+     * @example
+     * const enabled = mesh.bounding;
+     * @returns 是否启用包围盒计算。
+     */
+    public get bounding(): boolean {
+        return this._bounding;
+    }
+    /**
+     * 开启或关闭包围盒计算；变化时更新 Mesh 输入版本。
+     * @param value 是否计算包围盒。
+     * @example
+     * mesh.bounding = true;
+     * @returns 无返回值。
+     */
+    public set bounding(value: boolean) {
+        // 开关变化才清除旧快照，避免重复赋值触发无意义的版本更新。
+        if (this._bounding !== value) {
+            this._bounding = value;
+            this._boundingBox = null;
+            this._boundingGeometry = undefined;
+            this._boundingWorldMatrix = undefined;
+            this.updateVersion();
+        } else {
+            return;
+        }
+    }
+    /**
+     * 按需获取局部及世界坐标轴向包围盒；x/y 是最小坐标。
+     * 关闭计算或几何没有顶点时返回 null，不包含子节点。
+     * @example
+     * const bounds = mesh.boundingBox;
+     * @returns 当前几何的包围盒，或 null。
+     */
+    public get boundingBox(): MeshBoundingBox | null {
+        // 关闭时不生成几何，也不更新世界矩阵。
+        if (this._bounding) {
+            const geometry = this._data;
+            // Mesh 可能临时没有几何；此时不能沿用旧资源的边界。
+            if (geometry !== undefined) {
+                geometry.ensureGeometry();
+                const worldMatrix = this.ensureWorldMatrix();
+                // 几何或自身、父级变换变化后才重新遍历顶点。
+                if (
+                    this._boundingGeometry !== geometry ||
+                    this._boundingGeometryVersion !== geometry.version ||
+                    this._boundingWorldMatrix !== worldMatrix ||
+                    this._boundingWorldMatrixVersion !== worldMatrix.version
+                ) {
+                    this._boundingBox = this.createBoundingBox(geometry, worldMatrix);
+                    this._boundingGeometry = geometry;
+                    this._boundingGeometryVersion = geometry.version;
+                    this._boundingWorldMatrix = worldMatrix;
+                    this._boundingWorldMatrixVersion = worldMatrix.version;
+                }
+            } else {
+                this._boundingBox = null;
+                this._boundingGeometry = undefined;
+            }
+        }
+        return this._boundingBox;
+    }
+    /**
+     * 从三角面和线框顶点同时计算两个坐标系的轴向范围。
+     * @param geometry 当前 Mesh 的几何资源。
+     * @param worldMatrix 已更新的世界矩阵。
+     * @example
+     * const bounds = this.createBoundingBox(geometry, worldMatrix);
+     * @returns 几何边界；没有有效顶点时为 null。
+     */
+    private createBoundingBox(geometry: Geometry2d, worldMatrix: Mat3): MeshBoundingBox | null {
+        const matrix = worldMatrix.data;
+        // 非有限变换无法形成有效的世界轴向边界。
+        if (matrix.every(Number.isFinite)) {
+            let localMinX = Number.POSITIVE_INFINITY;
+            let localMinY = Number.POSITIVE_INFINITY;
+            let localMaxX = Number.NEGATIVE_INFINITY;
+            let localMaxY = Number.NEGATIVE_INFINITY;
+            let worldMinX = Number.POSITIVE_INFINITY;
+            let worldMinY = Number.POSITIVE_INFINITY;
+            let worldMaxX = Number.NEGATIVE_INFINITY;
+            let worldMaxY = Number.NEGATIVE_INFINITY;
+            const vertexSources = [geometry.geometry, geometry.linePoints?.geometry];
+            // 两种顶点来源共同决定 Mesh 自身的边界，不重复计算重合点也无碍。
+            for (const vertices of vertexSources) {
+                // 禁用的几何分区没有顶点，继续处理其他分区。
+                if (vertices !== undefined) {
+                    // 顶点数组按 x/y 成对存储，逐点更新局部和世界范围。
+                    for (let offset = 0; offset + 1 < vertices.length; offset += 2) {
+                        const x = vertices[offset];
+                        const y = vertices[offset + 1];
+                        const worldX = matrix[0] * x + matrix[3] * y + matrix[6];
+                        const worldY = matrix[1] * x + matrix[4] * y + matrix[7];
+                        // 非有限顶点或溢出的变换结果不能用于包围盒。
+                        if (
+                            Number.isFinite(x) &&
+                            Number.isFinite(y) &&
+                            Number.isFinite(worldX) &&
+                            Number.isFinite(worldY)
+                        ) {
+                            localMinX = Math.min(localMinX, x);
+                            localMinY = Math.min(localMinY, y);
+                            localMaxX = Math.max(localMaxX, x);
+                            localMaxY = Math.max(localMaxY, y);
+                            worldMinX = Math.min(worldMinX, worldX);
+                            worldMinY = Math.min(worldMinY, worldY);
+                            worldMaxX = Math.max(worldMaxX, worldX);
+                            worldMaxY = Math.max(worldMaxY, worldY);
+                        }
+                    }
+                }
+            }
+            // 完全没有有效顶点的几何保持空边界。
+            if (Number.isFinite(localMinX)) {
+                return {
+                    local: {
+                        x: localMinX,
+                        y: localMinY,
+                        width: localMaxX - localMinX,
+                        height: localMaxY - localMinY,
+                    },
+                    world: {
+                        x: worldMinX,
+                        y: worldMinY,
+                        width: worldMaxX - worldMinX,
+                        height: worldMaxY - worldMinY,
+                    },
+                };
+            } else {
+                return null;
+            }
+        } else {
+            return null;
         }
     }
     /**
@@ -462,4 +622,4 @@ class Mesh extends Group implements MeshLike {
     }
 }
 export default Mesh;
-export type { MeshLike };
+export type { MeshBoundingBox, MeshBoundingRect, MeshLike };

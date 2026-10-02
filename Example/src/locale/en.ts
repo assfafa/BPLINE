@@ -31,6 +31,7 @@ export const en = {
         imageTexture: "Image texture",
         controls: "Controls",
         cameraControl: "Camera control",
+        select: "Selection",
     },
     docs: {
         referenceExample: "Example",
@@ -114,6 +115,7 @@ export const en = {
         instanceTitle: "Instanced mesh",
         textureTitle: "Image texture",
         controlTitle: "Camera control",
+        selectTitle: "Unified selection",
         controlHint: "Drag to pan · Scroll to zoom · Pinch to rotate",
         simpleCode: "Short code",
         simplePreview: "Simple result",

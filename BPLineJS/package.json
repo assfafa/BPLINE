@@ -1,6 +1,6 @@
 {
     "name": "bplinejs",
-    "version": "0.1.103",
+    "version": "0.1.104-beta.11",
     "description": "A WebGPU-first 2D rendering library focused on line and border rendering.",
     "type": "module",
     "main": "./lib/index.js",
@@ -99,6 +99,34 @@
             "types": "./lib/Scene/index.d.ts",
             "import": "./lib/Scene/index.js"
         },
+        "./Select": {
+            "types": "./lib/Select/index.d.ts",
+            "import": "./lib/Select/index.js"
+        },
+        "./Select/RectSelectTool": {
+            "types": "./lib/Select/RectSelectTool/index.d.ts",
+            "import": "./lib/Select/RectSelectTool/index.js"
+        },
+        "./Select/NGonSelectTool": {
+            "types": "./lib/Select/NGonSelectTool/index.d.ts",
+            "import": "./lib/Select/NGonSelectTool/index.js"
+        },
+        "./Select/PolySelectTool": {
+            "types": "./lib/Select/PolySelectTool/index.d.ts",
+            "import": "./lib/Select/PolySelectTool/index.js"
+        },
+        "./Select/BaseSelectTool": {
+            "types": "./lib/Select/BaseSelectTool/index.d.ts",
+            "import": "./lib/Select/BaseSelectTool/index.js"
+        },
+        "./Select/LineSelectTool": {
+            "types": "./lib/Select/LineSelectTool/index.d.ts",
+            "import": "./lib/Select/LineSelectTool/index.js"
+        },
+        "./Select/PointSelectTool": {
+            "types": "./lib/Select/PointSelectTool/index.d.ts",
+            "import": "./lib/Select/PointSelectTool/index.js"
+        },
         "./Texture": {
             "types": "./lib/Texture/index.d.ts",
             "import": "./lib/Texture/index.js"
@@ -147,6 +175,6 @@
     },
     "dependencies": {
         "@webgpu/types": "^0.1.71",
-        "bpmatrixjs": "0.1.103"
+        "bpmatrixjs": "0.1.104-beta.11"
     }
 }

@@ -29,6 +29,7 @@ export const cn = {
         imageTexture: "图片贴图",
         controls: "控制器",
         cameraControl: "相机控制器",
+        select: "选择器",
     },
     docs: {
         referenceExample: "示例",
@@ -112,6 +113,7 @@ export const cn = {
         instanceTitle: "实例化网格体",
         textureTitle: "图片贴图",
         controlTitle: "相机控制器",
+        selectTitle: "统一选择器",
         controlHint: "拖拽平移 · 滚轮缩放 · 双指旋转",
         simpleCode: "简洁版代码",
         simplePreview: "简洁版案例效果",

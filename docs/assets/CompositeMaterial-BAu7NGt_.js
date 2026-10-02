@@ -1,0 +1,12 @@
+import{n as e}from"./index-YNW6j57L.js";import t from"./reference-C3TeAsHq.js";import{t as n}from"./types-DQN6DUYN.js";var r={title:`CompositeMaterial`,intro:{cn:`在同一套三角面管线中分别定义实体面、边框面和关键点面的片元函数体。`,en:`Define separate fill, edge, and point fragment function bodies within the shared triangle pipeline.`},detail:{cn:`三个 Shader 字段是返回 vec4f 颜色乘数的 WGSL 函数体，最终与 Style 颜色及分区贴图相乘。留空时各分区返回白色。raw.value 会按名称生成 group(2) 声明，例如 value_tint；Texture 另有 valueSampler_名称。`,en:`Each shader field is a WGSL function body returning a vec4f color multiplier, combined with the Style color and section texture. An empty field returns white. raw.value generates group(2) declarations such as value_tint; Texture fields also have valueSampler_name.`},code:`import { CompositeMaterial, Rect2D, Style } from "bplinejs";
+import { Vec2 } from "bpmatrixjs/Math";
+
+const style = new Style();
+style.solid.enabled = true;
+style.edge.enabled = true;
+style.edge.width = 6;
+const geometry = new Rect2D({ width: 150, height: 100, style });
+const material = new CompositeMaterial(style);
+material.raw.value = { tint: new Vec2(0.2, 0.8), blue: 0.7 };
+material.raw.solidShader = "return vec4f(value_tint, value_blue, 1.0);";
+material.raw.edgeShader = "return vec4f(1.0, 0.5, 0.2, 1.0);";`,properties:[n(`raw.solidShader: string`,`实体面 WGSL 函数体，空值返回白色。`,`Fill WGSL function body; empty means white.`),n(`raw.edgeShader: string`,`实体边框 WGSL 函数体，空值返回白色。`,`Edge WGSL function body; empty means white.`),n(`raw.pointShader: string`,`关键点 WGSL 函数体，空值返回白色。`,`Point WGSL function body; empty means white.`),n(`raw.value: Record<string, ShaderValue>`,`支持 number、Vec2、Mat3、Float32Array 和多个 Texture；字段名生成 value_名称 绑定。`,`Supports number, Vec2, Mat3, Float32Array, and multiple Textures; each name becomes a value_name binding.`)],methods:[n(`new CompositeMaterial(style?: Style)`,`创建基于内置矩形、多边形和正多边形模板的分区材质。`,`Create a section shader material using the built-in shape templates.`),n(`raw.touchValue(name: string): void`,`原地修改 Float32Array 后标记重新上传；同类型赋值会自动处理。`,`Request upload after in-place Float32Array edits; same-type assignments are observed automatically.`)],links:[{label:`Material`,to:`/docs/bpline/material`},{label:`WGSLMaterial`,to:`/docs/bpline/material/wgsl-material`},{label:`Custom shader example`,to:`/example/material/custom`}]},i=e(),a=()=>(0,i.jsx)(t,{config:r});export{a as default};

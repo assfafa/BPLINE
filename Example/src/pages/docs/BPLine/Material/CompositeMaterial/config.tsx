@@ -34,7 +34,7 @@ material.raw.edgeShader = "return vec4f(1.0, 0.5, 0.2, 1.0);";`,
         entry("raw.touchValue(name: string): void", "原地修改 Float32Array 后标记重新上传；同类型赋值会自动处理。", "Request upload after in-place Float32Array edits; same-type assignments are observed automatically."),
     ],
     links: [
-        { label: "Material", to: "/docs/bpline/material/material" },
+        { label: "Material", to: "/docs/bpline/material" },
         { label: "WGSLMaterial", to: "/docs/bpline/material/wgsl-material" },
         { label: "Custom shader example", to: "/example/material/custom" },
     ],

@@ -1,0 +1,102 @@
+import { entry } from "@/pages/docs/reference/types.ts";
+import type { ReferenceConfig } from "@/pages/docs/reference/types.ts";
+
+const areaProperties = [
+    entry("picker: boolean; selector: boolean", "分别控制点选与框选，默认都开启。", "Enable picking and area selection independently; both default to true."),
+    entry("selectionMode: 'all' | 'left' | 'right' | 'any'", "all/left 要求全包，any/right 接受相交；默认 all。方向由调用方判断。", "all/left require containment; any/right accept intersection. Defaults to all; the caller determines drag direction."),
+];
+
+const areaMethods = [
+    entry("SelectPicker(event: MouseEvent): Mesh[]", "返回鼠标下本类型的普通 Mesh。", "Return ordinary Mesh objects of this geometry type under the pointer."),
+    entry("Selector(selectionMesh: Mesh): Mesh[]", "用 Rect2D、Poly2D 或 NGon2D 的实际填充区域选择本类型 Mesh。", "Select this mesh type using the actual fill of a Rect2D, Poly2D, or NGon2D selection Mesh."),
+];
+
+export const rectConfig: ReferenceConfig = {
+    title: "RectSelectTool",
+    intro: { cn: "独立选择普通 Rect2D Mesh，支持圆角轮廓点选与面积框选。", en: "Pick and area-select ordinary Rect2D meshes using their rounded outline." },
+    detail: { cn: "选择区域 Mesh 可以不加入场景；选择框自身不会作为结果返回。", en: "The selection Mesh can stay outside the scene and is excluded from results." },
+    code: `import { RectSelectTool } from "bplinejs";
+
+const tool = new RectSelectTool(scene, render, camera);
+const clicked = tool.SelectPicker(mouseEvent);
+tool.selectionMode = "any";
+const enclosed = tool.Selector(selectionMesh);`,
+    properties: areaProperties,
+    methods: [
+        entry("new RectSelectTool(scene: Scene, render: Render, camera: Camera)", "创建矩形选择器。", "Create a rectangle selector."),
+        ...areaMethods,
+    ],
+    links: [{ label: "Select", to: "/docs/bpline/select" }],
+};
+
+/**
+ * Create one reference for a non-rectangular face selector.
+ * @param name Public selector class name.
+ * @param geometry Public geometry type handled by the selector.
+ * @param cn Chinese introduction.
+ * @param en English introduction.
+ * @example
+ * const config = createAreaConfig("PolySelectTool", "Poly2D", "多边形", "Polygon");
+ * @returns A complete bilingual API reference.
+ */
+const createAreaConfig = (name: string, geometry: string, cn: string, en: string): ReferenceConfig => {
+    return {
+        title: name,
+        intro: { cn: `独立点选与框选普通 ${geometry} Mesh，按实际填充三角面判断命中。`, en: `Pick and area-select ordinary ${geometry} meshes using their actual fill triangles.` },
+        detail: { cn: `默认自动为 ${geometry} 候选开启 bounding；通过统一 Select 使用时只开启一次。`, en: `Candidate ${geometry} meshes enable bounding by default. The combined Select enables bounds only once.` },
+        code: `import { ${name} } from "bplinejs";
+
+const tool = new ${name}(scene, render, camera);
+const clicked = tool.SelectPicker(mouseEvent);
+tool.selectionMode = "any";
+const enclosed = tool.Selector(selectionMesh);`,
+        properties: areaProperties,
+        methods: [
+            entry(`new ${name}(scene: Scene, render: Render, camera: Camera, autoEnableBounding?: boolean)`, `创建${cn}选择器；包围盒自动启用默认 true。`, `Create the ${en.toLowerCase()} selector; automatic bounding defaults to true.`),
+            ...areaMethods,
+        ],
+        links: [{ label: "Select", to: "/docs/bpline/select" }, { label: geometry, to: `/docs/bpline/geometry/${geometry.toLowerCase()}` }],
+    };
+};
+
+export const ngonConfig = createAreaConfig("NGonSelectTool", "NGon2D", "正多边形", "regular polygon");
+export const polyConfig = createAreaConfig("PolySelectTool", "Poly2D", "多边形", "polygon");
+export const baseConfig = createAreaConfig("BaseSelectTool", "Base2D", "直接顶点面", "direct-vertex face");
+
+export const lineConfig: ReferenceConfig = {
+    title: "LineSelectTool",
+    intro: { cn: "按屏幕像素误差半径点选普通 Mesh 的轮廓边。", en: "Pick contour edges on ordinary meshes within a screen-pixel tolerance." },
+    detail: { cn: "每条边单独返回 mesh、edgeIndex、contourIndex、世界端点与像素距离；没有面积框选方法。", en: "Each edge result contains mesh, edgeIndex, contourIndex, world endpoints, and pixel distance. There is no area-selection method." },
+    code: `import { LineSelectTool } from "bplinejs";
+
+const tool = new LineSelectTool(scene, render, camera, 10);
+const edges = tool.SelectPicker(mouseEvent);`,
+    properties: [
+        entry("picker: boolean", "是否启用点选，默认 true。", "Enable picking; defaults to true."),
+        entry("radius: number", "非负有限的屏幕 CSS 像素半径，默认 8。", "Finite nonnegative screen CSS-pixel radius; defaults to 8."),
+    ],
+    methods: [
+        entry("new LineSelectTool(scene: Scene, render: Render, camera: Camera, radius?: number)", "创建边选择器。", "Create an edge selector."),
+        entry("SelectPicker(event: MouseEvent): LineSelection[]", "返回半径内的模型边，包含 Mesh、边编号、轮廓编号、端点和距离。", "Return edges within the radius, including mesh, edge and contour indices, endpoints, and distance."),
+    ],
+    links: [{ label: "Select", to: "/docs/bpline/select" }],
+};
+
+export const pointConfig: ReferenceConfig = {
+    title: "PointSelectTool",
+    intro: { cn: "按屏幕像素误差半径点选普通 Mesh 的关键顶点。", en: "Pick key vertices on ordinary meshes within a screen-pixel tolerance." },
+    detail: { cn: "每个顶点单独返回 mesh、vertexIndex、contourIndex、世界位置与像素距离；没有面积框选方法。", en: "Each vertex result contains mesh, vertexIndex, contourIndex, world position, and pixel distance. There is no area-selection method." },
+    code: `import { PointSelectTool } from "bplinejs";
+
+const tool = new PointSelectTool(scene, render, camera, 10);
+const vertices = tool.SelectPicker(mouseEvent);`,
+    properties: [
+        entry("picker: boolean", "是否启用点选，默认 true。", "Enable picking; defaults to true."),
+        entry("radius: number", "非负有限的屏幕 CSS 像素半径，默认 8。", "Finite nonnegative screen CSS-pixel radius; defaults to 8."),
+    ],
+    methods: [
+        entry("new PointSelectTool(scene: Scene, render: Render, camera: Camera, radius?: number)", "创建顶点选择器。", "Create a vertex selector."),
+        entry("SelectPicker(event: MouseEvent): PointSelection[]", "返回半径内的关键顶点，包含 Mesh、编号、世界位置和距离。", "Return vertices within the radius, including mesh, indices, world position, and distance."),
+    ],
+    links: [{ label: "Select", to: "/docs/bpline/select" }],
+};

@@ -152,6 +152,17 @@ const loadCameraControlPage = async () => {
 };
 
 /**
+ * Load the unified selection example on demand.
+ * @example
+ * await loadSelectPage();
+ * @returns Selection route component.
+ */
+const loadSelectPage = async () => {
+    const page = await import("@/pages/example/Select/index.tsx");
+    return { Component: page.default };
+};
+
+/**
  * Show a translated status while the first lazy route loads.
  * @example
  * <InitialRouteFallback />
@@ -189,6 +200,18 @@ export const router = createHashRouter([
             ...collectDocumentationRoutes(matrixDocumentation),
             ...collectDocumentationRoutes(lineDocumentation),
             {
+                path: "docs/bpline/geometry/geo",
+                element: createElement(Navigate, { to: "/docs/bpline/geometry", replace: true }),
+            },
+            {
+                path: "docs/bpline/material/material",
+                element: createElement(Navigate, { to: "/docs/bpline/material", replace: true }),
+            },
+            {
+                path: "docs/bpline/style/style",
+                element: createElement(Navigate, { to: "/docs/bpline/style", replace: true }),
+            },
+            {
                 path: "example",
                 element: createElement(Navigate, { to: "/example/basic-mesh/rectangle", replace: true }),
             },
@@ -223,6 +246,10 @@ export const router = createHashRouter([
             {
                 path: "example/control/camera",
                 lazy: loadCameraControlPage,
+            },
+            {
+                path: "example/select",
+                lazy: loadSelectPage,
             },
         ],
     },

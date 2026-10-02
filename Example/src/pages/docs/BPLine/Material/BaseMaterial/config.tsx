@@ -18,7 +18,7 @@ const mesh = new Mesh(geometry, material, style);`,
         entry("new BaseMaterial(style?: Style)", "创建内置材质，可传入共享样式。", "Create the built-in material with an optional shared style."),
     ],
     links: [
-        { label: "Material", to: "/docs/bpline/material/material" },
-        { label: "Style", to: "/docs/bpline/style/style" },
+        { label: "Material", to: "/docs/bpline/material" },
+        { label: "Style", to: "/docs/bpline/style" },
     ],
 };

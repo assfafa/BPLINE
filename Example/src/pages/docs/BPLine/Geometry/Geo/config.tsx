@@ -2,7 +2,7 @@ import { entry } from "@/pages/docs/reference/types.ts";
 import type { ReferenceConfig } from "@/pages/docs/reference/types.ts";
 
 export const config: ReferenceConfig = {
-    title: "Geo",
+    title: "Geometry",
     intro: {
         cn: "BPLineJS 几何体的基类，统一管理样式关联和 CPU 几何数据。通常直接创建 Rect2D、Poly2D 或 NGon2D。",
         en: "Base geometry class for style binding and CPU geometry data. Usually create Rect2D, Poly2D, or NGon2D directly.",

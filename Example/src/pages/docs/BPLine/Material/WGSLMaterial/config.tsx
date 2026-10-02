@@ -29,7 +29,7 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
         entry("raw.touchValue(name: string): void", "原地修改 Float32Array 后通知下一帧上传。", "Schedule an upload after in-place Float32Array changes."),
     ],
     links: [
-        { label: "Material", to: "/docs/bpline/material/material" },
+        { label: "Material", to: "/docs/bpline/material" },
         { label: "CompositeMaterial", to: "/docs/bpline/material/composite-material" },
         { label: "Base2D", to: "/docs/bpline/geometry/base2d" },
         { label: "Custom shader example", to: "/example/material/custom" },

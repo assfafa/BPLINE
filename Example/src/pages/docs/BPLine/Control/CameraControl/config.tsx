@@ -16,12 +16,15 @@ if (container) {
     const camera = new Camera(container.clientWidth, container.clientHeight);
     const control = new CameraControl(camera, render);
     control.drag = true;
+    control.leftDrag = false; // Let another tool use the left mouse button.
+    control.rightDrag = true; // Keep right-button camera panning.
     control.zoom = true;
     // Call control.update() in the animation loop.
 }`,
     properties: [
         entry("is: boolean; drag: boolean; zoom: boolean", "控制器总开关，以及拖动和缩放开关。", "Master switch plus drag and zoom switches."),
-        entry("rightDrag: boolean; rotate: boolean", "允许右键拖动与双指旋转。", "Allow right-button drag and two-finger rotation."),
+        entry("leftDrag: boolean; rightDrag: boolean", "分别控制鼠标左键和右键拖动，默认均为 true；两者受 drag 控制，且不改变触屏手势。", "Control left- and right-button mouse dragging independently. Both default to true, obey drag, and leave touch gestures unchanged."),
+        entry("rotate: boolean", "允许双指旋转。", "Allow two-finger rotation."),
         entry("inertia: boolean; damp: number", "启用惯性并设置每 100ms 保留的动量比例。", "Enable inertia and set the momentum retained per 100 ms."),
         entry("zoomRate: number", "鼠标滚轮缩放灵敏度。", "Mouse-wheel zoom sensitivity."),
     ],

@@ -35,7 +35,7 @@ const mesh = new Mesh(geometry, material, false);`,
         entry("setData(options: Base2DOptions): void", "整体替换几何数据；缓冲尺寸不变时复用 GPUBuffer。", "Replace all geometry data; reuse GPU buffers when sizes match."),
     ],
     links: [
-        { label: "Geo", to: "/docs/bpline/geometry/geo" },
+        { label: "Geo", to: "/docs/bpline/geometry" },
         { label: "WGSLMaterial", to: "/docs/bpline/material/wgsl-material" },
         { label: "Custom shader example", to: "/example/material/custom" },
     ],
