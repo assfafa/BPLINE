@@ -163,6 +163,26 @@ const loadSelectPage = async () => {
 };
 
 /**
+ * Load the collection editor example on demand.
+ * @example await loadEditorPage();
+ * @returns Editor route component.
+ */
+const loadEditorPage = async () => {
+    const page = await import("@/pages/example/Editor/index.tsx");
+    return { Component: page.default };
+};
+
+/**
+ * Load the standalone helper grid example on demand.
+ * @example await loadHelperPage();
+ * @returns Helper route component.
+ */
+const loadHelperPage = async () => {
+    const page = await import("@/pages/example/HelperGrid/index.tsx");
+    return { Component: page.default };
+};
+
+/**
  * Show a translated status while the first lazy route loads.
  * @example
  * <InitialRouteFallback />
@@ -250,6 +270,14 @@ export const router = createHashRouter([
             {
                 path: "example/select",
                 lazy: loadSelectPage,
+            },
+            {
+                path: "example/editor",
+                lazy: loadEditorPage,
+            },
+            {
+                path: "example/helper/grid",
+                lazy: loadHelperPage,
             },
         ],
     },

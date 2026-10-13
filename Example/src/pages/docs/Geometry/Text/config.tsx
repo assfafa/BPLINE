@@ -26,6 +26,8 @@ const border = text.createBorderGeometry(3);
 const lines = text.createLineGeometry();
 const points = text.createPointGeometry(2, 4, true, false);`,
     properties: [
+        entry("originPrecision: number", "用户最后设置的字形细分基准。", "Last user-set glyph subdivision baseline."),
+        entry("precision: number", "Text options 的字形曲线细分精度，BPLineJS Text 会传递。", "Glyph curve flattening precision in Text options, forwarded by BPLineJS Text."),
         entry("data: TextGeometryData", "填充顶点、法线、UV、索引和排版度量。", "Fill vertices, normals, UVs, indices, and layout metrics."),
         entry("width; height; advanceWidth: number", "可见包围盒宽高，以及最大排版行宽。", "Visible bounds and maximum advance width."),
         entry("data.anchorX; data.anchorY: number", "按对齐和基线选择的局部锚点；几何仍居中。", "Local alignment anchors; geometry remains centered."),

@@ -1,15 +1,5 @@
 import type { PipelineLike } from "./types";
-interface SamplerManagerLike {
-    /**
-     * 获取或创建指定寻址组合的 Sampler。
-     * @param addressModeU 水平方向寻址方式
-     * @param addressModeV 垂直方向寻址方式
-     * @example
-     * samplerManager.get(addressModeU, addressModeV);
-     * @returns 可复用 Sampler，GPUDevice 尚未就绪时返回 undefined
-     */
-    get(addressModeU: GPUAddressMode, addressModeV: GPUAddressMode): GPUSampler | undefined;
-}
+
 /**
  * 管理当前 Render 对应 GPUDevice 创建的 Sampler 缓存。
  * 相同 U/V 寻址组合在多个材质和 DrawCall 之间复用同一个 GPUSampler。
@@ -60,5 +50,18 @@ class SamplerManager implements SamplerManagerLike {
         }
     }
 }
+
+interface SamplerManagerLike {
+    /**
+     * 获取或创建指定寻址组合的 Sampler。
+     * @param addressModeU 水平方向寻址方式
+     * @param addressModeV 垂直方向寻址方式
+     * @example
+     * samplerManager.get(addressModeU, addressModeV);
+     * @returns 可复用 Sampler，GPUDevice 尚未就绪时返回 undefined
+     */
+    get(addressModeU: GPUAddressMode, addressModeV: GPUAddressMode): GPUSampler | undefined;
+}
+
 export default SamplerManager;
 export type { SamplerManagerLike };

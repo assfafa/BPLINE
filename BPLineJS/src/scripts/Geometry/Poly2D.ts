@@ -1,44 +1,9 @@
-import Poly from "bpmatrixjs/Geometry/Poly";
 import type { PolyNode } from "bpmatrixjs/Geometry/Poly";
-import Geo from "./Geo";
-import type { GeoData, GeoPartDataLike } from "./Geo";
+import Poly from "bpmatrixjs/Geometry/Poly";
 import type Style from "../Style";
-interface Poly2DOptions {
-    /** 默认闭合；开放路径不能启用 style.solid.enabled。 */
-    closed?: boolean;
-}
-interface Poly2DLike extends GeoData {
-    points: Float32Array;
-    closed: boolean;
-    readonly width: number;
-    readonly height: number;
-    readonly perimeter: number;
-}
-/**
- * 验证并复制 [x,y,x,y,...] 输入，防止调用方修改原数组后静默改变几何。
- * @param points 有序单轮廓坐标，只接收 Float32Array
- * @example
- * CopyPoints(points);
- * @returns 自有数组
- */
-const CopyPoints = (points: Float32Array): Float32Array<ArrayBuffer> => {
-    // 区分输入数据形态，使用与实际类型匹配的处理方式。
-    if (!(points instanceof Float32Array)) {
-        throw new TypeError("Poly2D points must be a Float32Array.");
-    }
-    // 区分空数据和有效内容，空集合不创建可绘制资源。
-    if (points.length % 2 !== 0) {
-        throw new RangeError("Poly2D needs complete x/y pairs.");
-    }
-    // 按轮廓顺序处理节点，使顶点属性与生成索引保持对应。
-    for (const value of points) {
-        // 校验数值有效性，防止非有限值进入几何或 GPU 数据。
-        if (!Number.isFinite(value)) {
-            throw new RangeError("Poly2D coordinates must be finite.");
-        }
-    }
-    return new Float32Array(points);
-};
+import type { GeoData, GeoPartDataLike } from "./Geo";
+import Geo from "./Geo";
+
 /** 单轮廓多边形/开放折线，使用通用三角面填充和实体边框，不使用矩形 SDF。 */
 class Poly2D extends Geo implements Poly2DLike {
     /** 对象及管线选择类型。 */
@@ -66,12 +31,27 @@ class Poly2D extends Geo implements Poly2DLike {
         super(style ?? undefined);
         this._points = copied;
         this._closed = options.closed ?? true;
+        this.precision = options.precision ?? Math.min(4095, this.style.join.seg);
         try {
             this.updateGeometry();
         } catch (error) {
             this.dispose();
             throw error;
         }
+    }
+    /** @param source 来源多边形 @example target.copy(source); @returns 当前多边形。 */
+    public override copy(source: Poly2D): this {
+        this.style = source.style.clone();
+        this.copyPrecision(source);
+        this._points = new Float32Array(source.points);
+        this._closed = source.closed;
+        this.updateGeometry();
+        return this;
+    }
+
+    /** @example const duplicate = poly.clone(); @returns 独立顶点数组和样式的多边形。 */
+    public override clone(): Poly2D {
+        return new Poly2D(this.points, this.style.clone(), { closed: this.closed }).copy(this);
     }
     /**
      * 当前自有节点数组；直接改元素后须调用 updateVersion() 或 updateGeometry()。
@@ -165,7 +145,7 @@ class Poly2D extends Geo implements Poly2DLike {
         const nodes: PolyNode[] = [];
         // 按当前范围逐项处理，确保下标不越过有效数据。
         for (let i = 0; i < this._points.length; i += 2) {
-            let segments: number = join.seg;
+            let segments: number = this.precision;
             // 按几何或图元类型选择对应实现，不混用不同模板的规则。
             if (join.type === "bevel") {
                 segments = 1;
@@ -242,5 +222,47 @@ class Poly2D extends Geo implements Poly2DLike {
         return this;
     }
 }
+
+interface Poly2DOptions {
+    /** 默认闭合；开放路径不能启用 style.solid.enabled。 */
+    closed?: boolean;
+    /** 圆接精度，省略时采用 style.join.seg。 */
+    precision?: number;
+}
+
+interface Poly2DLike extends GeoData {
+    points: Float32Array;
+    closed: boolean;
+    readonly width: number;
+    readonly height: number;
+    readonly perimeter: number;
+}
+
+/**
+ * 验证并复制 [x,y,x,y,...] 输入，防止调用方修改原数组后静默改变几何。
+ * @param points 有序单轮廓坐标，只接收 Float32Array
+ * @example
+ * CopyPoints(points);
+ * @returns 自有数组
+ */
+const CopyPoints = (points: Float32Array): Float32Array<ArrayBuffer> => {
+    // 区分输入数据形态，使用与实际类型匹配的处理方式。
+    if (!(points instanceof Float32Array)) {
+        throw new TypeError("Poly2D points must be a Float32Array.");
+    }
+    // 区分空数据和有效内容，空集合不创建可绘制资源。
+    if (points.length % 2 !== 0) {
+        throw new RangeError("Poly2D needs complete x/y pairs.");
+    }
+    // 按轮廓顺序处理节点，使顶点属性与生成索引保持对应。
+    for (const value of points) {
+        // 校验数值有效性，防止非有限值进入几何或 GPU 数据。
+        if (!Number.isFinite(value)) {
+            throw new RangeError("Poly2D coordinates must be finite.");
+        }
+    }
+    return new Float32Array(points);
+};
+
 export default Poly2D;
 export type { Poly2DLike, Poly2DOptions };

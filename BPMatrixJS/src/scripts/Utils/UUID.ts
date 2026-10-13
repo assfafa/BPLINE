@@ -58,4 +58,5 @@ const UUID: () => string = (): string => {
         return crypto.randomUUID();
     }
 };
+
 export { UUID };

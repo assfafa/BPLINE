@@ -1,62 +1,9 @@
-import { Vec2 } from "bpmatrixjs/Math/Vec2";
-import { Mat3 } from "bpmatrixjs/Math/Mat3";
 import type { MathSubscriber, VersionedMath } from "bpmatrixjs/Math";
+import { Mat3 } from "bpmatrixjs/Math/Mat3";
+import { Vec2 } from "bpmatrixjs/Math/Vec2";
 import { GETID } from "../ID";
 import type { AddObject } from "../global-types";
-interface ObjectNodeLike extends MathSubscriber {
-    readonly id: number;
-    readonly type: string;
-    readonly version: number;
-    parent: AddObject | null;
-    position: Vec2;
-    rotation: number;
-    scale: Vec2;
-    matrix: Mat3;
-    worldMatrix: Mat3;
-    order: number;
-    /**
-     * 手动使变换失效；普通 position/scale/rotation 修改已自动通知。
-     * @example
-     * objectNode.updateVersion();
-     * @returns 无返回值。
-     */
-    updateVersion(): void;
-    /**
-     * 参数版本改变后才生成本地矩阵。
-     * @example
-     * objectNode.ensureMatrix();
-     * @returns 计算得到的 Mat3 结果。
-     */
-    ensureMatrix(): Mat3;
-    /**
-     * 先更新祖先，再按自身版本、父矩阵身份和版本更新世界矩阵，不遍历兄弟节点。
-     * @example
-     * objectNode.ensureWorldMatrix();
-     * @returns 计算得到的 Mat3 结果。
-     */
-    ensureWorldMatrix(): Mat3;
-    /**
-     * 强制根据 position/rotation/scale 生成本地矩阵；覆盖手动指定的本地矩阵。
-     * @example
-     * objectNode.updateMatrix();
-     * @returns 计算得到的 Mat3 结果。
-     */
-    updateMatrix(): Mat3;
-    /**
-     * 强制重新计算当前世界矩阵，同时保留显式修改的本地矩阵。
-     * @example
-     * objectNode.updateWorldMatrix();
-     * @returns 计算得到的 Mat3 结果。
-     */
-    updateWorldMatrix(): Mat3;
-    /**
-     * 最终释放数学对象订阅，不移除场景节点，不销毁共享 Vec2/Mat3。
-     * @example
-     * objectNode.dispose();
-     * @returns 无返回值。
-     */
-    dispose(): void;
-}
+
 /** 场景节点变换基类：参数持有一个版本，计算结果和每个消费者各存处理快照。 */
 class ObjectNode implements ObjectNodeLike {
     /** 全局节点 ID。 */
@@ -67,7 +14,7 @@ class ObjectNode implements ObjectNodeLike {
     private _parent: AddObject | null = null;
     private _position: Vec2;
     private _rotation: number = 0;
-    private _scale: Vec2;
+    private _scale: Vec2 = new Vec2(1, 1);
     private _matrix: Mat3 = new Mat3();
     private _worldMatrix: Mat3 = new Mat3();
     private _order: number = 0;
@@ -88,7 +35,6 @@ class ObjectNode implements ObjectNodeLike {
      */
     public constructor(x: number, y: number) {
         this._position = new Vec2(x, y);
-        this._scale = new Vec2(1, 1);
         this._position.add(this, "position");
         this._scale.add(this, "scale");
         this._matrix.add(this, "matrix");
@@ -443,5 +389,61 @@ class ObjectNode implements ObjectNodeLike {
         this._nodeDisposed = true;
     }
 }
+
+interface ObjectNodeLike extends MathSubscriber {
+    readonly id: number;
+    readonly type: string;
+    readonly version: number;
+    parent: AddObject | null;
+    position: Vec2;
+    rotation: number;
+    scale: Vec2;
+    matrix: Mat3;
+    worldMatrix: Mat3;
+    order: number;
+    /**
+     * 手动使变换失效；普通 position/scale/rotation 修改已自动通知。
+     * @example
+     * objectNode.updateVersion();
+     * @returns 无返回值。
+     */
+    updateVersion(): void;
+    /**
+     * 参数版本改变后才生成本地矩阵。
+     * @example
+     * objectNode.ensureMatrix();
+     * @returns 计算得到的 Mat3 结果。
+     */
+    ensureMatrix(): Mat3;
+    /**
+     * 先更新祖先，再按自身版本、父矩阵身份和版本更新世界矩阵，不遍历兄弟节点。
+     * @example
+     * objectNode.ensureWorldMatrix();
+     * @returns 计算得到的 Mat3 结果。
+     */
+    ensureWorldMatrix(): Mat3;
+    /**
+     * 强制根据 position/rotation/scale 生成本地矩阵；覆盖手动指定的本地矩阵。
+     * @example
+     * objectNode.updateMatrix();
+     * @returns 计算得到的 Mat3 结果。
+     */
+    updateMatrix(): Mat3;
+    /**
+     * 强制重新计算当前世界矩阵，同时保留显式修改的本地矩阵。
+     * @example
+     * objectNode.updateWorldMatrix();
+     * @returns 计算得到的 Mat3 结果。
+     */
+    updateWorldMatrix(): Mat3;
+    /**
+     * 最终释放数学对象订阅，不移除场景节点，不销毁共享 Vec2/Mat3。
+     * @example
+     * objectNode.dispose();
+     * @returns 无返回值。
+     */
+    dispose(): void;
+}
+
 export default ObjectNode;
 export type { ObjectNodeLike };

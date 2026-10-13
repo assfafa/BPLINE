@@ -1,49 +1,9 @@
 import { Mat3 } from "bpmatrixjs/Math/Mat3";
 import type { AddObject } from "../global-types";
-import ObjectNode from "../Object";
 import type { ObjectNodeLike } from "../Object";
+import ObjectNode from "../Object";
 import type { SceneLike } from "../Scene";
-interface GroupLike extends ObjectNodeLike {
-    children: AddObject[];
-    /**
-     * 添加子节点
-     * @param child 子节点对象
-     * @example
-     * group.add(child);
-     * @returns 无返回值
-     */
-    add(child: AddObject): void;
-    /**
-     * 从父组中删除当前节点。
-     * 当前节点没有父组时不进行处理。
-     * @example
-     * group.removeSelf();
-     * @returns 是否成功从父组中删除
-     */
-    removeSelf(): boolean;
-    /**
-     * 删除当前组中的一个直接子节点。
-     * @param child 需要删除的直接子节点
-     * @example
-     * group.removeChild(child);
-     * @returns 是否找到并删除了该子节点
-     */
-    removeChild(child: AddObject): boolean;
-    /**
-     * 删除当前组中的全部直接子节点。
-     * @example
-     * group.removeAll();
-     * @returns 无返回值
-     */
-    removeAll(): void;
-    /**
-     * 强制更新当前节点及子节点世界矩阵
-     * @example
-     * group.updateWorldMatrix();
-     * @returns Mat3
-     */
-    updateWorldMatrix(): Mat3;
-}
+
 /**
  * 组对象
  * 用于组织子节点和维护基础变换信息
@@ -203,5 +163,48 @@ class Group extends ObjectNode implements GroupLike {
         return undefined;
     }
 }
+
+interface GroupLike extends ObjectNodeLike {
+    children: AddObject[];
+    /**
+     * 添加子节点
+     * @param child 子节点对象
+     * @example
+     * group.add(child);
+     * @returns 无返回值
+     */
+    add(child: AddObject): void;
+    /**
+     * 从父组中删除当前节点。
+     * 当前节点没有父组时不进行处理。
+     * @example
+     * group.removeSelf();
+     * @returns 是否成功从父组中删除
+     */
+    removeSelf(): boolean;
+    /**
+     * 删除当前组中的一个直接子节点。
+     * @param child 需要删除的直接子节点
+     * @example
+     * group.removeChild(child);
+     * @returns 是否找到并删除了该子节点
+     */
+    removeChild(child: AddObject): boolean;
+    /**
+     * 删除当前组中的全部直接子节点。
+     * @example
+     * group.removeAll();
+     * @returns 无返回值
+     */
+    removeAll(): void;
+    /**
+     * 强制更新当前节点及子节点世界矩阵
+     * @example
+     * group.updateWorldMatrix();
+     * @returns Mat3
+     */
+    updateWorldMatrix(): Mat3;
+}
+
 export default Group;
 export type { GroupLike };

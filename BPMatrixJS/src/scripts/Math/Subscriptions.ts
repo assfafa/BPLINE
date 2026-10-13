@@ -1,19 +1,3 @@
-/** 可订阅的数学对象，不依赖渲染库或 Mesh 类型。 */
-interface VersionedMath {
-    readonly version: number;
-}
-/** 消费者；field 区分同一个数学对象被绑定到多个属性的情况。 */
-interface MathSubscriber {
-    /**
-     * 接收数学对象的变化通知，更新对应字段的消费者版本。
-     * @param source 变化来源对象
-     * @param field 发生变化的关联字段
-     * @example
-     * mathSubscriber.onMathChange(source, field);
-     * @returns 无返回值。
-     */
-    onMathChange(source: VersionedMath, field: string): void;
-}
 /** 数学对象内部订阅表；不保存任何 GPU 资源。 */
 class Subscriptions {
     private readonly _subscribers = new Map<MathSubscriber, Set<string>>();
@@ -72,5 +56,24 @@ class Subscriptions {
         }
     }
 }
+
+/** 可订阅的数学对象，不依赖渲染库或 Mesh 类型。 */
+interface VersionedMath {
+    readonly version: number;
+}
+
+/** 消费者；field 区分同一个数学对象被绑定到多个属性的情况。 */
+interface MathSubscriber {
+    /**
+     * 接收数学对象的变化通知，更新对应字段的消费者版本。
+     * @param source 变化来源对象
+     * @param field 发生变化的关联字段
+     * @example
+     * mathSubscriber.onMathChange(source, field);
+     * @returns 无返回值。
+     */
+    onMathChange(source: VersionedMath, field: string): void;
+}
+
 export default Subscriptions;
 export type { MathSubscriber, VersionedMath };

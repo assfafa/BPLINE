@@ -13,6 +13,9 @@ dist
 dist-ssr
 *.tgz
 
+# Local notes for the next commit or release
+/CHANGES.md
+
 # Local demos and stress-test assets
 BPLineJS/src/scripts/Examples/
 *.local

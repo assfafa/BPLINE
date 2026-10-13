@@ -5,24 +5,7 @@ import type Scene from "../Scene";
 import SamplerManager from "./SamplerManager";
 import TextureManager from "./TextureManager";
 import type { PipelineLike, PipelineTemplateLike } from "./types";
-interface PipelineManagerLike {
-    /**
-     * 创建当前 Render 共用的 Layout 和后备贴图。
-     * @param device 当前 Render 对应的 WebGPU 设备
-     * @example
-     * pipelineManager.initResources(device);
-     * @returns 无返回值
-     */
-    initResources(device: GPUDevice): void;
-    /**
-     * 按 materialList 创建材质管线和采样器，几何类型组合由 Scene 维护。
-     * @param scene 场景对象
-     * @example
-     * pipelineManager.draw(scene);
-     * @returns 无返回值
-     */
-    draw(scene: Scene): void;
-}
+
 /**
  * 管理 BindGroupLayout、Sampler 和可复用的 GPURenderPipeline 模板。
  * @class
@@ -315,5 +298,25 @@ class PipelineManager implements PipelineManagerLike {
         }
     }
 }
+
+interface PipelineManagerLike {
+    /**
+     * 创建当前 Render 共用的 Layout 和后备贴图。
+     * @param device 当前 Render 对应的 WebGPU 设备
+     * @example
+     * pipelineManager.initResources(device);
+     * @returns 无返回值
+     */
+    initResources(device: GPUDevice): void;
+    /**
+     * 按 materialList 创建材质管线和采样器，几何类型组合由 Scene 维护。
+     * @param scene 场景对象
+     * @example
+     * pipelineManager.draw(scene);
+     * @returns 无返回值
+     */
+    draw(scene: Scene): void;
+}
+
 export default PipelineManager;
 export type { PipelineManagerLike };

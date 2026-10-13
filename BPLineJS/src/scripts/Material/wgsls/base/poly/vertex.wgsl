@@ -46,7 +46,7 @@ struct MaterialUniform {
     solid: vec4f,
     // opacity、实体 width、align、pixelAligned。
     edge: vec4f,
-    // opacity、pixelAligned、补位、补位。
+    // opacity、pixelAligned、Mesh.ignoreZoom、补位。
     points: vec4f,
     // opacity，其余为补位。
     wireframe: vec4f,
@@ -64,7 +64,8 @@ struct GeometryUniform {
 };
 
 // 每个 Mesh 的世界矩阵。
-@group(0) @binding(0) var<storage, read> modelMatrices: array<mat3x3<f32>>;
+// 前两列的 w 存局部锚点；其余布局仍与 48 字节 Mat3 一致。
+@group(0) @binding(0) var<storage, read> modelMatrices: array<mat3x4<f32>>;
 // 当前相机的视图矩阵。
 @group(0) @binding(1) var<uniform> viewMatrix: mat3x3<f32>;
 // 当前相机的正交投影矩阵。
@@ -86,8 +87,8 @@ struct VertexOutput {
 };
 
 // 多边形实体已完成三角剖分，直接变换顶点，不按矩形宽高做 SDF 外扩。
-fn TransformSolid(input: VertexInput, resolvedIndex: u32, modelMatrix: mat3x3<f32>) -> VertexOutput {
-    let localPosition = vec3f(input.position, 1.0);
+fn TransformSolid(input: VertexInput, resolvedIndex: u32, modelMatrix: mat3x3<f32>, localAnchor: vec2f) -> VertexOutput {
+    let localPosition = vec3f(input.position - localAnchor, 1.0);
     let clipPosition = orthogonalMatrix * viewMatrix * modelMatrix * localPosition;
     var output: VertexOutput;
     output.position = vec4f(clipPosition.xy, GetDepth(resolvedIndex), 1.0);
@@ -111,7 +112,7 @@ fn getViewNormal(localNormal: vec2f, modelViewMatrix: mat3x3<f32>) -> vec2f {
         -c * localNormal.x + a * localNormal.y,
     ) * determinantSign;
     let normalLength = length(transformedNormal);
-    let safeNormalLength = max(normalLength, 0.000001);
+    let safeNormalLength = max(normalLength, 1e-30);
 
     return transformedNormal / safeNormalLength;
 }
@@ -120,10 +121,12 @@ fn getViewNormal(localNormal: vec2f, modelViewMatrix: mat3x3<f32>) -> vec2f {
 fn main(input: VertexInput) -> VertexOutput {
     // 保留入口 builtin 原值；用独立编号读取矩阵、样式并传给片段阶段。
     let resolvedIndex = ResolveIndex(input.instanceIndex);
-    let modelMatrix = modelMatrices[resolvedIndex];
+    let packedModel = modelMatrices[resolvedIndex];
+    let modelMatrix = mat3x3f(packedModel[0].xyz, packedModel[1].xyz, packedModel[2].xyz);
+    let localAnchor = vec2f(packedModel[0].w, packedModel[1].w);
     let materialUniform = materialStyles[resolvedIndex];
     if (input.vertexType == 0.0 && materialUniform.enabled.x != 0.0) {
-        return TransformSolid(input, resolvedIndex, modelMatrix);
+        return TransformSolid(input, resolvedIndex, modelMatrix, localAnchor);
     }
 
     var output: VertexOutput;
@@ -139,21 +142,25 @@ fn main(input: VertexInput) -> VertexOutput {
     }
 
     let modelViewMatrix = viewMatrix * modelMatrix;
-    let safeZoom = max(abs(renderCameraUniform.zoom), 0.000001);
-    let pixelAligned = select(materialUniform.points.y, materialUniform.edge.w, input.vertexType == 0.5);
+    let safeZoom = max(abs(renderCameraUniform.zoom), 1e-30);
+    let ignoreZoom = materialUniform.points.z != 0.0;
+    let sectionAlignment = select(materialUniform.points.y, materialUniform.edge.w, input.vertexType == 0.5);
+    // 固定尺寸 Mesh 的关键点和宽边框也必须保持像素尺寸。
+    let pixelAligned = select(sectionAlignment, 0.0, ignoreZoom);
     let zoomScale = mix(1.0 / safeZoom, 1.0, pixelAligned);
     var viewPosition: vec3f;
     if (input.vertexType == 0.5) {
-        viewPosition = modelViewMatrix * vec3f(input.position, 1.0);
+        viewPosition = modelViewMatrix * vec3f(input.position - localAnchor, 1.0);
         let viewNormal = getViewNormal(input.normal, modelViewMatrix);
         let sideOffset = mix(-(1.0 - materialUniform.edge.z), materialUniform.edge.z, input.uv.y);
         let offset = geometryUniform.borderWidth * input.miterScale * sideOffset * zoomScale;
         viewPosition.x += viewNormal.x * offset;
         viewPosition.y += viewNormal.y * offset;
-        output.uv.x *= mix(safeZoom, 1.0, materialUniform.edge.w);
+        let textureZoom = select(safeZoom, 1.0, ignoreZoom);
+        output.uv.x *= mix(textureZoom, 1.0, materialUniform.edge.w);
     } else {
         // 点型中心跟随模型，局部偏移独立缩放，保持屏幕朝向和原有像素单位。
-        viewPosition = modelViewMatrix * vec3f(input.center, 1.0);
+        viewPosition = modelViewMatrix * vec3f(input.center - localAnchor, 1.0);
         let offset = (input.position - input.center) * zoomScale;
         viewPosition.x += offset.x;
         viewPosition.y += offset.y;

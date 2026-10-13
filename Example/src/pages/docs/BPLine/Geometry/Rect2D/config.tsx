@@ -14,6 +14,7 @@ const style = new Style();
 style.solid.enabled = true;
 const mesh = new Mesh(geometry, new BaseMaterial(), style);`,
     properties: [
+        entry("precision: number = 8", "构造选项或 setter，控制圆角细分；继承 originPrecision 用于自动调整恢复。", "Constructor option or setter controlling rounded-corner subdivisions; inherited originPrecision supports restoration after automatic changes."),
         entry("width: number; height: number", "矩形尺寸，赋值后重建几何。", "Rectangle dimensions; assignment rebuilds geometry."),
         entry("radius: number", "圆角半径，会限制到半宽、半高的较小值。", "Corner radius, clamped to half the smaller side."),
         entry("perimeter: number", "当前轮廓周长。", "Current contour perimeter."),

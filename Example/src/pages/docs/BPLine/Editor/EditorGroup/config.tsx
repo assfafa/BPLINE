@@ -1,0 +1,17 @@
+import { entry } from "@/pages/docs/reference/types.ts";
+import type { ReferenceConfig } from "@/pages/docs/reference/types.ts";
+
+export const config: ReferenceConfig = {
+    title: "EditorGroup",
+    intro: { cn: "可绘制并可嵌套的空层级组，继承 Group。范围由一个不可拾取的虚线 Mesh 展示。", en: "Drawable, nestable hierarchy container extending Group, with a non-pickable dashed frame." },
+    code: "import { EditorGroup } from \"bplinejs/Editor\";\nconst group = new EditorGroup(0, 0, 200, 120);\nscene.add(group);\ngroup.add(mesh);\neditor.selectGroup(group);",
+    properties: [
+        entry("frame: Mesh / width: number / height: number", "虚线框及创建范围；width/height 只读，最小 0.001。", "Dashed frame and creation dimensions; read-only width/height, minimum 0.001."),
+        entry("ignoreZoom: boolean", "控制虚线范围是否保持屏幕尺寸。", "Keep the frame size fixed in screen space."),
+    ],
+    methods: [
+        entry("new EditorGroup(x, y, width, height)", "以世界位置和范围构造。使用 editor.selectGroup 进入编辑。", "Construct with position and dimensions. Use editor.selectGroup to edit."),
+        entry("disposeFrame(): void", "移除并清理虚线框，不删除业务 children。", "Detach and dispose the frame while retaining application children."),
+    ],
+    links: [],
+};

@@ -1,6 +1,7 @@
-import Color from "../Color";
 import type { ColorSubscriber } from "../Color";
+import Color from "../Color";
 import type { PartSubscriber, StyleArea } from "./types";
+
 /** 四个样式分区的共同基础，仅管理显示、颜色、透明度和订阅。 */
 class PartStyle implements ColorSubscriber {
     /** 分区身份。 */
@@ -100,6 +101,29 @@ class PartStyle implements ColorSubscriber {
         }
     }
     /**
+     * 复制通用分区参数；颜色内容独立，避免后续改色影响来源。
+     * @param source 来源分区
+     * @example
+     * target.copy(source);
+     * @returns 当前分区。
+     */
+    public copy(source: PartStyle): this {
+        this.enabled = source.enabled;
+        this.color.copy(source.color);
+        this.opacity = source.opacity;
+        return this;
+    }
+
+    /**
+     * 创建拥有独立颜色的同类分区。
+     * @example
+     * const duplicate = partStyle.clone();
+     * @returns 新分区。
+     */
+    public clone(): PartStyle {
+        return new PartStyle(this.area).copy(this);
+    }
+    /**
      * 关联消费者，使后续版本变化能通知该对象。
      * @param subscriber 分区变化接收者
      * @example
@@ -159,6 +183,7 @@ class PartStyle implements ColorSubscriber {
         }
     }
 }
+
 /**
  * 验证尺寸参数并钳制负值；拒绝非有限值，避免污染几何和 GPU 数据。
  * @param value 待验证数值
@@ -166,11 +191,13 @@ class PartStyle implements ColorSubscriber {
  * NormalizeSize(value);
  * @returns 非负有限值
  */
-export const NormalizeSize = (value: number): number => {
+const NormalizeSize = (value: number): number => {
     // 校验数值有效性，防止非有限值进入几何或 GPU 数据。
     if (!Number.isFinite(value)) {
         throw new RangeError("Style values must be finite.");
     }
     return Math.max(0, value);
 };
+
 export default PartStyle;
+export { NormalizeSize };

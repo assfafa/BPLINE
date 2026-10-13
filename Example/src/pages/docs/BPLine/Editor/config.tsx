@@ -1,0 +1,37 @@
+import { entry } from "@/pages/docs/reference/types.ts";
+import type { ReferenceConfig } from "@/pages/docs/reference/types.ts";
+
+export const config: ReferenceConfig = {
+    title: "Editor",
+    intro: { cn: "集合编辑器统一管理 Rect2D、NGon2D、Poly2D、Text、Base2D 和层级组。混合选择共享移动、组选中变换、历史与保存数据。", en: "Collection editor for Rect2D, NGon2D, Poly2D, Text, Base2D and hierarchy groups. Mixed selections share movement, group transforms, history and serialization." },
+    detail: { cn: "保存格式为 { version: 1, type: \"BPLineEditor\", nodes, textures, selection, activeGroup }。nodes 包含类型、父子关系、TRS/矩阵、order、几何参数与样式/材质，纹理独立列出。跨会话文字需重新注册字体，无 URL 纹理需在 load 提供。组选中自由缩放时不能保持参数化的对象自动转 Base；普通集合文档不序列化 IMesh 实例记录；不提供布尔运算。", en: "Document format: { version: 1, type: \"BPLineEditor\", nodes, textures, selection, activeGroup }. Nodes include type, parent relationships, TRS/matrix, order, geometry and appearance; textures are listed separately. Register fonts again across sessions and supply URL-less textures during load. Free group scaling converts entities that cannot remain parametric to Base. Collection documents do not serialize IMesh instance records. Boolean operations are not provided." },
+    code: "import { Editor, EditorKey } from \"bplinejs/Editor\";\n\nconst editor = new Editor(scene, render, camera);\nconst keys = new EditorKey(editor, cameraControl);\neditor.onSave(\"application\", (document) => {\n    console.log(JSON.stringify(document));\n});\n// 每帧：cameraControl.update(); editor.update(); render.render(scene, camera);\n// editor.load(editor.save());",
+    properties: [
+        entry("baseEditTool (passive)", "集合内维护 Base 内外轮廓的点/边编辑；输入、选择、历史由 Editor 接管，不提供独立手绘入口。", "Passive Base boundary vertex/edge editing. Editor owns its input, selection and history; no standalone creation gesture."),
+        entry("rectEditTool / ngonEditTool / polyEditTool / textEditTool", "独立工具的参数入口；集合接管输入和组操作，避免重复实例化键盘类。", "Access per-shape parameters. The collection owns input and group gestures; avoid duplicate keyboard instances."),
+        entry("shape: \"rect\" | \"ngon\" | \"poly\" | \"text\" | \"group\" = \"rect\"", "当前手绘类型；group 创建层级组，activeType=\"group\" 变换当前选择，含义不同。", "Current creation type. group creates hierarchy groups; activeType=\"group\" transforms the current selection."),
+        entry("rect / ngon / poly / text / group: boolean = true", "独立类型开关。Base 只能导入或从其他几何降级，不能手绘。", "Per-type enable switches. Base entities can only be imported or converted, not drawn directly."),
+        entry("activeType: EditorMode = \"edit\" / mult: boolean = true", "view/edit/add/sub/group 模式，多选默认开启。", "view/edit/add/sub/group modes, with multiple selection initially enabled."),
+        entry("actives / active: Mesh[] / activeGroup: EditorGroup | null", "当前实体选择、最后一批选择、当前层级组。", "Current entity selection, latest batch and current hierarchy group."),
+        entry("style / material / order / ignoreZoom / autoPrecision", "下一次创建的公共模板，同步到四个工具；autoPrecision 默认 true。", "Templates propagated to all four tools; autoPrecision defaults true."),
+        entry("orderMax: number / raiseSelected: boolean = true", "维护原始最大 order；选中时临时提升到 orderMax+1，取消后恢复，保存时记录原始值。", "Track the maximum original order. Selection temporarily raises order to orderMax+1, restores it on deselection, and saves the original order."),
+        entry("snap: boolean = false / snapOptions: SnapOptions", "vertex/edge/intersection/grid 默认全开，主开关默认关闭。", "vertex/edge/intersection/grid options default on; the master switch defaults off."),
+        entry("switches: EditSwitches", "pick/marquee/create/move/resize/scale/rotate/insertVertex/reparent 默认全开。", "All nine pointer interaction switches default on."),
+        entry("nest: boolean = false / dropTargetColor: Color", "普通几何作为父容器的开关；Group 始终允许嵌套。鼠标松开位置决定父对象，蓝色边框反馈可改色。", "Allow ordinary entities as parents. Group nesting is always available. The release position chooses the parent, with customizable blue target feedback."),
+        entry("helperGrid: HelperGrid / selector: Select", "集合仅维护一套网格、标尺和选择器；默认启用 scene.box 筛选，保留已有 box/quad 设置。", "One shared helper and selector. Enable scene.box by default while preserving existing box/quad configuration."),
+        entry("undoCount / redoCount / loadedNodes: ReadonlyMap<number, Group>", "历史长度；load 后原文档 ID 到新运行时对象的映射。", "History lengths and the mapping from document IDs to new runtime objects after load."),
+    ],
+    methods: [
+        entry("new Editor(scene, render, camera, options = {})", "options: { ngonUVMode?: \"bounding\" | \"polar\", nest?: boolean }。", "options: { ngonUVMode?: \"bounding\" | \"polar\", nest?: boolean }."),
+        entry("select(meshOrIds, operation = \"replace\"): void / selectAll(): void", "支持 Mesh/id/数组及 replace/add/sub；统一混合类型选择。", "Select meshes/IDs/arrays using replace/add/sub across geometry types."),
+        entry("push(mesh | readonly Mesh[]): Mesh[] / removeSelected(): Mesh[]", "代码导入或删除，统一记录历史。", "Import or remove entities with shared history."),
+        entry("copySelected(): void / cutSelected(): Mesh[] / paste(): Mesh[]", "复制、剪切与鼠标位置粘贴；保留几何类型和独立样式。", "Copy, cut and paste at the pointer, preserving geometry type and independent styles."),
+        entry("toBase(): Mesh[] / undo(): boolean / redo(): boolean", "主动降级；自动异形降级也在统一历史内，撤销可恢复 Rect/NGon/Poly/Text。Base 只编辑内外轮廓，不编辑内部三角点。", "Convert to Base. Automatic deformation conversions share history; undo restores Rect/NGon/Poly/Text. Base edits boundary vertices, including inner contours, rather than interior triangle vertices."),
+        entry("save(): EditorDocument / load(document: EditorDocument | string, options = {}): Mesh[]", "save 只返回 JSON 数据并触发 onSave。load 接收数据或 JSON 字符串；options.textures 可提供无 URL 的外部纹理。", "save returns JSON data and emits onSave. load accepts a document or JSON string; options.textures supplies external textures without URLs."),
+        entry("documentNodes(): Group[] / selectedGroup(): EditorGroup | null / selectGroup(group | null): void", "访问当前文档节点及层级组选择；辅助框不进入保存内容。", "Access document nodes and hierarchy-group selection. Auxiliary frames are excluded from saved documents."),
+        entry("onSelectionChange(key, callback) / onModeChange(key, callback)", "分别传 actives / mode；对应 onSelectionChangeDelete、onModeChangeDelete 删除订阅。", "Receive actives / mode. Remove subscriptions with onSelectionChangeDelete/onModeChangeDelete."),
+        entry("onSave(key, callback) / onBase(key, callback)", "分别传 EditorDocument / mesh；对应 onSaveDelete、onBaseDelete。同 key 替换。", "Receive EditorDocument / mesh, with onSaveDelete/onBaseDelete. Reusing a key replaces the callback."),
+        entry("update(): void / cancel(): void / destroy(): void", "每帧在控制器后 update，再 render；销毁时先销毁 EditorKey。", "Call update after the controller and before render each frame. Destroy EditorKey before destroying Editor."),
+    ],
+    links: [{ "label":"Editor example","to":"/example/editor" },{ "label":"EditorKey","to":"/docs/bpline/editor/key" }],
+};

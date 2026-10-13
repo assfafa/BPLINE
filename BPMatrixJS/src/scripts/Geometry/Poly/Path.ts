@@ -1,4 +1,5 @@
 import type { PolyNode, PolyOptions, PolyPoint } from "./types.js";
+
 interface Path {
     points: readonly PolyNode[];
     closed: boolean;
@@ -13,6 +14,7 @@ interface Path {
     minY: number;
     epsilon: number;
 }
+
 /**
  * 计算三个节点形成的有向两倍面积，用于判断转向和退化面。
  * @param a 起点
@@ -24,6 +26,7 @@ interface Path {
  */
 const Cross = (a: PolyNode, b: PolyNode, c: PolyNode): number =>
     (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+
 /**
  * 检查有限非负数值，拒绝不适合几何计算的参数。
  * @param value 数值
@@ -39,6 +42,7 @@ const Nonnegative = (value: number, name: string): number => {
     }
     return value;
 };
+
 /**
  * 检查细分段数的整数范围，避免异常数量的顶点分配。
  * @param value 段数
@@ -54,9 +58,10 @@ const Segments = (value: number, minimum: number): number => {
     }
     return value;
 };
+
 /**
  * 复制单条轮廓，允许空集、自交和回折；连续重复节点合并，避免零长度法线。
- * 闭合轮廓按有向面积统一方向，自交路径不保证全局内外侧语义。
+ * 闭合轮廓按有向面积统一方向；自交路径的填充由非零环绕剖分处理。
  * @param input 输入节点
  * @param options 闭合、填充开关
  * @example
@@ -185,6 +190,7 @@ const CreatePath = (input: readonly PolyPoint[], options: PolyOptions = {}): Pat
         epsilon: areaEpsilon,
     };
 };
+
 /**
  * 计算轮廓连接处的角平分线法线与斜接补偿倍率。
  * @param path 轮廓
@@ -220,9 +226,10 @@ const JoinNormal = (path: Path, index: number): [number, number, number] => {
         return [b[0], b[1], 1];
     }
 };
+
 /**
  * 耳切法支持简单凹多边形；只剔除填充剖分中的共线节点，线框和辅助点保留它们。
- * 自交等路径可能无法耳切，剩余区域改用扇形降级；不实现 evenodd/nonzero 填充规则。
+ * 自交路径由 WindingFill 预先识别并单独剖分，不进入这里的扇形降级。
  * @param path 闭合轮廓
  * @example
  * Triangulate(path);
@@ -343,5 +350,6 @@ const Triangulate = (path: Path): number[] => {
         return result;
     }
 };
+
 export { CreatePath, Cross, JoinNormal, Nonnegative, Segments, Triangulate };
 export type { Path };

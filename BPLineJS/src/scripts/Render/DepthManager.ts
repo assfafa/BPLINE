@@ -1,7 +1,6 @@
 import type Scene from "../Scene";
 import type { DepthTextureLike, PipelineLike } from "./types";
-/** 以 24 位整数层级生成精确可表示的 f32 深度，避免相邻对象因舍入获得相同深度。 */
-const DEPTH_LEVELS: number = 16777216;
+
 /** 深度纹理和每个 Mesh 的绘制参数均属于当前 Render，不写入共享 CPU 样式。 */
 class DepthManager {
     private readonly pipeline: PipelineLike;
@@ -107,4 +106,8 @@ class DepthManager {
         }
     }
 }
+
+/** 以 24 位整数层级生成精确可表示的 f32 深度，避免相邻对象因舍入获得相同深度。 */
+const DEPTH_LEVELS: number = 16777216;
+
 export default DepthManager;

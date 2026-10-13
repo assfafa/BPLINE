@@ -1,0 +1,14 @@
+import { entry } from "@/pages/docs/reference/types.ts";
+import type { ReferenceConfig } from "@/pages/docs/reference/types.ts";
+
+export const config: ReferenceConfig = {
+    title: "CheckPrecision",
+    intro: { cn: "曲线细分输入校验，防止超大精度生成过多顶点。Mesh 自动精度上限另由 precisionMax 控制。", en: "Curve subdivision validation preventing excessive vertex generation. Mesh automatic precision has a separate precisionMax cap." },
+    code: "import { CheckPrecision } from \"bpmatrixjs/Utils\";\nconst precision = CheckPrecision(16);",
+    properties: [
+
+    ],
+    methods: [
+        entry("CheckPrecision(value: number): number", "仅接受 1…4095 整数，非法输入抛 RangeError；Mesh 自动细分的最小值为 3。", "Accept only integers 1…4095; throw RangeError otherwise. Mesh automatic subdivision has a minimum of 3."),
+    ],
+};

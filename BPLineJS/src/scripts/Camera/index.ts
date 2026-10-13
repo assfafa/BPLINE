@@ -1,131 +1,10 @@
-import ObjectNode from "../Object";
-import type { ObjectNodeLike } from "../Object";
-import { Mat3 } from "bpmatrixjs/Math/Mat3";
 import { Vec2, type VersionedMath } from "bpmatrixjs/Math";
-import type { RenderLike } from "../Render";
+import { Mat3 } from "bpmatrixjs/Math/Mat3";
 import { GetInner } from "bpmatrixjs/Utils";
-interface CameraBuffersLike {
-    uniform?: number;
-}
-interface CameraLike extends ObjectNodeLike {
-    zoom: number;
-    width: number;
-    height: number;
-    orthogonalMatrix: Mat3;
-    viewMatrix: Mat3;
-    buffers: CameraBuffersLike;
-    readonly top: number;
-    readonly left: number;
-    readonly bottom: number;
-    readonly right: number;
-    /**
-     * 同时更新相机视口宽高，通知投影矩阵在下一次使用前更新。
-     * @param width 新视口宽度
-     * @param height 新视口高度
-     * @example
-     * camera.setViewport(width, height);
-     * @returns 无返回值。
-     */
-    setViewport(width: number, height: number): void;
-    /**
-     * 在渲染前更新版本落后的矩阵；支持相机挂在 Group/Mesh 内以及独立相机。
-     * @example
-     * camera.ensureCameraMatrix();
-     * @returns 无返回值。
-     */
-    ensureCameraMatrix(): void;
-    /**
-     * 强制计算投影矩阵，保持 Y 正方向向上。
-     * @example
-     * camera.updateOrthogonalMatrix();
-     * @returns 计算得到的 Mat3 结果。
-     */
-    updateOrthogonalMatrix(): Mat3;
-    /**
-     * 先确保父级与自身世界矩阵有效，再计算逆矩阵。
-     * @example
-     * camera.updateViewMatrix();
-     * @returns 计算得到的 Mat3 结果。
-     */
-    updateViewMatrix(): Mat3;
-    /**
-     * 强制更新投影矩阵和视图矩阵。
-     * @example
-     * camera.updateCameraMatrix();
-     * @returns 无返回值。
-     */
-    updateCameraMatrix(): void;
-    /**
-     * 世界坐标转归一化NDC坐标。
-     * @param position 世界坐标。
-     * @example
-     * camera.worldToNdc(position);
-     * @returns 归一化NDC坐标。
-     */
-    worldToNdc(position: Vec2): Vec2;
-    /**
-     * 归一化ndc坐标转世界坐标
-     * @param position 归一化NDC坐标。
-     * @example
-     * camera.ndcToWorld(position);
-     * @returns 世界坐标。
-     */
-    ndcToWorld(position: Vec2): Vec2;
-    /**
-     * 归一化NDC坐标转画布坐标。
-     * @param position 归一化NDC坐标。
-     * @param render 可选渲染器，按画布实际 CSS 尺寸换算；省略时使用相机宽高 / DPR
-     * @example
-     * camera.ndcToScreen(position, render);
-     * @returns 相对画布左上角的 CSS 像素坐标。
-     */
-    ndcToScreen(position: Vec2, render?: RenderLike): Vec2;
-    /**
-     * 画布坐标转归一化NDC坐标。
-     * @param position 相对画布左上角的 CSS 像素坐标
-     * @param render 可选渲染器，省略时使用相机宽高 / DPR
-     * @example
-     * camera.screenToNdc(position, render);
-     * @returns 归一化NDC坐标。
-     */
-    screenToNdc(position: Vec2, render?: RenderLike): Vec2;
-    /**
-     * 世界坐标转画布坐标。
-     * @param position 世界坐标。
-     * @param render 可选渲染器，支持 resize 延迟期间的 CSS 拉伸
-     * @example
-     * camera.worldToScreen(position, render);
-     * @returns 相对画布左上角的 CSS 像素坐标。
-     */
-    worldToScreen(position: Vec2, render?: RenderLike): Vec2;
-    /**
-     * 画布坐标转世界坐标
-     * @param position 相对画布左上角的 CSS 像素坐标
-     * @param render 可选渲染器，按画布实际 CSS 尺寸换算
-     * @example
-     * camera.screenToWorld(position, render);
-     * @returns 世界坐标。
-     */
-    screenToWorld(position: Vec2, render?: RenderLike): Vec2;
-    /**
-     * 世界坐标转浏览器视口坐标，适用于 DOM 定位；支持 CSS 平移/轴向缩放，不含旋转/倾斜。
-     * @param position 世界坐标。
-     * @param render 提供实际画布位置和尺寸的渲染器
-     * @example
-     * camera.worldToWindow(position, render);
-     * @returns clientX/clientY 坐标，不含页面滚动偏移。
-     */
-    worldToWindow(position: Vec2, render: RenderLike): Vec2;
-    /**
-     * 浏览器视口坐标转世界坐标。
-     * @param position MouseEvent.clientX/clientY，不是 pageX/pageY
-     * @param render 提供实际画布位置和尺寸的渲染器
-     * @example
-     * camera.windowToWorld(position, render);
-     * @returns 世界坐标。
-     */
-    windowToWorld(position: Vec2, render: RenderLike): Vec2;
-}
+import type { ObjectNodeLike } from "../Object";
+import ObjectNode from "../Object";
+import type { RenderLike } from "../Render";
+
 /** 正交相机：输入沿用节点单一版本，矩阵与每个 Render 独立保存处理快照。 */
 class Camera extends ObjectNode implements CameraLike {
     /** 对象类型。 */
@@ -133,6 +12,7 @@ class Camera extends ObjectNode implements CameraLike {
     private _width: number;
     private _height: number;
     private _zoom: number;
+    private _zoomVersion: number = 0;
     private _orthogonalMatrix = new Mat3();
     private _viewMatrix = new Mat3();
     private _projectionSnapshot: number = -1;
@@ -209,6 +89,10 @@ class Camera extends ObjectNode implements CameraLike {
             return;
         }
     }
+    /** @example camera.zoomVersion; @returns 仅缩放变化的版本，供空间索引与精度缓存使用。 */
+    public get zoomVersion(): number {
+        return this._zoomVersion;
+    }
     /**
      * 相机缩放。
      * @example
@@ -229,6 +113,7 @@ class Camera extends ObjectNode implements CameraLike {
         // 仅在属性实际改变时更新状态，避免重复订阅和版本递增。
         if (this._zoom !== value) {
             this._zoom = value;
+            this._zoomVersion++;
             this.updateVersion();
         } else {
             return;
@@ -593,5 +478,132 @@ class Camera extends ObjectNode implements CameraLike {
         return world;
     }
 }
+
+interface CameraBuffersLike {
+    uniform?: number;
+}
+
+interface CameraLike extends ObjectNodeLike {
+    zoom: number;
+    /** 仅 zoom 数值变化时递增，位置与视口更新不影响此值。 */
+    readonly zoomVersion: number;
+    width: number;
+    height: number;
+    orthogonalMatrix: Mat3;
+    viewMatrix: Mat3;
+    buffers: CameraBuffersLike;
+    readonly top: number;
+    readonly left: number;
+    readonly bottom: number;
+    readonly right: number;
+    /**
+     * 同时更新相机视口宽高，通知投影矩阵在下一次使用前更新。
+     * @param width 新视口宽度
+     * @param height 新视口高度
+     * @example
+     * camera.setViewport(width, height);
+     * @returns 无返回值。
+     */
+    setViewport(width: number, height: number): void;
+    /**
+     * 在渲染前更新版本落后的矩阵；支持相机挂在 Group/Mesh 内以及独立相机。
+     * @example
+     * camera.ensureCameraMatrix();
+     * @returns 无返回值。
+     */
+    ensureCameraMatrix(): void;
+    /**
+     * 强制计算投影矩阵，保持 Y 正方向向上。
+     * @example
+     * camera.updateOrthogonalMatrix();
+     * @returns 计算得到的 Mat3 结果。
+     */
+    updateOrthogonalMatrix(): Mat3;
+    /**
+     * 先确保父级与自身世界矩阵有效，再计算逆矩阵。
+     * @example
+     * camera.updateViewMatrix();
+     * @returns 计算得到的 Mat3 结果。
+     */
+    updateViewMatrix(): Mat3;
+    /**
+     * 强制更新投影矩阵和视图矩阵。
+     * @example
+     * camera.updateCameraMatrix();
+     * @returns 无返回值。
+     */
+    updateCameraMatrix(): void;
+    /**
+     * 世界坐标转归一化NDC坐标。
+     * @param position 世界坐标。
+     * @example
+     * camera.worldToNdc(position);
+     * @returns 归一化NDC坐标。
+     */
+    worldToNdc(position: Vec2): Vec2;
+    /**
+     * 归一化ndc坐标转世界坐标
+     * @param position 归一化NDC坐标。
+     * @example
+     * camera.ndcToWorld(position);
+     * @returns 世界坐标。
+     */
+    ndcToWorld(position: Vec2): Vec2;
+    /**
+     * 归一化NDC坐标转画布坐标。
+     * @param position 归一化NDC坐标。
+     * @param render 可选渲染器，按画布实际 CSS 尺寸换算；省略时使用相机宽高 / DPR
+     * @example
+     * camera.ndcToScreen(position, render);
+     * @returns 相对画布左上角的 CSS 像素坐标。
+     */
+    ndcToScreen(position: Vec2, render?: RenderLike): Vec2;
+    /**
+     * 画布坐标转归一化NDC坐标。
+     * @param position 相对画布左上角的 CSS 像素坐标
+     * @param render 可选渲染器，省略时使用相机宽高 / DPR
+     * @example
+     * camera.screenToNdc(position, render);
+     * @returns 归一化NDC坐标。
+     */
+    screenToNdc(position: Vec2, render?: RenderLike): Vec2;
+    /**
+     * 世界坐标转画布坐标。
+     * @param position 世界坐标。
+     * @param render 可选渲染器，支持 resize 延迟期间的 CSS 拉伸
+     * @example
+     * camera.worldToScreen(position, render);
+     * @returns 相对画布左上角的 CSS 像素坐标。
+     */
+    worldToScreen(position: Vec2, render?: RenderLike): Vec2;
+    /**
+     * 画布坐标转世界坐标
+     * @param position 相对画布左上角的 CSS 像素坐标
+     * @param render 可选渲染器，按画布实际 CSS 尺寸换算
+     * @example
+     * camera.screenToWorld(position, render);
+     * @returns 世界坐标。
+     */
+    screenToWorld(position: Vec2, render?: RenderLike): Vec2;
+    /**
+     * 世界坐标转浏览器视口坐标，适用于 DOM 定位；支持 CSS 平移/轴向缩放，不含旋转/倾斜。
+     * @param position 世界坐标。
+     * @param render 提供实际画布位置和尺寸的渲染器
+     * @example
+     * camera.worldToWindow(position, render);
+     * @returns clientX/clientY 坐标，不含页面滚动偏移。
+     */
+    worldToWindow(position: Vec2, render: RenderLike): Vec2;
+    /**
+     * 浏览器视口坐标转世界坐标。
+     * @param position MouseEvent.clientX/clientY，不是 pageX/pageY
+     * @param render 提供实际画布位置和尺寸的渲染器
+     * @example
+     * camera.windowToWorld(position, render);
+     * @returns 世界坐标。
+     */
+    windowToWorld(position: Vec2, render: RenderLike): Vec2;
+}
+
 export default Camera;
 export type { CameraBuffersLike, CameraLike };

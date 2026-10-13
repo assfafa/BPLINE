@@ -56,7 +56,7 @@ const ToLocal = (matrix: Mat3, point: SelectPoint): SelectPoint | undefined => {
     const values = matrix.data;
     const determinant = values[0] * values[4] - values[3] * values[1];
     // 零缩放或非法矩阵没有可选取的二维面积。
-    if (Number.isFinite(determinant) && Math.abs(determinant) > Number.EPSILON) {
+    if (Number.isFinite(determinant) && determinant !== 0) {
         const dx = point.x - values[6];
         const dy = point.y - values[7];
         return {
@@ -113,11 +113,12 @@ const CreateBounds = (points: readonly SelectPoint[]): SelectBounds => {
 /**
  * 从 Mesh 的 Rect2D 几何和世界矩阵建立一次选择快照。
  * @param mesh 场景中的普通 Mesh。
+ * @param worldMatrix 可选的显示或选择空间矩阵，默认使用逻辑世界矩阵
  * @example
  * const footprint = CreateRectFootprint(mesh);
  * @returns 可选择的矩形快照；非矩形或退化矩形返回 undefined。
  */
-const CreateRectFootprint = (mesh: Mesh): RectFootprint | undefined => {
+const CreateRectFootprint = (mesh: Mesh, worldMatrix: Mat3 = mesh.ensureWorldMatrix()): RectFootprint | undefined => {
     const geometry = mesh.data;
     // 选择器只处理有实际面积的 Rect2D，其他几何交给各自工具。
     if (
@@ -127,13 +128,12 @@ const CreateRectFootprint = (mesh: Mesh): RectFootprint | undefined => {
         geometry.width > 0 &&
         geometry.height > 0
     ) {
-        const worldMatrix = mesh.ensureWorldMatrix();
         const values = worldMatrix.data;
         const determinant = values[0] * values[4] - values[3] * values[1];
         // 非法变换会产生 NaN 包围盒，必须在 SAT 粗筛之前排除。
         const finiteMatrix = values.every(Number.isFinite);
         // 零缩放及非法变换不能提供稳定的二维选择区域。
-        if (finiteMatrix && Number.isFinite(determinant) && Math.abs(determinant) > Number.EPSILON) {
+        if (finiteMatrix && Number.isFinite(determinant) && determinant !== 0) {
             let radius = geometry.radius;
             // Rect2D 在重建几何时会做相同的圆角范围限制。
             if (Number.isFinite(radius)) {

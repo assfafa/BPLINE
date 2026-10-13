@@ -10,7 +10,7 @@ const GetOwner = (node) => {
     // 变量函数与类成员的注释放在声明前，不要求插入参数表达式内部。
     if (owner.parent?.type === "VariableDeclarator") {
         owner = owner.parent.parent;
-    } else if (owner.parent?.type === "MethodDefinition" || owner.parent?.type === "PropertyDefinition") {
+    } else if (owner.parent?.type === "MethodDefinition" || owner.parent?.type === "PropertyDefinition" || owner.parent?.type === "Property") {
         owner = owner.parent;
     }
     // 导出声明的注释位于 export 之前。
@@ -43,6 +43,124 @@ const GetDocumentation = (source, node) => {
 
 export default {
     rules: {
+        "field-defaults": {
+            meta: {
+                type: "suggestion",
+                schema: [],
+                messages: { declaration: "直接默认值应放在 class 字段声明上；构造函数保留传参赋值和初始化操作。" },
+            },
+            /** @param context 当前规则上下文 @example // 启用 readability/field-defaults。 @returns 类访问器，仅检查无参数依赖的直接常量赋值。 */
+            create(context) {
+                /** @param value 赋值表达式 @example IsDirectDefault(assignment.right); @returns 是否为直接常量或空容器。 */
+                const IsDirectDefault = (value) => {
+                    // 仅判断没有外部依赖的值，不推断函数调用或依赖前序字段的表达式。
+                    if (value.type === "Literal") {
+                        return true;
+                    } else if (value.type === "UnaryExpression" && value.operator === "-" && value.argument.type === "Literal") {
+                        return true;
+                    } else if (value.type === "ArrayExpression" && value.elements.length === 0) {
+                        return true;
+                    } else if (value.type === "ObjectExpression" && value.properties.length === 0) {
+                        return true;
+                    } else if (value.type === "NewExpression" && value.arguments.length === 0 &&
+                        value.callee.type === "Identifier" && ["Map", "Set", "AbortController"].includes(value.callee.name)) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                };
+                /** @param node 当前类 @example CheckDefaults(cameraClass); @returns 无返回值，报告构造体顶层的直接字段默认值。 */
+                const CheckDefaults = (node) => {
+                    const constructor = node.body.body.find(IsConstructor);
+                    // 条件分支和循环中的初始化可能依赖参数，仅检查构造体的直接语句。
+                    for (const statement of constructor?.value.body?.body ?? []) {
+                        // 方法调用及对子对象的设置属于绑定过程，不误判为字段声明。
+                        if (statement.type === "ExpressionStatement" && statement.expression.type === "AssignmentExpression") {
+                            const assignment = statement.expression;
+                            const target = assignment.left;
+                            // 只限制 this.field = constant；复合运算与索引写入仍属于初始化逻辑。
+                            if (assignment.operator === "=" && target.type === "MemberExpression" &&
+                                target.object.type === "ThisExpression" && target.computed === false && IsDirectDefault(assignment.right)) {
+                                context.report({ node: statement, messageId: "declaration" });
+                            }
+                        }
+                    }
+                };
+                /** @param member 候选成员 @example IsConstructor(member); @returns 是否为显式构造函数。 */
+                const IsConstructor = (member) => member.kind === "constructor";
+                return { ClassDeclaration: CheckDefaults };
+            },
+        },
+        "class-layout": {
+            meta: {
+                type: "suggestion",
+                schema: [],
+                messages: {
+                    before: "主类应紧跟 imports；接口、类型、辅助函数和导出放在 class 后面。",
+                    primary: "默认导出的主类应排在本文件的其他 class 前面。",
+                    fields: "字段声明应在构造函数与其他方法前，便于直接查看变量和默认值。",
+                    constructor: "构造函数应在字段声明之后、其他方法之前。",
+                },
+            },
+            /** @param context 当前规则上下文 @example // 启用 readability/class-layout。 @returns 顶层声明与类成员访问器。 */
+            create(context) {
+                /** @param node 当前程序 @example CheckProgram(program); @returns 无返回值，检查主类之前是否只有导入。 */
+                const CheckProgram = (node) => {
+                    const classes = node.body.filter(IsClass);
+                    // 没有类的桶文件或函数模块继续采用类型、函数、导出的普通布局。
+                    if (classes.length > 0) {
+                        const first = classes[0];
+                        // 前置声明会把主类挤到后面，禁止类型和内部辅助代码占据文件开头。
+                        for (const declaration of node.body) {
+                            // 主类之前只允许 import，注释不占用程序语句。
+                            if (declaration.range[0] < first.range[0] && declaration.type !== "ImportDeclaration") {
+                                context.report({ node: declaration, messageId: "before" });
+                            }
+                        }
+                        const exported = node.body.find(IsDefaultExport);
+                        // 命名的默认导出应优先展示；同文件辅助类放在主类之后。
+                        if (exported?.declaration?.type === "Identifier" && first.id?.name !== exported.declaration.name &&
+                            classes.some(MatchesDefaultClass(exported.declaration.name))) {
+                            context.report({ node: first, messageId: "primary" });
+                        }
+                    }
+                };
+                /** @param node 候选声明 @example IsClass(declaration); @returns 是否为顶层类。 */
+                const IsClass = (node) => node.type === "ClassDeclaration";
+                /** @param node 候选声明 @example IsDefaultExport(declaration); @returns 是否为默认导出。 */
+                const IsDefaultExport = (node) => node.type === "ExportDefaultDeclaration";
+                /** @param name 默认导出的名称 @example const match = MatchesDefaultClass("Camera"); @returns 检查命名类的回调。 */
+                const MatchesDefaultClass = (name) => {
+                    /** @param node 候选类 @example match(classDeclaration); @returns 是否为默认导出对应的类。 */
+                    const Matches = (node) => node.id?.name === name;
+                    return Matches;
+                };
+                /** @param node 当前类 @example CheckClass(cameraClass); @returns 无返回值，核对字段和构造函数位置。 */
+                const CheckClass = (node) => {
+                    let hasConstructor = false;
+                    let hasMethod = false;
+                    // 字段先完整展示；构造过程随后展示；其余方法保持原有调用组织。
+                    for (const member of node.body.body) {
+                        // 箭头属性仍是字段，不因其值为函数而被移到方法区。
+                        if (member.type === "PropertyDefinition" || member.type === "TSAbstractPropertyDefinition") {
+                            // 已进入构造或方法区后再声明字段会隐藏其初始值。
+                            if (hasConstructor || hasMethod) {
+                                context.report({ node: member, messageId: "fields" });
+                            }
+                        } else if (member.kind === "constructor") {
+                            // 构造函数不能被其他方法压到文件中间。
+                            if (hasMethod) {
+                                context.report({ node: member, messageId: "constructor" });
+                            }
+                            hasConstructor = true;
+                        } else {
+                            hasMethod = true;
+                        }
+                    }
+                };
+                return { Program: CheckProgram, ClassDeclaration: CheckClass };
+            },
+        },
         "function-documentation": {
             meta: {
                 type: "suggestion",

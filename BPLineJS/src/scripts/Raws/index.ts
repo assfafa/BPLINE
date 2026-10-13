@@ -1,32 +1,59 @@
-import { Vec2 } from "bpmatrixjs/Math";
 import type { MathSubscriber, VersionedMath } from "bpmatrixjs/Math";
+import { Vec2 } from "bpmatrixjs/Math";
 import { GETID } from "../ID";
-import Style from "../Style";
 import type { StyleChange, StyleSubscriber } from "../Style";
-/** push / updateAt 使用的完整快照；省略项分别为原点、0、单位缩放和默认样式。 */
-export interface RawOptions {
-    position?: Vec2;
-    rotation?: number;
-    scale?: Vec2;
-    style?: Style;
-    enabled?: boolean;
-}
-/** 原始值变化的影响范围，版本仍只有 Raw.version 一个。 */
-export type RawChange = "matrix" | "style" | "texture" | "textureData" | "sampler";
-/** 原始值管理者，不在回调内分配 GPU 资源。 */
-export interface RawSubscriber {
+import Style from "../Style";
+
+/** 由 IMesh 持有的原始记录索引；外部使用 map.get(id) 后修改记录，不直接增删 Map。 */
+class Raws {
+    private readonly _map = new Map<number, Raw>();
     /**
-     * 接收原始实例记录变化，更新该记录对应的连续数组。
-     * @param raw 变化来源的实例原始记录
-     * @param change 变化来源、区域及字段信息
+     * 只读 Map，避免外部删除记录后遗留订阅或数组空洞。
      * @example
-     * rawSubscriber.onRawChange(raw, change);
+     * const value = raws.map;
+     * @returns 只读 Map，避免外部删除记录后遗留订阅或数组空洞。
+     */
+    public get map(): ReadonlyMap<number, Raw> {
+        return this._map;
+    }
+    /**
+     * 记录数量，raw=false 时始终为 0。
+     * @example
+     * const value = raws.size;
+     * @returns 记录数量，raw=false 时始终为 0。
+     */
+    public get size(): number {
+        return this._map.size;
+    }
+    /**
+     * 关联消费者，使后续版本变化能通知该对象。
+     * @param raw 由 IMesh 创建的记录
+     * @internal
+     * @example
+     * raws.add(raw);
      * @returns 无返回值。
      */
-    onRawChange(raw: Raw, change: RawChange): void;
+    public add(raw: Raw): void {
+        this._map.set(raw.id, raw);
+    }
+    /**
+     * 由 IMesh.clear / dispose 调用，解除全部订阅。
+     * @internal
+     * @example
+     * raws.clear();
+     * @returns 无返回值。
+     */
+    public clear(): void {
+        // 遍历当前缓存条目，按实际引用关系处理资源。
+        for (const raw of this._map.values()) {
+            raw.dispose();
+        }
+        this._map.clear();
+    }
 }
+
 /** 一条实例原始记录；id 稳定，index 对应连续数组中的槽位。 */
-export class Raw implements MathSubscriber, StyleSubscriber {
+class Raw implements MathSubscriber, StyleSubscriber {
     /** 全局唯一 ID，不随扩容改变。 */
     public readonly id: number = GETID();
     /** 连续数组槽位，不是字节偏移。 */
@@ -325,51 +352,32 @@ export class Raw implements MathSubscriber, StyleSubscriber {
         }
     }
 }
-/** 由 IMesh 持有的原始记录索引；外部使用 map.get(id) 后修改记录，不直接增删 Map。 */
-class Raws {
-    private readonly _map = new Map<number, Raw>();
-    /**
-     * 只读 Map，避免外部删除记录后遗留订阅或数组空洞。
-     * @example
-     * const value = raws.map;
-     * @returns 只读 Map，避免外部删除记录后遗留订阅或数组空洞。
-     */
-    public get map(): ReadonlyMap<number, Raw> {
-        return this._map;
-    }
-    /**
-     * 记录数量，raw=false 时始终为 0。
-     * @example
-     * const value = raws.size;
-     * @returns 记录数量，raw=false 时始终为 0。
-     */
-    public get size(): number {
-        return this._map.size;
-    }
-    /**
-     * 关联消费者，使后续版本变化能通知该对象。
-     * @param raw 由 IMesh 创建的记录
-     * @internal
-     * @example
-     * raws.add(raw);
-     * @returns 无返回值。
-     */
-    public add(raw: Raw): void {
-        this._map.set(raw.id, raw);
-    }
-    /**
-     * 由 IMesh.clear / dispose 调用，解除全部订阅。
-     * @internal
-     * @example
-     * raws.clear();
-     * @returns 无返回值。
-     */
-    public clear(): void {
-        // 遍历当前缓存条目，按实际引用关系处理资源。
-        for (const raw of this._map.values()) {
-            raw.dispose();
-        }
-        this._map.clear();
-    }
+
+/** push / updateAt 使用的完整快照；省略项分别为原点、0、单位缩放和默认样式。 */
+interface RawOptions {
+    position?: Vec2;
+    rotation?: number;
+    scale?: Vec2;
+    style?: Style;
+    enabled?: boolean;
 }
+
+/** 原始值变化的影响范围，版本仍只有 Raw.version 一个。 */
+type RawChange = "matrix" | "style" | "texture" | "textureData" | "sampler";
+
+/** 原始值管理者，不在回调内分配 GPU 资源。 */
+interface RawSubscriber {
+    /**
+     * 接收原始实例记录变化，更新该记录对应的连续数组。
+     * @param raw 变化来源的实例原始记录
+     * @param change 变化来源、区域及字段信息
+     * @example
+     * rawSubscriber.onRawChange(raw, change);
+     * @returns 无返回值。
+     */
+    onRawChange(raw: Raw, change: RawChange): void;
+}
+
 export default Raws;
+export { Raw };
+export type { RawChange, RawOptions, RawSubscriber };

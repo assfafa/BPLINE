@@ -1,7 +1,6 @@
 import { GETID } from "../ID";
 import type { TextureLike, TextureSubscriber } from "./index";
-/** 可上传贴图资源：单图也以一层的 2d-array 视图绑定。 */
-export type TextureResource = TextureLike | TextureLayers;
+
 /** 多层纹理的 CPU 引用集合，GPUTexture 仍只属于 Render。 */
 class TextureLayers implements TextureSubscriber {
     /** 数组资源 ID，与层内图片 ID 独立。 */
@@ -85,4 +84,9 @@ class TextureLayers implements TextureSubscriber {
         this.set([]);
     }
 }
+
+/** 可上传贴图资源：单图也以一层的 2d-array 视图绑定。 */
+type TextureResource = TextureLike | TextureLayers;
+
 export default TextureLayers;
+export type { TextureResource };

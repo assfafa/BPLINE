@@ -24,6 +24,7 @@ style.edge.width = 6;`,
         entry("readonly key: string", "影响 Pipeline 选择的样式状态键；颜色等显示数值不会产生新管线。", "Style state key for pipeline selection; color changes do not create a new pipeline."),
     ],
     methods: [
+        entry("copy(source: Style): this / clone(): Style", "复制各样式分量和独立 Color，纹理资源保留引用；Solid/Edge/Points/Wireframe/Join 子样式也提供 copy/clone。", "Copy style components and independent Colors while retaining texture references. Solid/Edge/Points/Wireframe/Join components also provide copy/clone."),
         entry("new Style()", "创建全部显示分区默认关闭的样式。", "Create a style with all display parts disabled."),
         entry("dispose(): void", "所有使用者停止引用后解除关联。", "Release subscriptions after all users stop referencing the style."),
     ],

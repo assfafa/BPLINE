@@ -29,6 +29,7 @@ style.edge.enabled = true;
 style.edge.width = 3;
 mesh.style = style;`,
     properties: [
+        entry("precision: number = 8", "创建 options.precision 或 setter 控制字形曲线展开精度，保留 originPrecision。", "Constructor options.precision or setter controls glyph curve flattening, retaining originPrecision."),
         entry("text: string; layoutText: string", "原文可读写；layoutText 为转换后的只读排版文本。", "Read/write source text; layoutText is the converted read-only layout text."),
         entry("fontSize: number; fontFamily: string", "字号默认 16；字体默认 Font.map 的首项。", "Font size defaults to 16; family defaults to the first Font.map entry."),
         entry("lineSpacing: number; letterSpacing: number", "额外行距与字距；修改后重新生成几何。", "Extra line and letter spacing; edits rebuild geometry."),
@@ -38,6 +39,7 @@ mesh.style = style;`,
         entry("width; height; advanceWidth; anchorX; anchorY; perimeter", "包围盒、排版宽度、锚点与轮廓总周长。", "Bounds, advance width, anchors, and total contour perimeter."),
     ],
     methods: [
+        entry("copy(source: Text): this / clone(): Text", "复制原文字、排版、字体注册名称、精度和独立样式。", "Copy source text, layout, registered font name, precision and independent style."),
         entry("new Text(text, fontSize = 16, fontFamily = first registered, options = null)", "创建已注册字体的文字几何；options 可指定间距、对齐和排列。", "Create text from a registered font; options control spacing, alignment, and writing mode."),
         entry("updateGeometry(): this", "按当前文字与 Mesh Style 重建填充、边框、点和线框。", "Rebuild fill, border, points, and wireframe from text and Mesh Style."),
     ],

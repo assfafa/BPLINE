@@ -1,8 +1,11 @@
 /** 文字几何以可见包围盒中心为局部原点，坐标单位由 fontSize 决定。 */
 type TextAlign = "left" | "center" | "right";
+
 type TextBaseline = "top" | "middle" | "bottom";
 
 interface TextOptions {
+    /** 曲线精度，默认 8；越大轮廓误差越小，范围 1–4095。 */
+    readonly precision?: number;
     readonly lineSpacing?: number;
     readonly letterSpacing?: number;
     readonly textAlign?: TextAlign;
@@ -21,6 +24,7 @@ interface TextGeometryData {
     advanceWidth: number;
     text: string;
     fontSize: number;
+    precision: number;
     fontFamily: string;
     lineSpacing: number;
     letterSpacing: number;
@@ -53,6 +57,8 @@ interface TextPointGeometryData extends TextGeometryData {
 }
 
 interface TextLike {
+    precision: number;
+    readonly originPrecision: number;
     readonly text: string;
     readonly fontSize: number;
     readonly fontFamily: string;
@@ -127,12 +133,6 @@ interface TextLike {
 
 export type {
     TextAlign,
-    TextBaseline,
-    TextOptions,
-    TextGeometryData,
-    TextBorderAlign,
-    TextBorderGeometryData,
-    TextLineGeometryData,
-    TextPointGeometryData,
-    TextLike,
+    TextBaseline, TextBorderAlign,
+    TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 };

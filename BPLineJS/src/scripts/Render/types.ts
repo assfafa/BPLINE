@@ -5,11 +5,13 @@ import type { Material2d } from "../global-types";
 import type { MeshLike } from "../Mesh";
 import type Scene from "../Scene";
 import type { TextureResource } from "../Texture/Layers";
+
 /**
  * Render 运行模式。
  * development 启用运行时资源检查，production 跳过全部开发检查。
  */
 type RenderMode = "development" | "production";
+
 /** group(0) 的资源身份快照；所属矩阵缓存被替换时一起释放。 */
 interface MatrixBindGroupCache {
     group: GPUBindGroup;
@@ -20,6 +22,7 @@ interface MatrixBindGroupCache {
     geometry: GPUBuffer;
     depth: GPUBuffer;
 }
+
 /** group(1) 的资源身份快照；样式数值更新不使绑定失效。 */
 interface StyleBindGroupCache {
     group: GPUBindGroup;
@@ -31,6 +34,7 @@ interface StyleBindGroupCache {
     edgeSampler: GPUSampler;
     pointsSampler: GPUSampler;
 }
+
 /**
  * 单个 Mesh 的世界矩阵缓冲位。
  */
@@ -49,7 +53,14 @@ interface MeshMatrixBufferLike {
     capacity: number;
     /** 已上传的 Mesh.matrixVersion。 */
     version: number;
+    /** 本 Render 的相机相对矩阵状态，避免高倍率平移时复用旧坐标。 */
+    relative: boolean;
+    originX: number;
+    originY: number;
+    /** 当前 Render 上传的局部尺寸补偿倍率；跟随 zoom 时为 1。 */
+    zoomScale: number;
 }
+
 /** 每个 Mesh 独立的连续实例样式缓冲。 */
 interface MeshStyleBufferLike {
     /** 已创建的样式绑定组，随该 Mesh 样式缓存一起回收。 */
@@ -61,6 +72,7 @@ interface MeshStyleBufferLike {
     capacity: number;
     version: number;
 }
+
 /**
  * 单种 Geometry 绘制模式对应的顶点、二维轮廓法线、UV 和索引缓冲。
  */
@@ -79,6 +91,7 @@ interface GeometryBufferPartLike {
     /** 上传时保留的索引位宽，不能把 Uint32Array 强转为 Uint16Array。 */
     indexFormat: GPUIndexFormat;
 }
+
 /**
  * 单个 Geometry 对应的 WebGPU 缓存集合。
  */
@@ -89,12 +102,14 @@ interface GeometryBufferLike {
     geometry?: GeometryBufferPartLike;
     linePoints?: GeometryBufferPartLike;
 }
+
 /** 单个 Mesh 的层级起点和实例读取方向，静止帧不重复上传。 */
 interface MeshDepthBufferLike {
     meshId: number;
     buffer: GPUBuffer;
     data: Uint32Array<ArrayBuffer>;
 }
+
 /** 与画布实际尺寸绑定的 Render 私有深度附件。 */
 interface DepthTextureLike {
     texture: GPUTexture;
@@ -102,6 +117,7 @@ interface DepthTextureLike {
     width: number;
     height: number;
 }
+
 interface PipelineBuffersLike {
     meshDepth: Map<number, MeshDepthBufferLike>;
     /** CPU 按 Mesh ID 查询缓冲对象；buffer 内仍是连续矩阵数值。 */
@@ -110,6 +126,7 @@ interface PipelineBuffersLike {
     meshStyle: Map<number, MeshStyleBufferLike>;
     cameraUniform: GPUBuffer[];
 }
+
 /**
  * 单个 Scene 当前使用的 Render 缓存资源集合。
  */
@@ -122,6 +139,7 @@ interface SceneResourcesLike {
     textureIds: Set<number>;
     pipelineKeys: Set<string>;
 }
+
 /**
  * 单个 Texture 对应的 WebGPU 贴图资源。
  */
@@ -133,7 +151,10 @@ interface GPUTextureResourceLike {
     version: number;
     texture: GPUTexture;
     view: GPUTextureView;
+    /** 视频层尺寸不同时复用的缩放画布。 */
+    videoCanvas?: OffscreenCanvas;
 }
+
 /**
  * 相同材质 key 共享的 WebGPU 管线模板。
  */
@@ -145,6 +166,7 @@ interface PipelineTemplateLike {
     materialBindGroupLayout: GPUBindGroupLayout;
     customBindGroupLayout?: GPUBindGroupLayout;
 }
+
 /** 同一材质在一个 Render 中持有的具名数值缓冲与绑定组。 */
 interface CustomValueBufferLike {
     buffer: GPUBuffer;
@@ -153,12 +175,14 @@ interface CustomValueBufferLike {
     valueVersion: number;
     storeVersion: number;
 }
+
 interface CustomValueResourcesLike {
     buffers: Map<string, CustomValueBufferLike>;
     bindGroup?: GPUBindGroup;
     layout?: GPUBindGroupLayout;
     resources?: readonly unknown[];
 }
+
 interface PipelineLike {
     adapter?: GPUAdapter;
     device?: GPUDevice;
@@ -175,11 +199,13 @@ interface PipelineLike {
     buffers: PipelineBuffersLike;
     customValues: Map<number, CustomValueResourcesLike>;
 }
+
 interface RenderLike {
     readonly id: number;
     readonly type: string;
     readonly dpr: number;
     renderMode: RenderMode;
+    precisionDebounce: number;
     container: HTMLElement;
     canvas: HTMLCanvasElement;
     backgroundColor: GPUColorDict;
@@ -324,13 +350,9 @@ interface RenderLike {
      */
     resize(): void;
 }
+
 export type {
-    DepthTextureLike,
-    MeshDepthBufferLike,
-    GeometryBufferPartLike,
-    GeometryBufferLike,
-    GPUTextureResourceLike,
-    MeshMatrixBufferLike,
+    DepthTextureLike, GeometryBufferLike, GeometryBufferPartLike, GPUTextureResourceLike, MeshDepthBufferLike, MeshMatrixBufferLike,
     MeshStyleBufferLike,
     PipelineBuffersLike,
     PipelineLike,

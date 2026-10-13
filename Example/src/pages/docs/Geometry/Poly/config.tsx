@@ -27,6 +27,7 @@ const border = outline.createBorderGeometry(4);`,
         entry("borderData / lineData / pointData", "最近一次生成的附加几何数据。", "Most recently generated auxiliary geometry."),
     ],
     methods: [
+        entry("self-intersecting contour fill", "简单凹多边形用耳切；交叉/接触/反向路径用 X 带分解与 nonzero winding 填充，边框和关键点保留原路径；单轮廓不支持孔或 evenodd。", "Simple concave polygons use ear clipping; intersecting/touching/retraced contours use X-band decomposition with nonzero winding. Borders and points retain the input path; single contours do not support holes or evenodd."),
         entry("new Poly(points?: PolyPoint[], options?: PolyOptions)", "创建多边形或折线。", "Create a polygon or path."),
         entry("set(points: PolyPoint[], options?: PolyOptions): this", "更新节点和选项，重建填充并清除旧附加结果。", "Update points and options, rebuild fill, and clear old auxiliary data."),
         entry("getPerimeter(): number", "返回轮廓长度；开放路径不包含首尾连线。", "Return contour length; open paths omit the closing edge."),

@@ -7,11 +7,12 @@ import type { MeshLike } from "../Mesh";
 import type Scene from "../Scene";
 import type { TextureResource } from "../Texture/Layers";
 import BufferManager from "./BufferManager";
-import DevelopmentValidator from "./DevelopmentValidator";
 import DepthManager from "./DepthManager";
 import DestroyManager from "./DestroyManager";
+import DevelopmentValidator from "./DevelopmentValidator";
 import DrawCallManager from "./DrawCallManager";
 import PipelineManager from "./PipelineManager";
+import PrecisionManager from "./PrecisionManager";
 import SamplerManager from "./SamplerManager";
 import { InitCamera, InitScene, MatrixUpdate } from "./SceneUpdate";
 import TextureManager from "./TextureManager";
@@ -25,6 +26,7 @@ import type {
     RenderMode,
     SceneResourcesLike,
 } from "./types";
+
 /**
  * WebGPU 2D 渲染器。
  * 负责生命周期和渲染流程调度，具体 GPU 资源由各管理器维护。
@@ -35,7 +37,7 @@ class Render implements RenderLike {
     /**
      * 当前 Render 的全局唯一 ID。
      */
-    public readonly id: number;
+    public readonly id: number = GETID();
     /**
      * 对象类型。
      */
@@ -47,7 +49,7 @@ class Render implements RenderLike {
     /**
      * 渲染画布。
      */
-    public canvas: HTMLCanvasElement;
+    public canvas: HTMLCanvasElement = document.createElement("canvas");
     /**
      * 每帧开始前用于清空画布的 RGBA 颜色。
      */
@@ -55,21 +57,39 @@ class Render implements RenderLike {
     /**
      * 当前 Render 的共享 WebGPU 资源。
      */
-    public pipeline: PipelineLike;
+    public pipeline: PipelineLike = {
+        pipelineTemplates: new Map<string, PipelineTemplateLike>(),
+        textures: new Map<number, GPUTextureResourceLike>(),
+        samplers: new Map<string, GPUSampler>(),
+        sceneResources: new Map<number, SceneResourcesLike>(),
+        customValues: new Map(),
+        buffers: {
+            meshMatrix: new Map(),
+            meshDepth: new Map(),
+            geometry: new Map<number, GeometryBufferLike>(),
+            meshStyle: new Map<number, MeshStyleBufferLike>(),
+            cameraUniform: [],
+        },
+    };
     /**
      * WebGPU 初始化完成状态。
      */
     public readonly ready: Promise<void>;
-    private _alphaMode: GPUCanvasAlphaMode;
-    private _resizeTimer: number | null;
-    private _destroyed: boolean;
-    private _dpr: number;
+    private _alphaMode: GPUCanvasAlphaMode = "premultiplied";
+    private _resizeTimer: number | null = null;
+    private _destroyed: boolean = false;
+    private _dpr: number = GetInner().dpr;
     private _renderMode: RenderMode;
-    private readonly bufferManager: BufferManager;
-    private readonly destroyManager: DestroyManager;
-    private readonly drawCallManager: DrawCallManager;
-    private readonly pipelineManager: PipelineManager;
-    private readonly textureManager: TextureManager;
+    private _precisionDebounce: number = 100;
+    private readonly precisionManager: PrecisionManager = new PrecisionManager();
+    private _renderScene: Scene | null = null;
+    private _renderCamera: Camera | null = null;
+    private readonly bufferManager: BufferManager = new BufferManager(this.pipeline);
+    private readonly destroyManager: DestroyManager = new DestroyManager(this.pipeline);
+    private readonly textureManager: TextureManager = new TextureManager(this.pipeline);
+    private readonly samplerManager: SamplerManager = new SamplerManager(this.pipeline);
+    private readonly drawCallManager: DrawCallManager = new DrawCallManager(this.pipeline, this.samplerManager);
+    private readonly pipelineManager: PipelineManager = new PipelineManager(this.pipeline, this.textureManager, this.samplerManager);
     /**
      * 创建渲染器并开始异步初始化 WebGPU。
      * @param div 容器节点或容器 ID
@@ -79,7 +99,6 @@ class Render implements RenderLike {
      * @returns 创建的 Render 对象。
      */
     public constructor(div: HTMLElement | string, renderMode: RenderMode = "development") {
-        this.id = GETID();
         // 区分输入数据形态，使用与实际类型匹配的处理方式。
         if (typeof div === "string") {
             const container: HTMLElement | null = document.getElementById(div);
@@ -91,37 +110,29 @@ class Render implements RenderLike {
         } else {
             this.container = div;
         }
-        this.canvas = document.createElement("canvas");
         this.canvas.style.display = "block";
         this.canvas.style.width = "100%";
         this.canvas.style.height = "100%";
+        // 首次挂载前给画布真实视口尺寸，避免浏览器默认 300×150 缓冲区闪现。
+        const initialDpr = this._dpr;
+        this.canvas.width = Math.max(1, Math.round(this.container.clientWidth * initialDpr));
+        this.canvas.height = Math.max(1, Math.round(this.container.clientHeight * initialDpr));
         this.container.appendChild(this.canvas);
-        this._alphaMode = "premultiplied";
-        this._resizeTimer = null;
-        this._destroyed = false;
-        this._dpr = GetInner().dpr;
         this._renderMode = renderMode;
-        this.pipeline = {
-            pipelineTemplates: new Map<string, PipelineTemplateLike>(),
-            textures: new Map<number, GPUTextureResourceLike>(),
-            samplers: new Map<string, GPUSampler>(),
-            sceneResources: new Map<number, SceneResourcesLike>(),
-            customValues: new Map(),
-            buffers: {
-                meshMatrix: new Map(),
-                meshDepth: new Map(),
-                geometry: new Map<number, GeometryBufferLike>(),
-                meshStyle: new Map<number, MeshStyleBufferLike>(),
-                cameraUniform: [],
-            },
-        };
-        this.destroyManager = new DestroyManager(this.pipeline);
-        this.textureManager = new TextureManager(this.pipeline);
-        const samplerManager = new SamplerManager(this.pipeline);
-        this.pipelineManager = new PipelineManager(this.pipeline, this.textureManager, samplerManager);
-        this.bufferManager = new BufferManager(this.pipeline);
-        this.drawCallManager = new DrawCallManager(this.pipeline, samplerManager);
         this.ready = this.initWebGPU();
+    }
+    /** @example render.precisionDebounce; @returns 自动精度重建防抖毫秒，默认 100。 */
+    public get precisionDebounce(): number {
+        return this._precisionDebounce;
+    }
+    /** @param value 非负有限毫秒；0 立即处理 @example render.precisionDebounce = 0; @returns 无返回值。 */
+    public set precisionDebounce(value: number) {
+        // 非有限延迟会被浏览器截断，明确拒绝以免意外高频重建。
+        if (Number.isFinite(value) && value >= 0) {
+            this._precisionDebounce = value;
+        } else {
+            throw new RangeError("precisionDebounce must be finite and nonnegative.");
+        }
     }
     /**
      * 创建当前画布对应的 WebGPU 设备与呈现上下文。
@@ -242,15 +253,32 @@ class Render implements RenderLike {
      * @returns 无返回值
      */
     public warmup(scene: Scene, camera: Camera): void {
+        this.prepare(scene, camera, false);
+    }
+    /** @param scene 场景 @param camera 相机 @param redraw 精度更新后是否重绘当前画面 @example this.prepare(scene, camera, false); @returns 无返回值，准备阶段不提交 DrawCall。 */
+    private prepare(scene: Scene, camera: Camera, redraw: boolean): void {
         // 检查生命周期状态，防止已释放对象重新建立订阅或资源。
         if (!this._destroyed && this.pipeline.device !== undefined) {
             this.initScene(scene);
-            // 比较当前版本与处理快照，只同步尚未处理的变化。
+            this.matrixUpdate(scene);
+            this.initCamera(camera);
+            /** @param pendingScene 延迟处理的场景 @param pendingCamera 延迟处理的相机 @example RebuildPendingPrecision(scene, camera); @returns 无返回值，旧场景仅预热缓存。 */
+            const RebuildPendingPrecision = (pendingScene: Scene, pendingCamera: Camera): void => {
+                // 切换页面/场景后，旧防抖任务不能覆盖当前画面；warmup 也始终不提交绘制。
+                if (redraw && this._renderScene === pendingScene && this._renderCamera === pendingCamera) {
+                    this.render(pendingScene, pendingCamera);
+                } else {
+                    this.warmup(pendingScene, pendingCamera);
+                }
+            };
+            this.precisionManager.update(scene, camera, this._precisionDebounce, RebuildPendingPrecision);
+            // 精度隔离可能替换资源；空间范围必须在几何和世界变换同步后获取。
+            this.initScene(scene);
+            scene.updateSpatialLists();
+            // 资源引用变化后才回收，空间筛选不会从资源归属列表删除物体。
             if (this.pipeline.sceneResources.get(scene.id)?.version !== scene.version) {
                 this.trim(scene);
             }
-            this.matrixUpdate(scene);
-            this.initCamera(camera);
             this.drawBuffers(scene, camera);
             this.drawTextures(scene);
             this.drawPipelines(scene);
@@ -270,7 +298,9 @@ class Render implements RenderLike {
     public render(scene: Scene, camera: Camera): void {
         // 检查生命周期状态，防止已释放对象重新建立订阅或资源。
         if (!this._destroyed && this.pipeline.device !== undefined) {
-            this.warmup(scene, camera);
+            this._renderScene = scene;
+            this._renderCamera = camera;
+            this.prepare(scene, camera, true);
             this.drawCall(scene);
         } else {
             return;
@@ -407,6 +437,7 @@ class Render implements RenderLike {
         // 检查生命周期状态，防止已释放对象重新建立订阅或资源。
         if (!this._destroyed) {
             this._destroyed = true;
+            this.precisionManager.destroy();
             // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
             if (this._resizeTimer !== null) {
                 window.clearTimeout(this._resizeTimer);
@@ -475,27 +506,17 @@ class Render implements RenderLike {
         return this._destroyed;
     }
 }
+
 export default Render;
-export {
-    BufferManager,
-    DepthManager,
-    DevelopmentValidator,
-    DestroyManager,
-    DrawCallManager,
-    InitCamera,
-    InitScene,
-    MatrixUpdate,
-    PipelineManager,
-    SamplerManager,
-    TextureManager,
-};
+export type { BufferManagerLike } from "./BufferManager";
+export type { DestroyManagerLike } from "./DestroyManager";
+export type { DevelopmentValidatorLike } from "./DevelopmentValidator";
+export type { DrawCallManagerLike } from "./DrawCallManager";
+export type { PipelineManagerLike } from "./PipelineManager";
+export type { SamplerManagerLike } from "./SamplerManager";
+export type { TextureManagerLike } from "./TextureManager";
 export type {
-    DepthTextureLike,
-    MeshDepthBufferLike,
-    GeometryBufferPartLike,
-    GeometryBufferLike,
-    GPUTextureResourceLike,
-    MeshMatrixBufferLike,
+    DepthTextureLike, GeometryBufferLike, GeometryBufferPartLike, GPUTextureResourceLike, MeshDepthBufferLike, MeshMatrixBufferLike,
     MeshStyleBufferLike,
     PipelineBuffersLike,
     PipelineLike,
@@ -504,10 +525,13 @@ export type {
     RenderMode,
     SceneResourcesLike,
 } from "./types";
-export type { BufferManagerLike } from "./BufferManager";
-export type { DevelopmentValidatorLike } from "./DevelopmentValidator";
-export type { DestroyManagerLike } from "./DestroyManager";
-export type { DrawCallManagerLike } from "./DrawCallManager";
-export type { PipelineManagerLike } from "./PipelineManager";
-export type { SamplerManagerLike } from "./SamplerManager";
-export type { TextureManagerLike } from "./TextureManager";
+export {
+    BufferManager,
+    DepthManager, DestroyManager, DevelopmentValidator, DrawCallManager,
+    InitCamera,
+    InitScene,
+    MatrixUpdate,
+    PipelineManager,
+    SamplerManager,
+    TextureManager,
+};

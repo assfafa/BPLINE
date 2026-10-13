@@ -1,10 +1,6 @@
-import { Vec2, type Vec2Like } from "./Vec2.js";
 import Subscriptions, { type MathSubscriber } from "./Subscriptions.js";
-type Mat3Data = [number, number, number, number, number, number, number, number, number];
-interface Mat3Like {
-    data: Readonly<Mat3Data>;
-    readonly GPUData: Float32Array<ArrayBuffer>;
-}
+import { Vec2, type Vec2Like } from "./Vec2.js";
+
 /**
  * 3x3矩阵
  * @class
@@ -20,10 +16,31 @@ class Mat3 implements Mat3Like {
      * 采用列主序:
      * [m00, m10, m20, m01, m11, m21, m02, m12, m22]
      */
-    private _data: Mat3Data;
+    private _data: Mat3Data = CreateIdentityData();
     private readonly _committedData: Mat3Data = CreateIdentityData();
     private _version: number = 0;
     private readonly _subscriptions = new Subscriptions();
+    /**
+     * WebGPU uniform 使用的矩阵数组。
+     * 每列补齐到 vec4，共 12 个 f32。
+     */
+    public readonly GPUData: Float32Array<ArrayBuffer> = new Float32Array(12);
+    /**
+     * 创建3x3矩阵
+     * @param data 矩阵数组
+     * @example
+     * const mat3 = new Mat3(data);
+     * @returns 创建的 Mat3 对象。
+     */
+    public constructor(data?: Readonly<Mat3Data>) {
+        // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
+        if (data === undefined) {
+            this.updateGPUData();
+        } else {
+            this.set(data);
+            return;
+        }
+    }
     /**
      * 当前矩阵版本，只读。
      * @example
@@ -83,29 +100,6 @@ class Mat3 implements Mat3Like {
      */
     public updateVersion(): void {
         this.updateGPUData();
-    }
-    /**
-     * WebGPU uniform 使用的矩阵数组。
-     * 每列补齐到 vec4，共 12 个 f32。
-     */
-    public readonly GPUData: Float32Array<ArrayBuffer>;
-    /**
-     * 创建3x3矩阵
-     * @param data 矩阵数组
-     * @example
-     * const mat3 = new Mat3(data);
-     * @returns 创建的 Mat3 对象。
-     */
-    public constructor(data?: Readonly<Mat3Data>) {
-        this._data = CreateIdentityData();
-        this.GPUData = new Float32Array(12);
-        // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
-        if (data === undefined) {
-            this.updateGPUData();
-        } else {
-            this.set(data);
-            return;
-        }
     }
     /**
      * 设置为单位矩阵
@@ -485,6 +479,14 @@ class Mat3 implements Mat3Like {
         }
     }
 }
+
+type Mat3Data = [number, number, number, number, number, number, number, number, number];
+
+interface Mat3Like {
+    data: Readonly<Mat3Data>;
+    readonly GPUData: Float32Array<ArrayBuffer>;
+}
+
 /**
  * 创建独立的单位矩阵数组，避免不同矩阵共享可变数据。
  * @example
@@ -494,6 +496,7 @@ class Mat3 implements Mat3Like {
 const CreateIdentityData = (): Mat3Data => {
     return [1, 0, 0, 0, 1, 0, 0, 0, 1];
 };
+
+export type { MathSubscriber, VersionedMath } from "./Subscriptions.js";
 export { Mat3 };
 export type { Mat3Data, Mat3Like };
-export type { MathSubscriber, VersionedMath } from "./Subscriptions.js";

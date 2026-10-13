@@ -4,55 +4,7 @@ import type { MeshLike } from "../Mesh";
 import type Scene from "../Scene";
 import type { TextureResource } from "../Texture/Layers";
 import type { GeometryBufferLike, GeometryBufferPartLike, PipelineLike, SceneResourcesLike } from "./types";
-interface DestroyManagerLike {
-    /**
-     * 销毁指定 Mesh 的模型矩阵缓冲及可取得的关联资源。
-     * @param mesh Mesh 对象或全局 ID
-     * @example
-     * destroyManager.destroyMesh(mesh);
-     * @returns 是否销毁了任意资源
-     */
-    destroyMesh(mesh: MeshLike | number): boolean;
-    /**
-     * 销毁指定 Texture 的 GPUTexture 缓存。
-     * @param texture Texture 对象或全局 ID
-     * @example
-     * destroyManager.destroyTexture(texture);
-     * @returns 是否找到并销毁了对应资源
-     */
-    destroyTexture(texture: TextureResource | number): boolean;
-    /**
-     * 销毁所有关联此 Material 的 Mesh 实例样式缓冲，并在可取得对象时销毁其基础、边框和点型贴图。
-     * @param material Material 对象或全局 ID
-     * @example
-     * destroyManager.destroyMaterial(material);
-     * @returns 是否销毁了任意资源
-     */
-    destroyMaterial(material: Material2d | number): boolean;
-    /**
-     * 销毁指定 Geometry 的全部 GPUBuffer。
-     * @param geometry Geometry 对象或全局 ID
-     * @example
-     * destroyManager.destroyGeometry(geometry);
-     * @returns 是否找到并销毁了对应资源
-     */
-    destroyGeometry(geometry: GeoData | number): boolean;
-    /**
-     * 更新场景资源使用记录并回收所有场景均未引用的缓存。
-     * @param scene 需要同步资源记录的场景
-     * @example
-     * destroyManager.trim(scene);
-     * @returns 无返回值
-     */
-    trim(scene: Scene): void;
-    /**
-     * 销毁当前 Render 持有的全部 WebGPU 资源和设备。
-     * @example
-     * destroyManager.destroyAll();
-     * @returns 无返回值
-     */
-    destroyAll(): void;
-}
+
 /**
  * 统一负责当前 Render 的 GPU 资源销毁与无引用缓存回收。
  * @class
@@ -501,5 +453,56 @@ class DestroyManager implements DestroyManagerLike {
         }
     }
 }
+
+interface DestroyManagerLike {
+    /**
+     * 销毁指定 Mesh 的模型矩阵缓冲及可取得的关联资源。
+     * @param mesh Mesh 对象或全局 ID
+     * @example
+     * destroyManager.destroyMesh(mesh);
+     * @returns 是否销毁了任意资源
+     */
+    destroyMesh(mesh: MeshLike | number): boolean;
+    /**
+     * 销毁指定 Texture 的 GPUTexture 缓存。
+     * @param texture Texture 对象或全局 ID
+     * @example
+     * destroyManager.destroyTexture(texture);
+     * @returns 是否找到并销毁了对应资源
+     */
+    destroyTexture(texture: TextureResource | number): boolean;
+    /**
+     * 销毁所有关联此 Material 的 Mesh 实例样式缓冲，并在可取得对象时销毁其基础、边框和点型贴图。
+     * @param material Material 对象或全局 ID
+     * @example
+     * destroyManager.destroyMaterial(material);
+     * @returns 是否销毁了任意资源
+     */
+    destroyMaterial(material: Material2d | number): boolean;
+    /**
+     * 销毁指定 Geometry 的全部 GPUBuffer。
+     * @param geometry Geometry 对象或全局 ID
+     * @example
+     * destroyManager.destroyGeometry(geometry);
+     * @returns 是否找到并销毁了对应资源
+     */
+    destroyGeometry(geometry: GeoData | number): boolean;
+    /**
+     * 更新场景资源使用记录并回收所有场景均未引用的缓存。
+     * @param scene 需要同步资源记录的场景
+     * @example
+     * destroyManager.trim(scene);
+     * @returns 无返回值
+     */
+    trim(scene: Scene): void;
+    /**
+     * 销毁当前 Render 持有的全部 WebGPU 资源和设备。
+     * @example
+     * destroyManager.destroyAll();
+     * @returns 无返回值
+     */
+    destroyAll(): void;
+}
+
 export default DestroyManager;
 export type { DestroyManagerLike };

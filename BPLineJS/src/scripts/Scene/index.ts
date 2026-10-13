@@ -1,92 +1,13 @@
+import type Camera from "../Camera";
 import type { AddObject, Geometry2d, Material2d } from "../global-types";
-import Group from "../Group";
 import type { GroupLike } from "../Group";
-import Mesh from "../Mesh";
+import Group from "../Group";
 import type { MeshLike } from "../Mesh";
+import Mesh from "../Mesh";
 import type { TextureResource } from "../Texture/Layers";
-type DrawList = MeshLike;
-type GeometryList = Geometry2d;
-type MaterialList = Material2d;
-type TextureList = TextureResource;
-interface SceneLike extends GroupLike {
-    drawList: DrawList[];
-    geometryList: GeometryList[];
-    materialList: MaterialList[];
-    textureList: TextureList[];
-    /**
-     * 版本变化后统一重建四个列表；一个 Render 处理后不影响其他 Render 的缓存快照。
-     * @example
-     * scene.ensureLists();
-     * @returns 计算得到的 DrawList[] 结果。
-     */
-    ensureLists(): DrawList[];
-    /**
-     * 将新加入场景的节点及其后代增量写入四个列表。
-     * 该方法只负责补充引用；删除节点时由 removeFromLists 处理共享资源校准。
-     * @param child 新加入场景树的节点
-     * @example
-     * scene.addToLists(child);
-     * @returns 无返回值
-     */
-    addToLists(child: AddObject): void;
-    /**
-     * 从 drawList 中移除节点及其后代包含的 Mesh。
-     * 资源可能仍被其他 Mesh 共用，因此只标记下一帧重建另外三个资源列表。
-     * @param child 从场景树删除的节点
-     * @example
-     * scene.removeFromLists(child);
-     * @returns 无返回值
-     */
-    removeFromLists(child: AddObject): void;
-    /**
-     * 一次递归更新场景的 Mesh、Geometry、Material 和 Texture 四个列表。
-     * Geometry、Material 与 Texture 按全局 ID 去重，供 Render 创建和回收缓存。
-     * @example
-     * scene.updateLists();
-     * @returns 更新后的绘制列表
-     */
-    updateLists(): DrawList[];
-    /**
-     * 根据当前 drawList 重建 Geometry、Material 和 Texture 三个资源列表。
-     * 资源按全局 ID 去重，避免删除共享资源时误伤仍在场景中的 Mesh。
-     * @example
-     * scene.updateResourceLists();
-     * @returns 无返回值
-     */
-    updateResourceLists(): void;
-    /**
-     * 更新绘制列表及其关联资源列表。
-     * 保留原方法名，现有调用会同步更新全部四个列表。
-     * @example
-     * scene.updateDrawList();
-     * @returns 更新后的绘制列表
-     */
-    updateDrawList(): DrawList[];
-    /**
-     * 根据材质列表单独刷新 Texture 列表。
-     * 适用于只替换 Style 中 solid、edge、points.texture 的普通渲染帧。
-     * @example
-     * scene.updateTextureList();
-     * @returns 更新后的贴图列表
-     */
-    updateTextureList(): TextureList[];
-    /**
-     * 获取当前场景中一个材质实际使用的几何类型，供 materialList 创建管线。
-     * @param materialId 材质 ID
-     * @example
-     * scene.getMaterialGeometryTypes(materialId);
-     * @returns 几何类型只读集合；不要修改返回的内部集合
-     */
-    getMaterialGeometryTypes(materialId: number): ReadonlySet<string>;
-    /**
-     * 更新场景绘制顺序。
-     * 仅按照 Mesh 的 order 从小到大重新排列 drawList，不重建其他资源列表。
-     * @example
-     * scene.updateDrawOrder();
-     * @returns 无返回值
-     */
-    updateDrawOrder(): void;
-}
+import type QuadTree from "./QuadTree";
+import SceneSpatial from "./Spatial";
+
 /**
  * 场景对象
  * 作为场景树的根级容器使用
@@ -99,6 +20,15 @@ class Scene extends Group implements SceneLike {
     public readonly type: string = "Scene";
     /** CPU 四个列表与贴图列表分别处理到的版本快照，不是额外版本源。 */
     private _listsSnapshot: number = -1;
+    private _box: Camera | null = null;
+    private _quad: Camera | null = null;
+    private _quadTreeDepth: number = 2;
+    private readonly _spatial: SceneSpatial = new SceneSpatial();
+    private _spatialMode: "box" | "quad" | null = null;
+    /** 视口筛选的有序 Mesh/IMesh 子集，由 Render 更新。 */
+    public boxDrawList: DrawList[] = [];
+    /** 四叉树区域查询的有序子集，由 Render 更新。 */
+    public quadDrawList: DrawList[] = [];
     private _textureSnapshot: number = -1;
     /**
      * 当前 Scene 中材质实际搭配的几何类型，不使用材质历史类型创建闲置模板。
@@ -130,6 +60,114 @@ class Scene extends Group implements SceneLike {
      */
     public constructor() {
         super(0, 0);
+    }
+    /** @example scene.box; @returns 视口包围盒筛选相机，null 表示关闭。 */
+    public get box(): Camera | null {
+        return this._box;
+    }
+    /** @param value 筛选相机或 null @example scene.box = camera; @returns 无返回值，开启后关闭 quad。 */
+    public set box(value: Camera | null) {
+        // 两种筛选方式共用 drawList，不叠加两次空间筛选。
+        if (this._box !== value || (value !== null && this._quad !== null)) {
+            this._box = value;
+            // 启用 box 时解除树查询相机，但关闭 box 不改变其他模式。
+            if (value !== null) {
+                this._quad = null;
+            }
+            this.boxDrawList = [];
+            this.quadDrawList = [];
+            this._spatialMode = null;
+            this.updateVersion();
+        }
+    }
+    /** @example scene.quad; @returns 四叉树查询相机，null 表示关闭。 */
+    public get quad(): Camera | null {
+        return this._quad;
+    }
+    /** @param value 查询相机或 null @example scene.quad = camera; @returns 无返回值，开启后关闭 box。 */
+    public set quad(value: Camera | null) {
+        // 根区域来自 Scene 包围盒，相机只决定查询范围。
+        if (this._quad !== value || (value !== null && this._box !== null)) {
+            this._quad = value;
+            // 启用四叉树时只采用该相机查询，不再应用 box 结果。
+            if (value !== null) {
+                this._box = null;
+            }
+            this.boxDrawList = [];
+            this.quadDrawList = [];
+            this._spatialMode = null;
+            this.updateVersion();
+        }
+    }
+    /** @example scene.quadTreeDepth; @returns 根区域向下分区的层数，默认 2。 */
+    public get quadTreeDepth(): number {
+        return this._quadTreeDepth;
+    }
+    /** @param value 0 至 16 的整数 @example scene.quadTreeDepth = 4; @returns 无返回值，下次渲染重建分区。 */
+    public set quadTreeDepth(value: number) {
+        // 只创建占用子区，仍限制递归层数以保护调用栈和坐标精度。
+        if (Number.isInteger(value) && value >= 0 && value <= 16) {
+            // 重复赋值不使稳定树失效。
+            if (this._quadTreeDepth !== value) {
+                this._quadTreeDepth = value;
+                this.updateVersion();
+            }
+        } else {
+            throw new RangeError("quadTreeDepth must be an integer in [0, 16].");
+        }
+    }
+    /** @example scene.quadTree; @returns 最近渲染阶段建立的场景四叉树。 */
+    public get quadTree(): QuadTree | null {
+        let tree: QuadTree | null = null;
+        // 关闭四叉树时不暴露之前 box 模式留下的内部缓存。
+        if (this._quad !== null) {
+            tree = this._spatial.tree;
+        }
+        return tree;
+    }
+    /** @example scene.quadTreeUpdate(); @returns 无返回值，立即根据当前物体包围盒重建分区。 */
+    public quadTreeUpdate(): void {
+        this.updateSpatialLists(true);
+    }
+    /** @param force 是否强制重建分区 @example scene.updateSpatialLists(); @returns 无返回值，由 Render 在矩阵更新后调用。 */
+    public updateSpatialLists(force: boolean = false): void {
+        const camera = this._box ?? this._quad;
+        // 没有筛选相机时恢复完整绘制，不保留旧查询结果。
+        if (camera !== null) {
+            const meshes = this.ensureLists();
+            const changed = this._spatial.update(meshes, camera, this._quadTreeDepth, force, this._quad !== null);
+            // 两个模式互斥，对外只维护当前启用的那一份子集。
+            if (this._box !== null) {
+                // 选择子集和它的数组身份都可供调用方缓存，稳定帧不重新计算 SAT。
+                if (changed || this._spatialMode !== "box") {
+                    this.boxDrawList = this._spatial.boxList(meshes, camera);
+                }
+                this.quadDrawList = [];
+                this._spatialMode = "box";
+            } else {
+                // 模式切换即使相机相同也必须刷新，不能复用上一种空子集。
+                if (changed || this._spatialMode !== "quad") {
+                    this.quadDrawList = this._spatial.quadList(meshes, camera);
+                }
+                this.boxDrawList = [];
+                this._spatialMode = "quad";
+            }
+        } else {
+            this.boxDrawList = [];
+            this.quadDrawList = [];
+        }
+    }
+    /** @example scene.getRenderDrawList(); @returns 本次渲染的有序子集；资源与选择仍使用完整 drawList。 */
+    public getRenderDrawList(): DrawList[] {
+        let drawList = this.drawList;
+        // 完整资源归属与实际提交列表分开，关闭筛选可立即恢复完整绘制。
+        if (this._box !== null) {
+            drawList = this.boxDrawList;
+        } else if (this._quad !== null) {
+            // 两种开关互斥，四叉树结果无需再按 box 过滤。
+            drawList = this.quadDrawList;
+        }
+        return drawList;
     }
     /**
      * 版本变化后统一重建四个列表；一个 Render 处理后不影响其他 Render 的缓存快照。
@@ -271,6 +309,9 @@ class Scene extends Group implements SceneLike {
                 return !removedMeshIds.has(mesh.id);
             };
             this.drawList = this.drawList.filter(KeepSceneMesh);
+            this.boxDrawList = this.boxDrawList.filter(KeepSceneMesh);
+            this.quadDrawList = this.quadDrawList.filter(KeepSceneMesh);
+            this._spatial.remove(removedMeshIds);
             this.updateVersion();
         } else {
             return;
@@ -462,6 +503,107 @@ class Scene extends Group implements SceneLike {
         this.drawList.sort(CompareMeshOrder);
     }
 }
+
+type DrawList = MeshLike;
+
+type GeometryList = Geometry2d;
+
+type MaterialList = Material2d;
+
+type TextureList = TextureResource;
+
+interface SceneLike extends GroupLike {
+    drawList: DrawList[];
+    boxDrawList: DrawList[];
+    quadDrawList: DrawList[];
+    box: Camera | null;
+    quad: Camera | null;
+    quadTreeDepth: number;
+    readonly quadTree: QuadTree | null;
+    /** @example scene.quadTreeUpdate(); @returns 无返回值，重建四叉树。 */
+    quadTreeUpdate(): void;
+    /** @param force 强制重建 @example scene.updateSpatialLists(); @returns 无返回值。 */
+    updateSpatialLists(force?: boolean): void;
+    /** @example scene.getRenderDrawList(); @returns 当前绘制子集。 */
+    getRenderDrawList(): DrawList[];
+    geometryList: GeometryList[];
+    materialList: MaterialList[];
+    textureList: TextureList[];
+    /**
+     * 版本变化后统一重建四个列表；一个 Render 处理后不影响其他 Render 的缓存快照。
+     * @example
+     * scene.ensureLists();
+     * @returns 计算得到的 DrawList[] 结果。
+     */
+    ensureLists(): DrawList[];
+    /**
+     * 将新加入场景的节点及其后代增量写入四个列表。
+     * 该方法只负责补充引用；删除节点时由 removeFromLists 处理共享资源校准。
+     * @param child 新加入场景树的节点
+     * @example
+     * scene.addToLists(child);
+     * @returns 无返回值
+     */
+    addToLists(child: AddObject): void;
+    /**
+     * 从 drawList 中移除节点及其后代包含的 Mesh。
+     * 资源可能仍被其他 Mesh 共用，因此只标记下一帧重建另外三个资源列表。
+     * @param child 从场景树删除的节点
+     * @example
+     * scene.removeFromLists(child);
+     * @returns 无返回值
+     */
+    removeFromLists(child: AddObject): void;
+    /**
+     * 一次递归更新场景的 Mesh、Geometry、Material 和 Texture 四个列表。
+     * Geometry、Material 与 Texture 按全局 ID 去重，供 Render 创建和回收缓存。
+     * @example
+     * scene.updateLists();
+     * @returns 更新后的绘制列表
+     */
+    updateLists(): DrawList[];
+    /**
+     * 根据当前 drawList 重建 Geometry、Material 和 Texture 三个资源列表。
+     * 资源按全局 ID 去重，避免删除共享资源时误伤仍在场景中的 Mesh。
+     * @example
+     * scene.updateResourceLists();
+     * @returns 无返回值
+     */
+    updateResourceLists(): void;
+    /**
+     * 更新绘制列表及其关联资源列表。
+     * 保留原方法名，现有调用会同步更新全部四个列表。
+     * @example
+     * scene.updateDrawList();
+     * @returns 更新后的绘制列表
+     */
+    updateDrawList(): DrawList[];
+    /**
+     * 根据材质列表单独刷新 Texture 列表。
+     * 适用于只替换 Style 中 solid、edge、points.texture 的普通渲染帧。
+     * @example
+     * scene.updateTextureList();
+     * @returns 更新后的贴图列表
+     */
+    updateTextureList(): TextureList[];
+    /**
+     * 获取当前场景中一个材质实际使用的几何类型，供 materialList 创建管线。
+     * @param materialId 材质 ID
+     * @example
+     * scene.getMaterialGeometryTypes(materialId);
+     * @returns 几何类型只读集合；不要修改返回的内部集合
+     */
+    getMaterialGeometryTypes(materialId: number): ReadonlySet<string>;
+    /**
+     * 更新场景绘制顺序。
+     * 仅按照 Mesh 的 order 从小到大重新排列 drawList，不重建其他资源列表。
+     * @example
+     * scene.updateDrawOrder();
+     * @returns 无返回值
+     */
+    updateDrawOrder(): void;
+}
+
 /**
  * 获取网格使用的单层图片或实例层表；列表由调用者按 ID 去重。
  * @param mesh 普通或实例网格
@@ -483,6 +625,7 @@ const GetMeshTextures = (mesh: MeshLike): TextureResource[] => {
     const customTextures = mesh.material?.values?.textures ?? [];
     return [...textures, ...customTextures];
 };
+
 /**
  * 比较两个贴图列表是否包含相同 ID。
  * @param left 左侧贴图列表
@@ -516,5 +659,8 @@ const HaveSameTextureIds = (left: readonly TextureResource[], right: readonly Te
         return false;
     }
 };
+
 export default Scene;
+export { default as QuadTree } from "./QuadTree";
+export type { QuadTreeEntry } from "./QuadTree";
 export type { DrawList, GeometryList, MaterialList, SceneLike, TextureList };

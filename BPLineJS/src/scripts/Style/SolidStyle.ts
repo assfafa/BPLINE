@@ -1,10 +1,14 @@
 import Color from "../Color";
-import TexturedStyle from "./TexturedStyle";
 import { NormalizeSize } from "./PartStyle";
+import TexturedStyle from "./TexturedStyle";
 import type { BorderAlign, PixelAligned } from "./types";
+
 /** 实体面样式，SDF 边框属于此分区，不与 EdgeStyle 共用参数。 */
 class SolidStyle extends TexturedStyle {
     private _borderColor: Color = new Color("#000000");
+    private _borderWidth: number = 0;
+    private _borderAlign: BorderAlign = "normal";
+    private _pixelAligned: PixelAligned = "px";
     /**
      * 创建关闭的实体面样式。
      * @example
@@ -14,6 +18,31 @@ class SolidStyle extends TexturedStyle {
     public constructor() {
         super("solid");
         this._borderColor.add(this, "borderColor");
+    }
+    /**
+     * 复制实体面及 SDF 边框参数。
+     * @param source 来源实体面样式
+     * @example
+     * target.copy(source);
+     * @returns 当前实体面样式。
+     */
+    public override copy(source: SolidStyle): this {
+        super.copy(source);
+        this.borderColor.copy(source.borderColor);
+        this.borderWidth = source.borderWidth;
+        this.borderAlign = source.borderAlign;
+        this.pixelAligned = source.pixelAligned;
+        return this;
+    }
+
+    /**
+     * 创建独立的实体面样式。
+     * @example
+     * const duplicate = solidStyle.clone();
+     * @returns 新实体面样式。
+     */
+    public override clone(): SolidStyle {
+        return new SolidStyle().copy(this);
     }
     /**
      * SDF 边框独立颜色。
@@ -68,7 +97,6 @@ class SolidStyle extends TexturedStyle {
             return;
         }
     }
-    private _borderWidth: number = 0;
     /**
      * SDF 边框宽度，0 表示关闭 SDF 边框。
      * @example
@@ -95,7 +123,6 @@ class SolidStyle extends TexturedStyle {
             return;
         }
     }
-    private _borderAlign: BorderAlign = "normal";
     /**
      * 边框对齐：inset / normal / outset。
      * @example
@@ -125,7 +152,6 @@ class SolidStyle extends TexturedStyle {
             return;
         }
     }
-    private _pixelAligned: PixelAligned = "px";
     /**
      * px 固定像素，zoom 随相机缩放。
      * @example
@@ -156,4 +182,5 @@ class SolidStyle extends TexturedStyle {
         }
     }
 }
+
 export default SolidStyle;

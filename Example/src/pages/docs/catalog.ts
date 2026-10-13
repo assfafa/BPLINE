@@ -58,6 +58,9 @@ export const matrixDocumentation: readonly DocumentationItem[] = [
         page("Inner", "/docs/utils/inner", "Utils/Inner"),
         page("Time", "/docs/utils/time", "Utils/Time"),
         page("UUID", "/docs/utils/uuid", "Utils/UUID"),
+        page("PointGeometry", "/docs/utils/point-geometry", "Utils/PointGeometry"),
+        page("PlanarGeometry", "/docs/utils/planar-geometry", "Utils/PlanarGeometry"),
+        page("CheckPrecision", "/docs/utils/precision", "Utils/Precision"),
     ]),
 ];
 
@@ -69,6 +72,14 @@ export const lineDocumentation: readonly DocumentationItem[] = [
     group("Control", [
         page("CameraControl", "/docs/bpline/control/camera-control", "BPLine/Control/CameraControl"),
     ]),
+    page("Editor", "/docs/bpline/editor", "BPLine/Editor", [
+        page("RectEditTool", "/docs/bpline/editor/rect", "BPLine/Editor/RectEditTool"),
+        page("NGonEditTool", "/docs/bpline/editor/ngon", "BPLine/Editor/NGonEditTool"),
+        page("PolyEditTool", "/docs/bpline/editor/poly", "BPLine/Editor/PolyEditTool"),
+        page("TextEditTool", "/docs/bpline/editor/text", "BPLine/Editor/TextEditTool"),
+        page("EditorKey", "/docs/bpline/editor/key", "BPLine/Editor/EditorKey"),
+        page("EditorGroup", "/docs/bpline/editor/group", "BPLine/Editor/EditorGroup"),
+    ]),
     page("Geometry", "/docs/bpline/geometry", "BPLine/Geometry/Geo", [
         page("Base2D", "/docs/bpline/geometry/base2d", "BPLine/Geometry/Base2D"),
         page("Rect2D", "/docs/bpline/geometry/rect2d", "BPLine/Geometry/Rect2D"),
@@ -77,6 +88,10 @@ export const lineDocumentation: readonly DocumentationItem[] = [
         page("Text", "/docs/bpline/geometry/text", "BPLine/Geometry/Text"),
     ]),
     page("Group", "/docs/bpline/group", "BPLine/Group"),
+    page("Helper", "/docs/bpline/helper", "BPLine/Helper", [
+        page("HelperGrid", "/docs/bpline/helper/grid", "BPLine/Helper/HelperGrid"),
+        page("HelperGridCustomStyle", "/docs/bpline/helper/custom-style", "BPLine/Helper/HelperGridCustomStyle"),
+    ]),
     page("IMesh", "/docs/bpline/imesh", "BPLine/IMesh"),
     page("Material", "/docs/bpline/material", "BPLine/Material/Material", [
         page("BaseMaterial", "/docs/bpline/material/base-material", "BPLine/Material/BaseMaterial"),
@@ -87,12 +102,15 @@ export const lineDocumentation: readonly DocumentationItem[] = [
     page("Object", "/docs/bpline/object", "BPLine/Object"),
     page("Raws", "/docs/bpline/raws", "BPLine/Raws"),
     page("Render", "/docs/bpline/render", "BPLine/Render"),
-    page("Scene", "/docs/bpline/scene", "BPLine/Scene"),
+    page("Scene", "/docs/bpline/scene", "BPLine/Scene", [
+        page("QuadTree", "/docs/bpline/scene/quad-tree", "BPLine/Scene/QuadTree"),
+    ]),
     page("Select", "/docs/bpline/select", "BPLine/Select", [
         page("RectSelectTool", "/docs/bpline/select/rect", "BPLine/Select/RectSelectTool"),
         page("NGonSelectTool", "/docs/bpline/select/ngon", "BPLine/Select/NGonSelectTool"),
         page("PolySelectTool", "/docs/bpline/select/poly", "BPLine/Select/PolySelectTool"),
         page("BaseSelectTool", "/docs/bpline/select/base", "BPLine/Select/BaseSelectTool"),
+        page("TextSelectTool", "/docs/bpline/select/text", "BPLine/Select/TextSelectTool"),
         page("LineSelectTool", "/docs/bpline/select/line", "BPLine/Select/LineSelectTool"),
         page("PointSelectTool", "/docs/bpline/select/point", "BPLine/Select/PointSelectTool"),
     ]),

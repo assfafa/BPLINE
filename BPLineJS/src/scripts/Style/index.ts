@@ -1,18 +1,19 @@
-import SolidStyle from "./SolidStyle";
-import WireframeStyle from "./WireframeStyle";
 import EdgeStyle from "./EdgeStyle";
-import PointsStyle from "./PointsStyle";
 import JoinStyle from "./JoinStyle";
+import PointsStyle from "./PointsStyle";
+import SolidStyle from "./SolidStyle";
 import type { PartSubscriber, StyleArea, StyleSubscriber } from "./types";
+import WireframeStyle from "./WireframeStyle";
+
 /** 共享样式；四个显示分区与节点连接样式独立持有参数，通过订阅链通知使用者。 */
 class Style implements PartSubscriber {
     /** 对象类型。 */
     public readonly type: string = "Style";
-    private readonly _solid: SolidStyle;
-    private readonly _wireframe: WireframeStyle;
-    private readonly _edge: EdgeStyle;
-    private readonly _points: PointsStyle;
-    private readonly _join: JoinStyle;
+    private readonly _solid: SolidStyle = new SolidStyle();
+    private readonly _wireframe: WireframeStyle = new WireframeStyle();
+    private readonly _edge: EdgeStyle = new EdgeStyle();
+    private readonly _points: PointsStyle = new PointsStyle();
+    private readonly _join: JoinStyle = new JoinStyle();
     private readonly _subscribers = new Set<StyleSubscriber>();
     private _version: number = 0;
     private _key: string = "wireframe:0";
@@ -23,16 +24,47 @@ class Style implements PartSubscriber {
      * @returns 创建的 Style 对象。
      */
     public constructor() {
-        this._solid = new SolidStyle();
-        this._wireframe = new WireframeStyle();
-        this._edge = new EdgeStyle();
-        this._points = new PointsStyle();
-        this._join = new JoinStyle();
         this._solid.add(this);
         this._wireframe.add(this);
         this._edge.add(this);
         this._points.add(this);
         this._join.add(this);
+    }
+    /**
+     * 复制各分区参数到当前对象，保留当前对象的订阅关系。
+     * @param source 来源样式
+     * @example
+     * const style = new Style().copy(source);
+     * @returns 当前样式。
+     */
+    public copy(source: Style): this {
+        this._solid.copy(source.solid);
+        this._wireframe.copy(source.wireframe);
+        this._edge.copy(source.edge);
+        this._points.copy(source.points);
+        this._join.copy(source.join);
+        return this;
+    }
+
+    /**
+     * 创建拥有独立分区和颜色的新样式。
+     * @example
+     * const duplicate = style.clone();
+     * @returns 新样式。
+     */
+    public clone(): Style {
+        return new Style().copy(this);
+    }
+
+    /**
+     * 从来源直接创建新样式。
+     * @param source 来源样式
+     * @example
+     * const duplicate = Style.copy(source);
+     * @returns 新样式。
+     */
+    public static copy(source: Style): Style {
+        return new Style().copy(source);
     }
     /**
      * 实体面与 SDF 样式。
@@ -158,15 +190,13 @@ class Style implements PartSubscriber {
         }
     }
 }
+
 export default Style;
-export { SolidStyle, WireframeStyle, EdgeStyle, PointsStyle, JoinStyle };
 export type { JoinType } from "./JoinStyle";
-export { WriteStyleData, STYLE_STRIDE } from "./WriteStyleData";
 export type {
-    StyleArea,
+    BorderAlign, PartSubscriber, PixelAligned, StyleArea,
     StyleChange,
     StyleSubscriber,
-    BorderAlign,
-    PixelAligned,
-    PartSubscriber,
 } from "./types";
+export { STYLE_STRIDE, WriteStyleData } from "./WriteStyleData";
+export { EdgeStyle, JoinStyle, PointsStyle, SolidStyle, WireframeStyle };

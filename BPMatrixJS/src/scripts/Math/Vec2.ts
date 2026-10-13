@@ -1,11 +1,6 @@
 import type { Mat3Like } from "./Mat3.js";
 import Subscriptions, { type MathSubscriber } from "./Subscriptions.js";
-/** 向量分量数组。 */
-type Vec2Data = [number, number];
-interface Vec2Like {
-    x: number;
-    y: number;
-}
+
 /**
  * 2D向量
  * @class
@@ -23,6 +18,17 @@ class Vec2 implements Vec2Like {
     private _data: Vec2Data;
     private _version: number = 0;
     private readonly _subscriptions = new Subscriptions();
+    /**
+     * 创建2D向量
+     * @param x X分量
+     * @param y Y分量
+     * @example
+     * const vec2 = new Vec2(x, y);
+     * @returns 创建的 Vec2 对象。
+     */
+    public constructor(x: number = 0, y: number = 0) {
+        this._data = [x, y];
+    }
     /**
      * Y分量
      */
@@ -112,17 +118,6 @@ class Vec2 implements Vec2Like {
     public updateVersion(): void {
         this._version++;
         this._subscriptions.notify(this);
-    }
-    /**
-     * 创建2D向量
-     * @param x X分量
-     * @param y Y分量
-     * @example
-     * const vec2 = new Vec2(x, y);
-     * @returns 创建的 Vec2 对象。
-     */
-    public constructor(x: number = 0, y: number = 0) {
-        this._data = [x, y];
     }
     /**
      * 传 Vec2Like 执行加法；传 MathSubscriber 登记订阅，不修改分量。
@@ -404,6 +399,15 @@ class Vec2 implements Vec2Like {
         return this.x === vec2.x && this.y === vec2.y;
     }
 }
+
+/** 向量分量数组。 */
+type Vec2Data = [number, number];
+
+interface Vec2Like {
+    x: number;
+    y: number;
+}
+
+export type { MathSubscriber, VersionedMath } from "./Subscriptions.js";
 export { Vec2 };
 export type { Vec2Data, Vec2Like };
-export type { MathSubscriber, VersionedMath } from "./Subscriptions.js";

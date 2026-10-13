@@ -21,6 +21,7 @@ const instances = new IMesh(
 );
 const id = instances.push({ position: new Vec2(20, 30) });`,
     properties: [
+        entry("bounding / boundingBox / ignoreZoom / culling / autoPrecision / precisionMax", "继承 Mesh；包围盒包含全部实例，Scene.box/quad 使用这个整体范围，不逐实例筛选。所有实例共享几何精度与 ignoreZoom 开关。", "Inherited from Mesh. Bounds aggregate every instance; Scene.box/quad cull the aggregate rather than individual records. Instances share geometry precision and ignoreZoom."),
         entry("raw: boolean", "是否保留可修改的 Raw 记录。", "Whether editable Raw records are retained."),
         entry("raws: Raws", "当前实例记录集合。", "Current instance record collection."),
         entry("capacity: number; growthFactor: number", "实例缓冲容量与扩容系数。", "Instance capacity and growth factor."),

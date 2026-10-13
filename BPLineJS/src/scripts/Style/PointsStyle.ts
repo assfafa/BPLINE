@@ -1,8 +1,20 @@
-import TexturedStyle from "./TexturedStyle";
 import { NormalizeSize } from "./PartStyle";
+import TexturedStyle from "./TexturedStyle";
 import type { PixelAligned } from "./types";
+
 /** 关键点样式；总开关与顶点/边中点选择分离。 */
 class PointsStyle extends TexturedStyle {
+    /** 点标记的 U 轴 UV 固定在一张贴图内。 */
+    protected override _addressModeU: GPUAddressMode = "clamp-to-edge";
+    /** 点标记的 V 轴 UV 固定在一张贴图内。 */
+    protected override _addressModeV: GPUAddressMode = "clamp-to-edge";
+    private _pixelAligned: PixelAligned = "px";
+    private _vertices: boolean = true;
+    private _midpoints: boolean = false;
+    private _radius: number = 2;
+    private _segments: number = 4;
+    private _minPointsLength: number = 6;
+    private _minEdgePointsLength: number = 4;
     /**
      * 创建关闭的点型，默认选择顶点点位，UV 两轴固定不重复。
      * @example
@@ -11,10 +23,35 @@ class PointsStyle extends TexturedStyle {
      */
     public constructor() {
         super("points");
-        this.addressModeU = "clamp-to-edge";
-        this.addressModeV = "clamp-to-edge";
     }
-    private _pixelAligned: PixelAligned = "px";
+    /**
+     * 复制关键点形状、过滤阈值和贴图设置。
+     * @param source 来源关键点样式
+     * @example
+     * target.copy(source);
+     * @returns 当前关键点样式。
+     */
+    public override copy(source: PointsStyle): this {
+        super.copy(source);
+        this.pixelAligned = source.pixelAligned;
+        this.vertices = source.vertices;
+        this.midpoints = source.midpoints;
+        this.radius = source.radius;
+        this.segments = source.segments;
+        this.minPointsLength = source.minPointsLength;
+        this.minEdgePointsLength = source.minEdgePointsLength;
+        return this;
+    }
+
+    /**
+     * 创建独立的关键点样式。
+     * @example
+     * const duplicate = pointsStyle.clone();
+     * @returns 新关键点样式。
+     */
+    public override clone(): PointsStyle {
+        return new PointsStyle().copy(this);
+    }
     /**
      * px 固定像素，zoom 随相机缩放。
      * @example
@@ -44,7 +81,6 @@ class PointsStyle extends TexturedStyle {
             return;
         }
     }
-    private _vertices: boolean = true;
     /**
      * 是否生成顶点点位；仍受 enabled 总开关控制。
      * @example
@@ -70,7 +106,6 @@ class PointsStyle extends TexturedStyle {
             return;
         }
     }
-    private _midpoints: boolean = false;
     /**
      * 是否生成边中点；仍受 enabled 总开关控制。
      * @example
@@ -96,7 +131,6 @@ class PointsStyle extends TexturedStyle {
             return;
         }
     }
-    private _radius: number = 2;
     /**
      * 点半径，默认 2。
      * @example
@@ -123,7 +157,6 @@ class PointsStyle extends TexturedStyle {
             return;
         }
     }
-    private _segments: number = 4;
     /**
      * 点型边数，默认 4。
      * @example
@@ -153,7 +186,6 @@ class PointsStyle extends TexturedStyle {
             return;
         }
     }
-    private _minPointsLength: number = 6;
     /**
      * 顶点相邻边长度之和的严格下限。
      * @example
@@ -180,7 +212,6 @@ class PointsStyle extends TexturedStyle {
             return;
         }
     }
-    private _minEdgePointsLength: number = 4;
     /**
      * 边中点所在边长度的严格下限。
      * @example
@@ -208,4 +239,5 @@ class PointsStyle extends TexturedStyle {
         }
     }
 }
+
 export default PointsStyle;

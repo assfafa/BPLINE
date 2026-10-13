@@ -13,15 +13,24 @@ const container = document.getElementById("stage");
 if (container) {
     const render = new Render(container);
     await render.ready;
-    const camera = new Camera(container.clientWidth, container.clientHeight);
+    const camera = new Camera(container.clientWidth * render.dpr, container.clientHeight * render.dpr);
     const control = new CameraControl(camera, render);
     control.drag = true;
     control.leftDrag = false; // Let another tool use the left mouse button.
     control.rightDrag = true; // Keep right-button camera panning.
+    control.oFDrag = false; // Reserve one-finger interaction for editing.
+    control.tFDrag = true;
+    control.minZoom = 0.01;
+    control.maxZoom = 10000;
     control.zoom = true;
+    control.onZoom("ui", (zoom, previous) => {
+        console.log(previous, zoom);
+    });
     // Call control.update() in the animation loop.
 }`,
     properties: [
+        entry("oFDrag: boolean = true / tFDrag: boolean = true", "单指/双指中心拖动独立开关，同时受 is 和 drag 控制；不影响双指 zoom/rotate。leftDrag/rightDrag 只作用鼠标。", "Single-finger / two-finger-center pan switches, also governed by is and drag. They do not affect two-finger zoom/rotate. leftDrag/rightDrag only govern mouse input."),
+        entry("minZoom: number = 1e-13 / maxZoom: number = 999999999999", "正数有限范围，min≤max，约束滚轮、触屏及惯性缩放。", "Finite positive range with min≤max, constraining wheel, touch and inertial zoom."),
         entry("is: boolean; drag: boolean; zoom: boolean", "控制器总开关，以及拖动和缩放开关。", "Master switch plus drag and zoom switches."),
         entry("leftDrag: boolean; rightDrag: boolean", "分别控制鼠标左键和右键拖动，默认均为 true；两者受 drag 控制，且不改变触屏手势。", "Control left- and right-button mouse dragging independently. Both default to true, obey drag, and leave touch gestures unchanged."),
         entry("rotate: boolean", "允许双指旋转。", "Allow two-finger rotation."),
@@ -29,6 +38,10 @@ if (container) {
         entry("zoomRate: number", "鼠标滚轮缩放灵敏度。", "Mouse-wheel zoom sensitivity."),
     ],
     methods: [
+        entry("onZoom(key, callback) / deleteZoom(key): boolean", "callback(newZoom, oldZoom, control)。同 key 替换，不同 key 并存。", "callback(newZoom, oldZoom, control). Reusing a key replaces its callback; distinct keys coexist."),
+        entry("onPosition(key, callback) / deletePosition(key): boolean", "callback(newPosition, oldPosition, control)，position 为 {x,y} 快照。", "callback(newPosition, oldPosition, control), with {x,y} position snapshots."),
+        entry("onRotation(key, callback) / deleteRotation(key): boolean", "callback(newRadians, oldRadians, control)。", "callback(newRadians, oldRadians, control)."),
+        entry("onChange(key, callback) / deleteChange(key): boolean", "callback(newState, oldState, control)，state 为 {zoom, position, rotation}；一次更新合并通知，稳定帧不重复触发。", "callback(newState, oldState, control), with {zoom, position, rotation}. Changes are batched per update; unchanged frames are silent."),
         entry("new CameraControl(camera: Camera, render: Render)", "把控制器连接到相机和渲染容器。", "Connect the controller to a camera and render container."),
         entry("update(): void", "每帧更新手势惯性。", "Advance gesture inertia each frame."),
         entry("zoomUpdate(center: Vec2, rate: number): void", "以指定中心应用缩放倍率。", "Apply a zoom rate around the selected center."),

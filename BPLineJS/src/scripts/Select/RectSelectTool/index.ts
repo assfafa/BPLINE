@@ -5,25 +5,19 @@ import Mesh from "../../Mesh";
 import type Render from "../../Render";
 import type Scene from "../../Scene";
 import {
-    ContainsFootprint,
-    ContainsWorldPoint,
-    CreateRectFootprint,
-    IntersectsFootprints,
-} from "./RectSelectGeometry";
-import type { RectFootprint } from "./RectSelectGeometry";
-import {
     ContainsSelectionTriangles,
     CreateSelectionArea,
     IntersectsSelectionTriangles,
     RectFootprintTriangles,
 } from "../SelectionAreaGeometry";
-
-/**
- * all / left 要求完整包围；any / right 允许任意相交。
- * left 表示从左向右拖框，right 表示从右向左拖框。
- * 拖动方向由调用方设置，Selector 不追踪鼠标拖动。
- */
-type RectSelectionMode = "all" | "left" | "right" | "any";
+import { CreateSelectionMatrix, CreateSelectionPoint } from "../SelectionSpace";
+import type { RectFootprint } from "./RectSelectGeometry";
+import {
+    ContainsFootprint,
+    ContainsWorldPoint,
+    CreateRectFootprint,
+    IntersectsFootprints,
+} from "./RectSelectGeometry";
 
 /** 场景中的普通 Rect2D Mesh 点选与框选工具。 */
 class RectSelectTool {
@@ -79,15 +73,16 @@ class RectSelectTool {
             ) {
                 const windowPoint = new Vec2(event.clientX, event.clientY);
                 const worldPoint = this.camera.windowToWorld(windowPoint, this.render);
+                const selectionPoint = CreateSelectionPoint(worldPoint, this.camera);
                 const drawList = this.scene.ensureLists();
                 // 绘制列表顺序由低到高；逆向查询让上层对象优先返回。
                 for (let index = drawList.length - 1; index >= 0; index -= 1) {
                     const mesh = drawList[index];
                     // IMesh 的单个实例不等于模板 Mesh，留给实例选择工具处理。
-                    if (mesh instanceof Mesh && !(mesh instanceof IMesh)) {
-                        const footprint = CreateRectFootprint(mesh);
+                    if (mesh instanceof Mesh && !(mesh instanceof IMesh) && !mesh.noSelect) {
+                        const footprint = CreateRectFootprint(mesh, CreateSelectionMatrix(mesh, this.camera));
                         // 只有实际 Rect2D 的填充轮廓会参与命中。
-                        if (footprint !== undefined && ContainsWorldPoint(footprint, worldPoint)) {
+                        if (footprint !== undefined && ContainsWorldPoint(footprint, selectionPoint)) {
                             matches.push(mesh);
                         }
                     }
@@ -107,7 +102,7 @@ class RectSelectTool {
      * @returns 被框选的 Rect2D Mesh 列表；selector 关闭时为空，不包括选择框自身。
      */
     public Selector(selectionMesh: Mesh): Mesh[] {
-        const selection = CreateSelectionArea(selectionMesh);
+        const selection = CreateSelectionArea(selectionMesh, CreateSelectionMatrix(selectionMesh, this.camera));
         const matches: Mesh[] = [];
         // 无效或退化的选择框没有可用的二维范围。
         if (this.selector && selection !== undefined) {
@@ -117,8 +112,9 @@ class RectSelectTool {
             for (let index = drawList.length - 1; index >= 0; index -= 1) {
                 const mesh = drawList[index];
                 // 排除选择框自身以及需要逐实例计算的 IMesh。
-                if (mesh instanceof Mesh && !(mesh instanceof IMesh) && mesh !== selectionMesh) {
-                    const candidate: RectFootprint | undefined = CreateRectFootprint(mesh);
+                if (mesh instanceof Mesh && !(mesh instanceof IMesh) && !mesh.noSelect && mesh !== selectionMesh) {
+                    const candidate: RectFootprint | undefined = CreateRectFootprint(mesh,
+                        CreateSelectionMatrix(mesh, this.camera));
                     // 候选圆角矩形先按世界轴向包围盒排除远处对象。
                     if (candidate !== undefined) {
                         let selected: boolean;
@@ -152,6 +148,13 @@ class RectSelectTool {
         return matches;
     }
 }
+
+/**
+ * all / left 要求完整包围；any / right 允许任意相交。
+ * left 表示从左向右拖框，right 表示从右向左拖框。
+ * 拖动方向由调用方设置，Selector 不追踪鼠标拖动。
+ */
+type RectSelectionMode = "all" | "left" | "right" | "any";
 
 export default RectSelectTool;
 export type { RectSelectionMode };

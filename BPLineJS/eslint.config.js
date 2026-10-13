@@ -39,6 +39,8 @@ export default tseslint.config(
             "no-negated-condition": "off",
             "no-else-return": "off",
             "readability/function-documentation": "error",
+            "readability/class-layout": "error",
+            "readability/field-defaults": "error",
             "readability/control-comment": "error",
             "@stylistic/max-statements-per-line": ["error", { max: 1 }],
             "one-var": ["error", "never"],

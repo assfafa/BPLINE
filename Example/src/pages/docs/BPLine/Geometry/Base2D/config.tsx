@@ -8,8 +8,8 @@ export const config: ReferenceConfig = {
         en: "Supply 2D triangle vertices and optional attributes directly, useful for external triangulators, dynamic geometry, and custom WGSL.",
     },
     detail: {
-        cn: "vertices 是按 x、y 排列的 Float32Array；没有 index 时，每连续三个顶点组成一个三角形。几何体不会自动从顶点生成边框或关键点，需提供对应的 vertexType、normal、position 和 miterScale 数据。",
-        en: "vertices is a Float32Array of x/y pairs. Without index, each three consecutive vertices form a triangle. Borders and point markers are not inferred from vertices; provide matching vertexType, normal, position, and miterScale attributes when needed.",
+        cn: "options.vertices 按 x、y 排列；没有 index 时，每连续三个顶点组成三角形。可传 contours 指定外轮廓与内轮廓；省略时尝试从规则三角网提取边界，再按 Style 生成边框与关键点。复杂或不规则拓扑建议显式提供 contours。轮廓编辑不操作内部三角点；这不是多轮廓布尔剖分接口。",
+        en: "options.vertices contains x/y pairs; without index, each three consecutive vertices form a triangle. Supply contours for outer and inner boundaries, or let regular triangle meshes attempt boundary extraction. Style generates borders and points from those contours. Provide explicit contours for complex topology. Editing excludes interior triangle vertices; this is not a multi-contour Boolean tessellator.",
     },
     code: `import { Base2D, BaseMaterial, Mesh, Style } from "bplinejs";
 
@@ -24,13 +24,19 @@ const material = new BaseMaterial(style);
 material.cullMode = "none";
 const mesh = new Mesh(geometry, material, false);`,
     properties: [
+        entry("contours: readonly Float32Array[] / options.contours?", "内外轮廓的独立坐标副本；选中和吸附使用轮廓，不显示内部三角点。", "Copies of inner/outer boundary coordinates; selection and snapping use contours without showing interior triangle vertices."),
         entry("readonly type: \"Base2D\"", "可用于区分直接顶点几何。", "Identifies direct-vertex geometry."),
-        entry("vertices: Float32Array", "每个顶点占两个浮点数；顺序索引要求完整三角形。", "Two floats per vertex; sequential input requires complete triangles."),
-        entry("uv; normal; position?: Float32Array", "每项长度与 vertices 相同。", "Each array has the same length as vertices."),
-        entry("index?: Uint16Array | Uint32Array", "可选三角形索引；未提供时按顶点顺序生成。", "Optional triangle indices; generated sequentially when omitted."),
-        entry("vertexType; miterScale?: Float32Array", "每项长度等于顶点数；实体面类型为 0，边框为 0.5，关键点为 1。", "One value per vertex; section types are 0 for fill, 0.5 for edge, and 1 for points."),
+        entry("options.vertices: Float32Array", "每个顶点占两个浮点数；顺序索引要求完整三角形。", "Two floats per vertex; sequential input requires complete triangles."),
+        entry("options.uv / normal / position?: Float32Array", "每项长度与 vertices 相同。", "Each array has the same length as vertices."),
+        entry("options.index?: Uint16Array | Uint32Array", "可选三角形索引；未提供时按顶点顺序生成。", "Optional triangle indices; generated sequentially when omitted."),
+        entry("options.vertexType / miterScale?: Float32Array", "每项长度等于顶点数；实体面类型为 0，边框为 0.5，关键点为 1。", "One value per vertex; section types are 0 for fill, 0.5 for edge, and 1 for points."),
+        entry("options.linePoints?: GeoPartDataLike", "可选原生线段数据；转为 Base 后可以保留 wireframe。", "Optional native line data, retaining wireframe after conversion."),
     ],
     methods: [
+        entry("getData(): Base2DOptions", "返回原始输入独立副本，不含选中样式生成的辅助面。", "Return copied original input, excluding auxiliary selection geometry."),
+        entry("setContourPoint(contourIndex, vertexIndex, x, y): boolean", "修改轮廓点，并同步对应的三角面顶点。", "Move a boundary vertex and synchronize matching triangle vertices."),
+        entry("insertContourPoint(contourIndex, edgeIndex, ratio): boolean", "在线段比例位置新增边界点并更新三角数据，供集合编辑器拖边新增顶点使用。", "Insert a boundary point at an edge fraction and update triangle data, used by collection edge editing."),
+        entry("copy(source: Base2D): this / clone(): Base2D", "复制三角数组和边界数据；边框/关键点来自外轮廓与内轮廓。精度不改变已有三角面。", "Copy triangle arrays and boundary data. Edges/points derive from outer and inner boundaries. Precision does not alter existing triangles."),
         entry("new Base2D(options: Base2DOptions)", "复制并校验传入的顶点和属性。", "Copy and validate the supplied vertices and attributes."),
         entry("setData(options: Base2DOptions): void", "整体替换几何数据；缓冲尺寸不变时复用 GPUBuffer。", "Replace all geometry data; reuse GPU buffers when sizes match."),
     ],

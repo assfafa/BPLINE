@@ -14,14 +14,16 @@ const fill = rectangle.data;
 const border = rectangle.createBorderGeometry(6);
 const perimeter = GetRectPerimeter(180, 110, 18);`,
     properties: [
+        entry("originPrecision: number", "用户最后设置的基准精度，precision setter 会同步更新。", "Last user-set baseline, updated by the precision setter."),
+        entry("precision: number", "Rect 创建参数的圆角细分精度，BPLineJS Rect2D 会传递。", "Rounded-corner subdivision parameter forwarded by BPLineJS Rect2D."),
         entry("width: number; height: number", "矩形当前宽高。", "Current rectangle dimensions."),
         entry("radius: number", "实际使用的圆角半径。", "Effective corner radius."),
         entry("data: RectGeometryData", "填充顶点、法线、UV 与索引数据。", "Fill vertices, normals, UVs, and indices."),
         entry("borderData / lineData / pointData", "最近一次按需生成的边框、线框或点型数据。", "Most recently generated border, line, or point data."),
     ],
     methods: [
-        entry("new Rect(width: number, height: number, radius?: number)", "创建矩形；radius 默认 0。", "Create a rectangle; radius defaults to zero."),
-        entry("set(width: number, height: number, radius?: number): this", "更新尺寸和圆角并重新生成填充。", "Update dimensions and corner radius, then rebuild fill data."),
+        entry("new Rect(width: number, height: number, radius?: number, precision?: number)", "创建矩形；radius 默认 0，省略 precision 时按半径推算。", "Create a rectangle; radius defaults to zero. Omitted precision is derived from the radius."),
+        entry("set(width: number, height: number, radius?: number, precision?: number): this", "更新尺寸和圆角并重新生成填充。", "Update dimensions and corner radius, then rebuild fill data."),
         entry("getPerimeter(): number", "计算当前离散轮廓的周长。", "Calculate the perimeter of the generated contour."),
         entry("createBorderGeometry(lineWidth, uvRepeat?, align?)", "生成指定宽度与对齐方式的边框数据。", "Build border data with width and alignment."),
         entry("createLineGeometry(uvRepeat?): RectLineGeometryData", "生成闭合矩形轮廓的线段数据。", "Build line segments for the closed outline."),

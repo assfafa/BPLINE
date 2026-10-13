@@ -25,17 +25,19 @@ select.selectionMode = "right";
 const grouped = select.Selector(area);
 const topFirst = Select.Sort(grouped, "desc");`,
     properties: [
+        entry("textPicker / textSelector: boolean = true / textSelectTool: TextSelectTool", "文字加入统一选择结果 Text；按包围盒拾取，光标行列查询使用 textSelectTool。", "Text joins the combined Text result group. Picking uses bounds; query caret rows/columns with textSelectTool."),
         entry("selectionMode: 'all' | 'left' | 'right' | 'any'", "all/left 要求完全覆盖；any/right 接受相交或相切。默认 all。", "all/left require full coverage; any/right accept intersection or touching. Defaults to all."),
         entry("rectPicker, ngonPicker, polyPicker, basePicker: boolean", "分别启用四类实体面的点选，默认 true。", "Enable face picking per geometry type; all default to true."),
         entry("rectSelector, ngonSelector, polySelector, baseSelector: boolean", "分别启用四类实体面的框选，默认 true。", "Enable area selection per geometry type; all default to true."),
         entry("linePicker, pointPicker: boolean", "启用边和顶点的点选，默认 true；Selector 的这两组结果始终为空。", "Enable edge and vertex picking; both default to true. Selector always returns empty groups for these."),
         entry("lineSelectTool.radius; pointSelectTool.radius: number", "边和顶点的容差半径，单位为屏幕 CSS 像素，默认 8。", "Tolerance radius for edges and vertices in screen CSS pixels; defaults to 8."),
-        entry("rectSelectTool; ngonSelectTool; polySelectTool; baseSelectTool; lineSelectTool; pointSelectTool", "可访问对应选择工具；各工具类也可通过 Select 的同名静态属性取得。", "Access each underlying tool; the classes are also available as static members of Select."),
+        entry("rectSelectTool; ngonSelectTool; polySelectTool; baseSelectTool; textSelectTool; lineSelectTool; pointSelectTool", "可访问对应选择工具；各工具类也可通过 Select 的同名静态属性取得。", "Access each underlying tool; the classes are also available as static members of Select."),
     ],
     methods: [
+        entry("SelectPicker / Selector → SelectResult.Text: Mesh[]", "命中结果共七组：Rect2D、NGon、Poly2D、Base2D、Text、Line、Point。所有选择器排除 noSelect 并考虑 ignoreZoom 显示矩阵。", "Seven result groups: Rect2D, NGon, Poly2D, Base2D, Text, Line, Point. Selectors exclude noSelect and respect ignoreZoom display matrices."),
         entry("new Select(scene: Scene, render: Render, camera: Camera)", "创建统一选择器，并按需为 NGon2D、Poly2D、Base2D 候选开启包围盒。", "Create the combined selector and enable bounds for NGon2D, Poly2D, and Base2D candidates when needed."),
-        entry("SelectPicker(event: MouseEvent): SelectResult", "返回 Rect2D、NGon、Poly2D、Base2D、Line、Point 六组命中；边和点结果带 Mesh、编号、位置和像素距离。", "Return Rect2D, NGon, Poly2D, Base2D, Line, and Point groups. Edge and point hits include mesh, index, position, and pixel distance."),
-        entry("Selector(selectionMesh: Mesh): SelectResult", "按选择区域的实际填充面框选四类 Mesh；支持圆角矩形、凹多边形和带内孔正多边形。", "Select four mesh types using the area's actual fill, including rounded rectangles, concave polygons, and NGons with holes."),
+        entry("SelectPicker(event: MouseEvent): SelectResult", "返回 Rect2D、NGon、Poly2D、Base2D、Text、Line、Point 七组命中；边和点结果带 Mesh、编号、位置和像素距离。", "Return Rect2D, NGon, Poly2D, Base2D, Text, Line, and Point groups. Edge and point hits include mesh, index, position, and pixel distance."),
+        entry("Selector(selectionMesh: Mesh): SelectResult", "按选择区域的实际填充面框选五类 Mesh；支持圆角矩形、凹多边形和带内孔正多边形。", "Select five mesh types using the area's actual fill, including rounded rectangles, concave polygons, and NGons with holes."),
         entry("Select.Sort(result: SelectResult, direction?: 'asc' | 'desc'): Mesh[]", "合并去重后按深度测试阶段与场景绘制顺序排序；desc 默认顶层在前。", "Deduplicate and sort by depth-test phase and scene draw order. desc puts the topmost mesh first by default."),
     ],
     links: [

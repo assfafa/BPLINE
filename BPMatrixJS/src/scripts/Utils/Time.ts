@@ -1,14 +1,3 @@
-type TimeUpdateFn = (time: Time) => void;
-interface TimeLike {
-    initial: number;
-    current: number;
-    past: number;
-    difference: number;
-    log: number[];
-    fps: number;
-    maxLogLength: number;
-    onUpdate?: TimeUpdateFn;
-}
 /**
  * 时间工具类
  * @class
@@ -31,19 +20,19 @@ class Time implements TimeLike {
     /**
      * 已经过时间
      */
-    public past: number;
+    public past: number = 0;
     /**
      * 与上一帧的时间差
      */
-    public difference: number;
+    public difference: number = 0;
     /**
      * 帧率记录
      */
-    public log: number[];
+    public log: number[] = [];
     /**
      * 平均帧率
      */
-    public fps: number;
+    public fps: number = 0;
     /**
      * 帧率采样数量
      */
@@ -64,10 +53,6 @@ class Time implements TimeLike {
     public constructor(initial: number = Time.now(), maxLogLength: number = 60) {
         this.initial = initial;
         this.current = initial;
-        this.past = 0;
-        this.difference = 0;
-        this.log = [];
-        this.fps = 0;
         this.maxLogLength = Math.max(1, Math.floor(maxLogLength));
     }
     /**
@@ -143,5 +128,19 @@ class Time implements TimeLike {
         return this;
     }
 }
+
+type TimeUpdateFn = (time: Time) => void;
+
+interface TimeLike {
+    initial: number;
+    current: number;
+    past: number;
+    difference: number;
+    log: number[];
+    fps: number;
+    maxLogLength: number;
+    onUpdate?: TimeUpdateFn;
+}
+
 export { Time };
 export type { TimeLike, TimeUpdateFn };

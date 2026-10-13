@@ -10,10 +10,9 @@
 const Clamp = (value: number, min: number, max: number): number => {
     return Math.min(Math.max(value, min), max);
 };
+
 export { ConvertEventToCanvasCoord, GetDevicePixelRatio, GetInner } from "./Inner.js";
-export { UUID } from "./UUID.js";
-export { Clamp };
-export { Time } from "./Time.js";
+export type { CanvasCoord, InnerSize } from "./Inner.js";
 export {
     ContainsTrianglePoint,
     HasSeparatingAxis,
@@ -22,5 +21,10 @@ export {
     TriangleOverlapArea,
 } from "./PlanarGeometry.js";
 export type { Point2D, Triangle2D } from "./PlanarGeometry.js";
-export type { CanvasCoord, InnerSize } from "./Inner.js";
+export { ContainsPolygonPoint, InverseTransformPoint2D, ProjectSegmentPoint, TransformPoint2D } from "./PointGeometry.js";
+export type { PolygonFillRule } from "./PointGeometry.js";
+export { CheckPrecision } from "./Precision.js";
+export { Time } from "./Time.js";
 export type { TimeLike, TimeUpdateFn } from "./Time.js";
+export { UUID } from "./UUID.js";
+export { Clamp };

@@ -1,46 +1,9 @@
-import NGon from "bpmatrixjs/Geometry/NGon";
 import type { NGonUVMode } from "bpmatrixjs/Geometry/NGon";
-import Geo from "./Geo";
-import type { GeoData, GeoPartDataLike } from "./Geo";
+import NGon from "bpmatrixjs/Geometry/NGon";
 import type Style from "../Style";
-interface NGon2DOptions {
-    /** 外接圆半径，默认 1，允许为 0。 */
-    outer?: number;
-    /** 内轮廓半径，默认 0；大于 0 自动留孔，限制到 outer。 */
-    inner?: number;
-    /** 边数，默认 32；至少 2，2 为无填充的直径线段。 */
-    sides?: number;
-    /** 填充面 UV：bounding 包围盒或 polar 极坐标，默认 bounding。 */
-    uvMode?: NGonUVMode;
-    /** 首点角度，默认 0，单位弧度。 */
-    startAngle?: number;
-    /** 可选共享样式，未提供或 null 时各生成分区关闭。 */
-    style?: Style | null;
-}
-interface NGon2DLike extends GeoData {
-    outer: number;
-    inner: number;
-    sides: number;
-    uvMode: NGonUVMode;
-    startAngle: number;
-    readonly width: number;
-    readonly height: number;
-    readonly perimeter: number;
-}
-/**
- * 校验半径参数，拒绝非有限数值并处理尺寸边界。
- * @param value 半径
- * @example
- * CheckRadius(value);
- * @returns 校验后的有限非负半径
- */
-const CheckRadius = (value: number): number => {
-    // 校验数值有效性，防止非有限值进入几何或 GPU 数据。
-    if (value < 0 || !Number.isFinite(Math.fround(value * 2))) {
-        throw new RangeError("NGon2D radii must be finite, nonnegative Float32 sizes.");
-    }
-    return value;
-};
+import type { GeoData, GeoPartDataLike } from "./Geo";
+import Geo from "./Geo";
+
 /**
  * 正多边形、圆盘近似或圆环；圆心为 (0,0)，填充、边框和关键点合并绘制。
  * hole/nvMode/inter 仅在内部适配 BPMatrixJS，公开接口为 inner/uvMode。
@@ -85,6 +48,23 @@ class NGon2D extends Geo implements NGon2DLike {
             this.dispose();
             throw error;
         }
+    }
+    /** @param source 来源正多边形 @example target.copy(source); @returns 当前正多边形。 */
+    public override copy(source: NGon2D): this {
+        this.copyPrecision(source);
+        this.style = source.style.clone();
+        this._outer = source.outer;
+        this._inner = source.inner;
+        this._sides = source.sides;
+        this._uvMode = source.uvMode;
+        this._startAngle = source.startAngle;
+        this.updateGeometry();
+        return this;
+    }
+
+    /** @example const duplicate = ngon.clone(); @returns 独立的正多边形几何体。 */
+    public override clone(): NGon2D {
+        return new NGon2D().copy(this);
     }
     /**
      * 外轮廓外接圆半径。
@@ -323,5 +303,47 @@ class NGon2D extends Geo implements NGon2DLike {
         return this;
     }
 }
+
+interface NGon2DOptions {
+    /** 外接圆半径，默认 1，允许为 0。 */
+    outer?: number;
+    /** 内轮廓半径，默认 0；大于 0 自动留孔，限制到 outer。 */
+    inner?: number;
+    /** 边数，默认 32；至少 2，2 为无填充的直径线段。 */
+    sides?: number;
+    /** 填充面 UV：bounding 包围盒或 polar 极坐标，默认 bounding。 */
+    uvMode?: NGonUVMode;
+    /** 首点角度，默认 0，单位弧度。 */
+    startAngle?: number;
+    /** 可选共享样式，未提供或 null 时各生成分区关闭。 */
+    style?: Style | null;
+}
+
+interface NGon2DLike extends GeoData {
+    outer: number;
+    inner: number;
+    sides: number;
+    uvMode: NGonUVMode;
+    startAngle: number;
+    readonly width: number;
+    readonly height: number;
+    readonly perimeter: number;
+}
+
+/**
+ * 校验半径参数，拒绝非有限数值并处理尺寸边界。
+ * @param value 半径
+ * @example
+ * CheckRadius(value);
+ * @returns 校验后的有限非负半径
+ */
+const CheckRadius = (value: number): number => {
+    // 校验数值有效性，防止非有限值进入几何或 GPU 数据。
+    if (value < 0 || !Number.isFinite(Math.fround(value * 2))) {
+        throw new RangeError("NGon2D radii must be finite, nonnegative Float32 sizes.");
+    }
+    return value;
+};
+
 export default NGon2D;
 export type { NGon2DLike, NGon2DOptions, NGonUVMode };

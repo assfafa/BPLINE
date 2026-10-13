@@ -8,7 +8,7 @@ struct MaterialUniform {
     solid: vec4f,
     // opacity、实体 width、align、pixelAligned。
     edge: vec4f,
-    // opacity、pixelAligned、补位、补位。
+    // opacity、pixelAligned、Mesh.ignoreZoom、补位。
     points: vec4f,
     // opacity，其余为补位。
     wireframe: vec4f,
@@ -82,7 +82,8 @@ fn ShadeRect(input: FragmentInput, textureColor: vec4f, materialUniform: Materia
     let halfSize = geometrySize * 0.5;
     var outputColor = textureColor * materialUniform.solidColor;
 
-    let safeZoom = max(abs(renderCameraUniform.zoom), 0.000001);
+    let cameraZoom = max(abs(renderCameraUniform.zoom), 1e-30);
+    let safeZoom = select(cameraZoom, 1.0, materialUniform.points.z != 0.0);
     let borderZoomScale = mix(1.0 / safeZoom, 1.0, materialUniform.solid.w);
     let borderWidth = materialUniform.solid.y * borderZoomScale;
     let outward = borderWidth * materialUniform.solid.z;

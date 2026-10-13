@@ -1,20 +1,13 @@
 import { Mat3, Vec2 } from "bpmatrixjs/Math";
 import Texture from "../Texture";
 
-type ShaderValue = number | Vec2 | Mat3 | Float32Array | Texture;
-type ShaderValueKind = "f32" | "vec2f" | "mat3x3f" | "array<f32>" | "texture";
-type ShaderValueRecord = Record<string, ShaderValue>;
-interface ShaderValueEntry {
-    name: string;
-    value: ShaderValue;
-    kind: ShaderValueKind;
-    binding: number;
-}
-
 /** 为自定义材质维护稳定的 WGSL 绑定顺序和可替换的具名值。 */
 class ShaderValues {
     private readonly _record: ShaderValueRecord = {};
-    private readonly _proxy: ShaderValueRecord;
+    private readonly _proxy: ShaderValueRecord = new Proxy(this._record, {
+        set: this.setProxyValue.bind(this),
+        deleteProperty: this.deleteProxyValue.bind(this),
+    });
     private readonly _onChange: (schemaChanged: boolean, textureChanged: boolean) => void;
     private _version: number = 0;
     private _schemaKey: string = "[]";
@@ -28,45 +21,28 @@ class ShaderValues {
      */
     public constructor(onChange: (schemaChanged: boolean, textureChanged: boolean) => void) {
         this._onChange = onChange;
-        /**
-         * 验证代理写入并通知材质。
-         * @param _target 原始记录
-         * @param name 字段名
-         * @param value 新值
-         * @example
-         * values.value.offset = new Vec2(1, 2);
-         * @returns 是否接受写入。
-         */
-        const SetValue = (_target: ShaderValueRecord, name: string | symbol, value: unknown): boolean => {
-            // WGSL 绑定仅由字符串字段名生成。
-            if (typeof name === "string") {
-                this.set(name, value);
-                return true;
-            } else {
-                return false;
-            }
-        };
-        /**
-         * 将代理删除操作映射到布局更新。
-         * @param _target 原始记录
-         * @param name 字段名
-         * @example
-         * delete values.value.offset;
-         * @returns 是否接受删除。
-         */
-        const DeleteValue = (_target: ShaderValueRecord, name: string | symbol): boolean => {
-            // 符号属性不参与 WGSL 绑定。
-            if (typeof name === "string") {
-                this.delete(name);
-                return true;
-            } else {
-                return false;
-            }
-        };
-        this._proxy = new Proxy(this._record, {
-            set: SetValue,
-            deleteProperty: DeleteValue,
-        });
+    }
+
+    /** @param _target 原始记录 @param name 字段名 @param value 新值 @example values.value.offset = new Vec2(1, 2); @returns 是否接受代理写入。 */
+    private setProxyValue(_target: ShaderValueRecord, name: string | symbol, value: unknown): boolean {
+        // WGSL 绑定仅由字符串字段名生成。
+        if (typeof name === "string") {
+            this.set(name, value);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /** @param _target 原始记录 @param name 字段名 @example delete values.value.offset; @returns 是否接受代理删除。 */
+    private deleteProxyValue(_target: ShaderValueRecord, name: string | symbol): boolean {
+        // 符号属性不参与 WGSL 绑定，删除普通名称会同步更新布局版本。
+        if (typeof name === "string") {
+            this.delete(name);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -368,6 +344,19 @@ class ShaderValues {
             previousTextures.some(TextureChanged);
         this._onChange(previousSchema !== this._schemaKey, textureChanged);
     }
+}
+
+type ShaderValue = number | Vec2 | Mat3 | Float32Array | Texture;
+
+type ShaderValueKind = "f32" | "vec2f" | "mat3x3f" | "array<f32>" | "texture";
+
+type ShaderValueRecord = Record<string, ShaderValue>;
+
+interface ShaderValueEntry {
+    name: string;
+    value: ShaderValue;
+    kind: ShaderValueKind;
+    binding: number;
 }
 
 export default ShaderValues;

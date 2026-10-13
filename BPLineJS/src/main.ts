@@ -1,2 +1,2 @@
-import "./style.css";
 import "@/scripts/Examples";
+import "./style.css";

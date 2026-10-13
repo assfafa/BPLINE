@@ -2,24 +2,7 @@ import type Scene from "../Scene";
 import type { TextureLike, TextureSource } from "../Texture";
 import TextureLayers from "../Texture/Layers";
 import type { GPUTextureResourceLike, PipelineLike } from "./types";
-interface TextureManagerLike {
-    /**
-     * 创建或同步本次渲染所需的资源。
-     * @param scene 当前场景，按资源自己的版本更新，不清除共享版本
-     * @example
-     * textureManager.draw(scene);
-     * @returns 无返回值。
-     */
-    draw(scene: Scene): void;
-    /**
-     * 创建缺省白色贴图，使未提供图片的材质仍有有效绑定。
-     * @param device 当前设备
-     * @example
-     * textureManager.createFallbackTexture(device);
-     * @returns 只有一层的白色后备贴图
-     */
-    createFallbackTexture(device: GPUDevice): GPUTextureResourceLike;
-}
+
 /** 按 textureList 上传图片；单张图片和多层图片统一使用 2d-array 视图。 */
 class TextureManager implements TextureManagerLike {
     private readonly pipeline: PipelineLike;
@@ -71,7 +54,8 @@ class TextureManager implements TextureManagerLike {
                         continue;
                     }
                 } else {
-                    continue;
+                    // 视频帧会变化而 Texture 版本不变；复用 GPUTexture 和 BindGroup。
+                    this.uploadVideoFrames(device, cached, resource);
                 }
             }
         }
@@ -118,6 +102,60 @@ class TextureManager implements TextureManagerLike {
             resource.texture.destroy();
         } else {
             return;
+        }
+    }
+    /**
+     * 每次渲染把视频当前帧写入原有纹理层，不改变纹理视图或样式版本。
+     * @param device 当前 GPU 设备
+     * @param cached 已创建的 GPU 纹理
+     * @param resource 单张贴图或有序贴图层组
+     * @example
+     * this.uploadVideoFrames(device, cached, resource);
+     * @returns 无返回值。
+     */
+    private uploadVideoFrames(
+        device: GPUDevice,
+        cached: GPUTextureResourceLike,
+        resource: TextureLike | TextureLayers,
+    ): void {
+        let layers: readonly (TextureLike | undefined)[];
+        // 单图和层组都按目标层号顺序更新，保持样式中的索引稳定。
+        if (resource instanceof TextureLayers) {
+            layers = resource.layers;
+        } else {
+            layers = [resource];
+        }
+        // 同一 GPUTexture 中可能混有静态图片和多个视频层。
+        for (let layer = 0; layer < layers.length; layer++) {
+            const image = layers[layer];
+            // 首帧尚未就绪时沿用当前 GPU 层内容。
+            if (IsReady(image)) {
+                const source = image.source;
+                // 静态图片只在版本变化时上传，视频在每次渲染时更新。
+                if (source !== null && "videoWidth" in source) {
+                    const width = cached.texture.width;
+                    const height = cached.texture.height;
+                    let frameSource: HTMLVideoElement | OffscreenCanvas = source;
+                    // 层组尺寸取最大值；较小的视频帧要铺满整个目标层。
+                    if (image.width !== width || image.height !== height) {
+                        const staging = cached.videoCanvas ?? new OffscreenCanvas(width, height);
+                        cached.videoCanvas = staging;
+                        const context = staging.getContext("2d");
+                        // 浏览器无法建立 2D 上下文时明确报错，避免上传空帧。
+                        if (context === null) {
+                            throw new Error("Cannot create video texture normalization canvas.");
+                        }
+                        context.clearRect(0, 0, width, height);
+                        context.drawImage(source, 0, 0, width, height);
+                        frameSource = staging;
+                    }
+                    device.queue.copyExternalImageToTexture(
+                        { source: frameSource, flipY: true },
+                        { texture: cached.texture, origin: { x: 0, y: 0, z: layer } },
+                        { width, height, depthOrArrayLayers: 1 },
+                    );
+                }
+            }
         }
     }
     /**
@@ -220,7 +258,7 @@ class TextureManager implements TextureManagerLike {
                             inputContext.putImageData(pixels, 0, 0);
                             context.drawImage(input, 0, 0, width, height);
                         } else {
-                            context.drawImage(source as HTMLImageElement | ImageBitmap, 0, 0, width, height);
+                            context.drawImage(source as HTMLImageElement | HTMLVideoElement | ImageBitmap, 0, 0, width, height);
                         }
                         device.queue.copyExternalImageToTexture(
                             { source: staging, flipY: true },
@@ -258,6 +296,26 @@ class TextureManager implements TextureManagerLike {
         }
     }
 }
+
+interface TextureManagerLike {
+    /**
+     * 创建或同步本次渲染所需的资源。
+     * @param scene 当前场景，按资源自己的版本更新，不清除共享版本
+     * @example
+     * textureManager.draw(scene);
+     * @returns 无返回值。
+     */
+    draw(scene: Scene): void;
+    /**
+     * 创建缺省白色贴图，使未提供图片的材质仍有有效绑定。
+     * @param device 当前设备
+     * @example
+     * textureManager.createFallbackTexture(device);
+     * @returns 只有一层的白色后备贴图
+     */
+    createFallbackTexture(device: GPUDevice): GPUTextureResourceLike;
+}
+
 /**
  * 判断贴图是否已有可上传的有效来源。
  * @param image 源图
@@ -265,13 +323,28 @@ class TextureManager implements TextureManagerLike {
  * IsReady(image);
  * @returns 是否具有可上传的有效源
  */
-const IsReady = (image: TextureLike | undefined): image is TextureLike =>
-    image !== undefined &&
-    image.loaded &&
-    image.source !== null &&
-    Number.isInteger(image.width) &&
-    Number.isInteger(image.height) &&
-    image.width > 0 &&
-    image.height > 0;
+const IsReady = (image: TextureLike | undefined): image is TextureLike => {
+    // 资源状态和尺寸必须同时有效，才能安全进行外部图像复制。
+    if (
+        image !== undefined &&
+        image.loaded &&
+        image.source !== null &&
+        Number.isInteger(image.width) &&
+        Number.isInteger(image.height) &&
+        image.width > 0 &&
+        image.height > 0
+    ) {
+        const source = image.source;
+        // 正在等待解码帧的视频暂时保留上一次已上传的画面。
+        if ("videoWidth" in source) {
+            return source.readyState >= 2;
+        } else {
+            return true;
+        }
+    } else {
+        return false;
+    }
+};
+
 export default TextureManager;
 export type { TextureManagerLike };

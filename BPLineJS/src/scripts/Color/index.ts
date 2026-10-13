@@ -1,15 +1,3 @@
-/** 接收颜色变化的对象；字段标识允许同一对象的多个属性共用一个 Color。 */
-export interface ColorSubscriber {
-    /**
-     * 接收颜色变化通知，将更新转发给使用该颜色的样式。
-     * @param color 变化来源颜色
-     * @param field 发生变化的关联字段
-     * @example
-     * colorSubscriber.onColorChange(color, field);
-     * @returns 无返回值。
-     */
-    onColorChange(color: Color, field: string): void;
-}
 /** 归一化 RGBA 颜色；所有修改入口都会在值实际变化后通知订阅者。 */
 class Color {
     private readonly _data: number[] = [1, 1, 1, 1];
@@ -311,4 +299,19 @@ class Color {
         }
     }
 }
+
+/** 接收颜色变化的对象；字段标识允许同一对象的多个属性共用一个 Color。 */
+interface ColorSubscriber {
+    /**
+     * 接收颜色变化通知，将更新转发给使用该颜色的样式。
+     * @param color 变化来源颜色
+     * @param field 发生变化的关联字段
+     * @example
+     * colorSubscriber.onColorChange(color, field);
+     * @returns 无返回值。
+     */
+    onColorChange(color: Color, field: string): void;
+}
+
 export default Color;
+export type { ColorSubscriber };

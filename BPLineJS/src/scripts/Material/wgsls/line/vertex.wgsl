@@ -25,7 +25,7 @@ struct VertexInput {
 };
 
 // linePoints 与标准三角面共用 Mesh 和 Camera 矩阵缓冲。
-@group(0) @binding(0) var<storage, read> modelMatrices: array<mat3x3<f32>>;
+@group(0) @binding(0) var<storage, read> modelMatrices: array<mat3x4<f32>>;
 @group(0) @binding(1) var<uniform> viewMatrix: mat3x3<f32>;
 @group(0) @binding(2) var<uniform> orthogonalMatrix: mat3x3<f32>;
 
@@ -38,8 +38,10 @@ struct VertexOutput {
 fn main(input: VertexInput) -> VertexOutput {
     // 保留入口 builtin 原值；用独立编号读取矩阵、样式并传给片段阶段。
     let resolvedIndex = ResolveIndex(input.instanceIndex);
-    let modelMatrix = modelMatrices[resolvedIndex];
-    let worldPosition = modelMatrix * vec3f(input.position, 1.0);
+    let packedModel = modelMatrices[resolvedIndex];
+    let modelMatrix = mat3x3f(packedModel[0].xyz, packedModel[1].xyz, packedModel[2].xyz);
+    let localAnchor = vec2f(packedModel[0].w, packedModel[1].w);
+    let worldPosition = modelMatrix * vec3f(input.position - localAnchor, 1.0);
     let viewPosition = viewMatrix * worldPosition;
     let clipPosition = orthogonalMatrix * viewPosition;
 

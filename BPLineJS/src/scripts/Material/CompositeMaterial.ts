@@ -1,17 +1,75 @@
 import type Style from "../Style";
 import Material from "./Material";
-import ShaderValues from "./ShaderValues";
 import type { ShaderValueRecord } from "./ShaderValues";
-import rectVertexShader from "./wgsls/base/rect/vertex.wgsl?raw";
-import rectFragmentShader from "./wgsls/base/rect/fragment.wgsl?raw";
-import polyVertexShader from "./wgsls/base/poly/vertex.wgsl?raw";
-import polyFragmentShader from "./wgsls/base/poly/fragment.wgsl?raw";
-import ngonVertexShader from "./wgsls/base/ngon/vertex.wgsl?raw";
+import ShaderValues from "./ShaderValues";
 import ngonFragmentShader from "./wgsls/base/ngon/fragment.wgsl?raw";
+import ngonVertexShader from "./wgsls/base/ngon/vertex.wgsl?raw";
+import polyFragmentShader from "./wgsls/base/poly/fragment.wgsl?raw";
+import polyVertexShader from "./wgsls/base/poly/vertex.wgsl?raw";
+import rectFragmentShader from "./wgsls/base/rect/fragment.wgsl?raw";
+import rectVertexShader from "./wgsls/base/rect/vertex.wgsl?raw";
 
-interface CompositeMaterialLike extends Material {
-    readonly type: "CompositeMaterial";
-    readonly raw: CompositeMaterialRaw;
+/** 将三个颜色函数体合入形状的片元模板，顶点变换保持基础材质行为。 */
+class CompositeMaterial extends Material implements CompositeMaterialLike {
+    public readonly type = "CompositeMaterial" as const;
+    public readonly raw: CompositeMaterialRaw;
+
+    /**
+     * 创建可逐分区定制片元颜色的材质。
+     * @param style 共享样式
+     * @example
+     * const material = new CompositeMaterial(style);
+     * @returns 材质对象。
+     */
+    public constructor(style?: Style) {
+        super(style);
+        /**
+         * 值布局变化要重组 WGSL，资源替换只通知上传路径。
+         * @param schemaChanged 字段名或类型是否变化
+         * @param textureChanged 纹理资源引用是否变化
+         * @example
+         * OnValuesChange(true, false);
+         * @returns 无返回值。
+         */
+        const OnValuesChange = (schemaChanged: boolean, textureChanged: boolean): void => {
+            // 新字段需要同步片元声明及 Pipeline 布局。
+            if (schemaChanged) {
+                this.refreshShaders();
+            }
+            // 同名纹理仅更新绑定资源。
+            if (textureChanged && !schemaChanged) {
+                this.updateVersion("texture");
+            }
+        };
+        /**
+         * 三个分区任一源码变化时重新组装片元模块。
+         * @example
+         * OnShaderChange();
+         * @returns 无返回值。
+         */
+        const OnShaderChange = (): void => {
+            this.refreshShaders();
+        };
+        this._values = new ShaderValues(OnValuesChange);
+        this.raw = new CompositeMaterialRaw(this._values, OnShaderChange);
+        this.rectVertexShader = rectVertexShader;
+        this.polyVertexShader = polyVertexShader;
+        this.ngonVertexShader = ngonVertexShader;
+        this.refreshShaders();
+    }
+
+    /**
+     * 重新组装三个形状模板；数据变化不调用此方法。
+     * @example
+     * this.refreshShaders();
+     * @returns 无返回值。
+     */
+    private refreshShaders(): void {
+        const declarations = this._values?.declarations ?? "";
+        this.rectFragmentShader = Compose(rectFragmentShader, declarations, this.raw.solidShader, this.raw.edgeShader, this.raw.pointShader);
+        this.polyFragmentShader = Compose(polyFragmentShader, declarations, this.raw.solidShader, this.raw.edgeShader, this.raw.pointShader);
+        this.ngonFragmentShader = Compose(ngonFragmentShader, declarations, this.raw.solidShader, this.raw.edgeShader, this.raw.pointShader);
+    }
 }
 
 /** 三个 Shader 字段均为函数体，返回颜色乘数；缺省时为 vec4f(1.0)。 */
@@ -149,67 +207,9 @@ class CompositeMaterialRaw {
     }
 }
 
-/** 将三个颜色函数体合入形状的片元模板，顶点变换保持基础材质行为。 */
-class CompositeMaterial extends Material implements CompositeMaterialLike {
-    public readonly type = "CompositeMaterial" as const;
-    public readonly raw: CompositeMaterialRaw;
-
-    /**
-     * 创建可逐分区定制片元颜色的材质。
-     * @param style 共享样式
-     * @example
-     * const material = new CompositeMaterial(style);
-     * @returns 材质对象。
-     */
-    public constructor(style?: Style) {
-        super(style);
-        /**
-         * 值布局变化要重组 WGSL，资源替换只通知上传路径。
-         * @param schemaChanged 字段名或类型是否变化
-         * @param textureChanged 纹理资源引用是否变化
-         * @example
-         * OnValuesChange(true, false);
-         * @returns 无返回值。
-         */
-        const OnValuesChange = (schemaChanged: boolean, textureChanged: boolean): void => {
-            // 新字段需要同步片元声明及 Pipeline 布局。
-            if (schemaChanged) {
-                this.refreshShaders();
-            }
-            // 同名纹理仅更新绑定资源。
-            if (textureChanged && !schemaChanged) {
-                this.updateVersion("texture");
-            }
-        };
-        /**
-         * 三个分区任一源码变化时重新组装片元模块。
-         * @example
-         * OnShaderChange();
-         * @returns 无返回值。
-         */
-        const OnShaderChange = (): void => {
-            this.refreshShaders();
-        };
-        this._values = new ShaderValues(OnValuesChange);
-        this.raw = new CompositeMaterialRaw(this._values, OnShaderChange);
-        this.rectVertexShader = rectVertexShader;
-        this.polyVertexShader = polyVertexShader;
-        this.ngonVertexShader = ngonVertexShader;
-        this.refreshShaders();
-    }
-
-    /**
-     * 重新组装三个形状模板；数据变化不调用此方法。
-     * @example
-     * this.refreshShaders();
-     * @returns 无返回值。
-     */
-    private refreshShaders(): void {
-        const declarations = this._values?.declarations ?? "";
-        this.rectFragmentShader = Compose(rectFragmentShader, declarations, this.raw.solidShader, this.raw.edgeShader, this.raw.pointShader);
-        this.polyFragmentShader = Compose(polyFragmentShader, declarations, this.raw.solidShader, this.raw.edgeShader, this.raw.pointShader);
-        this.ngonFragmentShader = Compose(ngonFragmentShader, declarations, this.raw.solidShader, this.raw.edgeShader, this.raw.pointShader);
-    }
+interface CompositeMaterialLike extends Material {
+    readonly type: "CompositeMaterial";
+    readonly raw: CompositeMaterialRaw;
 }
 
 /**

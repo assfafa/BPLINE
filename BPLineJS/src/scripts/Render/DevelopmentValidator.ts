@@ -1,42 +1,10 @@
-import IMesh from "../IMesh";
 import type Camera from "../Camera";
+import { DEFAULT_MAX_ZOOM, DEFAULT_MIN_ZOOM } from "../Control/CameraControl/ZoomLimits";
 import type { GeoData, GeoPartDataLike } from "../Geometry";
 import type { Material2d } from "../global-types";
+import IMesh from "../IMesh";
 import type { MeshLike } from "../Mesh";
-interface DevelopmentValidatorLike {
-    /**
-     * 检查 Camera 是否能生成有效矩阵与 Uniform。
-     * @param camera 当前 Camera
-     * @example
-     * developmentValidator.validateCamera(camera);
-     * @returns 无返回值
-     */
-    validateCamera(camera: Camera): void;
-    /**
-     * 检查材质样式数据和分区配置。
-     * @param material 当前材质
-     * @example
-     * developmentValidator.validateMaterial(material);
-     * @returns 无返回值
-     */
-    validateMaterial(material: Material2d): void;
-    /**
-     * 检查 Geometry 各缓冲分区的长度、有限值和索引范围。
-     * @param geometry 当前 Geometry
-     * @example
-     * developmentValidator.validateGeometry(geometry);
-     * @returns 无返回值
-     */
-    validateGeometry(geometry: GeoData): void;
-    /**
-     * 检查 Mesh 的 Geometry 与 Material 是否能组成目标边框绘制模式。
-     * @param mesh 当前 Mesh
-     * @example
-     * developmentValidator.validateMesh(mesh);
-     * @returns 无返回值
-     */
-    validateMesh(mesh: MeshLike): void;
-}
+
 /**
  * 开发模式 GPUBuffer 数据与渲染配置校验器。
  * 只报告 TypeScript 无法约束的运行时数据问题，并按对象和问题类型去重。
@@ -63,6 +31,14 @@ class DevelopmentValidator implements DevelopmentValidatorLike {
         // 校验数值有效性，防止非有限值进入几何或 GPU 数据。
         if (!Number.isFinite(camera.zoom) || camera.zoom <= 0) {
             this.error("CAMERA_ZOOM", camera.id, "Camera zoom 必须是大于 0 的有限数。", camera);
+        } else if (camera.zoom < DEFAULT_MIN_ZOOM || camera.zoom > DEFAULT_MAX_ZOOM) {
+            // 直接设置 Camera.zoom 可以绕过控制器，开发模式提醒默认的稳定缩放范围。
+            this.warn(
+                "CAMERA_ZOOM_RANGE",
+                camera.id,
+                "Camera zoom 超出默认范围 [" + String(DEFAULT_MIN_ZOOM) + ", " + String(DEFAULT_MAX_ZOOM) + "]。",
+                camera,
+            );
         }
     }
     /**
@@ -554,6 +530,42 @@ class DevelopmentValidator implements DevelopmentValidatorLike {
         }
     }
 }
+
+interface DevelopmentValidatorLike {
+    /**
+     * 检查 Camera 是否能生成有效矩阵与 Uniform。
+     * @param camera 当前 Camera
+     * @example
+     * developmentValidator.validateCamera(camera);
+     * @returns 无返回值
+     */
+    validateCamera(camera: Camera): void;
+    /**
+     * 检查材质样式数据和分区配置。
+     * @param material 当前材质
+     * @example
+     * developmentValidator.validateMaterial(material);
+     * @returns 无返回值
+     */
+    validateMaterial(material: Material2d): void;
+    /**
+     * 检查 Geometry 各缓冲分区的长度、有限值和索引范围。
+     * @param geometry 当前 Geometry
+     * @example
+     * developmentValidator.validateGeometry(geometry);
+     * @returns 无返回值
+     */
+    validateGeometry(geometry: GeoData): void;
+    /**
+     * 检查 Mesh 的 Geometry 与 Material 是否能组成目标边框绘制模式。
+     * @param mesh 当前 Mesh
+     * @example
+     * developmentValidator.validateMesh(mesh);
+     * @returns 无返回值
+     */
+    validateMesh(mesh: MeshLike): void;
+}
+
 /**
  * 获取数组中首个非有限数索引。
  * @param data 待检查数值数组
@@ -571,5 +583,6 @@ const GetInvalidNumberIndex = (data: ArrayLike<number>): number => {
     }
     return -1;
 };
+
 export default DevelopmentValidator;
 export type { DevelopmentValidatorLike };

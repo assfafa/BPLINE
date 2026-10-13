@@ -9,7 +9,7 @@ import type {
 
 type TextMetadata = Pick<
     TextGeometryData,
-    "text" | "fontSize" | "fontFamily" | "lineSpacing" | "letterSpacing" | "textAlign" | "baseline"
+    "precision" | "text" | "fontSize" | "fontFamily" | "lineSpacing" | "letterSpacing" | "textAlign" | "baseline"
 >;
 
 /**
@@ -448,5 +448,5 @@ const CreatePointBuffers = (
     };
 };
 
-export { CreateFillBuffers, CreateBorderBuffers, CreateLineBuffers, CreatePointBuffers };
+export { CreateBorderBuffers, CreateFillBuffers, CreateLineBuffers, CreatePointBuffers };
 export type { TextMetadata };

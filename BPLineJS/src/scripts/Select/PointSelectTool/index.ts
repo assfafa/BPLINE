@@ -3,24 +3,15 @@ import IMesh from "../../IMesh";
 import Mesh from "../../Mesh";
 import type Render from "../../Render";
 import type Scene from "../../Scene";
-import { CreateSelectableVertices, IsCanvasEvent, ProjectPoint } from "../SelectionGeometry";
 import type { SelectPoint } from "../RectSelectTool/RectSelectGeometry";
-
-/** 单个模型顶点的命中结果，距离以画布 CSS 像素计。 */
-interface PointSelection {
-    readonly mesh: Mesh;
-    readonly vertexIndex: number;
-    readonly contourIndex: number;
-    readonly position: SelectPoint;
-    readonly distance: number;
-}
+import { CreateSelectableVertices, IsCanvasEvent, ProjectPoint } from "../SelectionGeometry";
 
 /** 普通 Mesh 轮廓顶点的屏幕半径点选工具。 */
 class PointSelectTool {
     private readonly scene: Scene;
     private readonly render: Render;
     private readonly camera: Camera;
-    private _radius: number;
+    private _radius: number = 8;
 
     /** 是否允许 SelectPicker 点选，默认开启。 */
     public picker: boolean = true;
@@ -39,7 +30,6 @@ class PointSelectTool {
         this.scene = scene;
         this.render = render;
         this.camera = camera;
-        this._radius = 8;
         this.radius = radius;
     }
 
@@ -87,8 +77,8 @@ class PointSelectTool {
             for (let index = drawList.length - 1; index >= 0; index -= 1) {
                 const mesh = drawList[index];
                 // IMesh 需要额外的实例身份，本工具只处理普通 Mesh。
-                if (mesh instanceof Mesh && !(mesh instanceof IMesh)) {
-                    const vertices = CreateSelectableVertices(mesh);
+                if (mesh instanceof Mesh && !(mesh instanceof IMesh) && !mesh.noSelect) {
+                    const vertices = CreateSelectableVertices(mesh, mesh.getRenderMatrix(this.camera));
                     // 先变换到屏幕，误差半径始终用 CSS 像素表示。
                     for (const vertex of vertices) {
                         const projected = ProjectPoint(vertex.position, this.camera, this.render);
@@ -111,6 +101,15 @@ class PointSelectTool {
         }
         return matches;
     }
+}
+
+/** 单个模型顶点的命中结果，距离以画布 CSS 像素计。 */
+interface PointSelection {
+    readonly mesh: Mesh;
+    readonly vertexIndex: number;
+    readonly contourIndex: number;
+    readonly position: SelectPoint;
+    readonly distance: number;
 }
 
 export default PointSelectTool;

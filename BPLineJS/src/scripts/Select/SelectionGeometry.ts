@@ -1,12 +1,13 @@
 import { CreateRectLineGeometry } from "bpmatrixjs/Geometry/Rect";
-import { Vec2 } from "bpmatrixjs/Math";
 import type { Mat3 } from "bpmatrixjs/Math";
+import { Vec2 } from "bpmatrixjs/Math";
 import type Camera from "../Camera";
 import NGon2D from "../Geometry/NGon2D";
 import Poly2D from "../Geometry/Poly2D";
 import Rect2D from "../Geometry/Rect2D";
 import type Mesh from "../Mesh";
 import type Render from "../Render";
+import Text from "../Text";
 import type { SelectPoint } from "./RectSelectTool/RectSelectGeometry";
 
 interface SelectableVertex {
@@ -78,11 +79,12 @@ const ProjectPoint = (point: SelectPoint, camera: Camera, render: Render): Selec
 /**
  * 从已生成的实体面三角形取得世界坐标，用于精确面积选择。
  * @param mesh 待查询的普通 Mesh。
+ * @param matrix 可选的显示或选择空间矩阵，默认使用逻辑世界矩阵
  * @example
  * const triangles = CreateFillTriangles(mesh);
  * @returns 有面积的实体三角形列表。
  */
-const CreateFillTriangles = (mesh: Mesh): SelectTriangle[] => {
+const CreateFillTriangles = (mesh: Mesh, matrix: Mat3 = mesh.ensureWorldMatrix()): SelectTriangle[] => {
     const geometry = mesh.data;
     const triangles: SelectTriangle[] = [];
     // 没有几何的 Mesh 无法提供填充区域。
@@ -91,7 +93,6 @@ const CreateFillTriangles = (mesh: Mesh): SelectTriangle[] => {
         const vertices = geometry.geometry;
         const indices = geometry.index;
         const vertexTypes = geometry.vertexType;
-        const matrix = mesh.ensureWorldMatrix();
         // 索引和顶点同时存在时才能组成明确的三角面。
         if (vertices !== undefined && indices !== undefined) {
             // 合并缓冲还含边框及关键点，只保留实体面的三角形。
@@ -122,20 +123,20 @@ const CreateFillTriangles = (mesh: Mesh): SelectTriangle[] => {
 /**
  * 生成保留轮廓顶点编号的世界坐标路径。
  * @param mesh 待查询的普通 Mesh。
+ * @param matrix 可选的显示矩阵，默认使用逻辑世界矩阵
  * @example
  * const contours = CreateContours(mesh);
  * @returns 世界坐标轮廓；不含三角剖分的内部边。
  */
-const CreateContours = (mesh: Mesh): SelectableContour[] => {
+const CreateContours = (mesh: Mesh, matrix: Mat3 = mesh.ensureWorldMatrix()): SelectableContour[] => {
     const geometry = mesh.data;
     const contours: SelectableContour[] = [];
     // 各几何类型的轮廓来源不同，矩形直接复用其生成的 line-list 路径。
     if (geometry instanceof Rect2D) {
-        const line = CreateRectLineGeometry(geometry.width, geometry.height, geometry.radius);
+        const line = CreateRectLineGeometry(geometry.width, geometry.height, geometry.radius, 1, geometry.precision);
         const vertexCount = line.index.length / 2;
         // line-list 的最后一个坐标是闭合接缝，不能重复报告首点。
         if (vertexCount > 0) {
-            const matrix = mesh.ensureWorldMatrix();
             const vertices: SelectableVertex[] = [];
             // 顶点和边都沿用实际几何的分段数及顺序。
             for (let index = 0; index < vertexCount; index += 1) {
@@ -147,7 +148,6 @@ const CreateContours = (mesh: Mesh): SelectableContour[] => {
         }
     } else if (geometry instanceof NGon2D) {
         // NGon 有独立的外轮廓和可选内孔，不能把两者连成一条路径。
-        const matrix = mesh.ensureWorldMatrix();
         const rings = [geometry.outer];
         // 内半径为零时只有外轮廓，正值时增加内孔轮廓。
         if (geometry.inner > 0) {
@@ -171,7 +171,6 @@ const CreateContours = (mesh: Mesh): SelectableContour[] => {
         }
     } else if (geometry instanceof Poly2D) {
         // Poly 保留用户输入的原始节点顺序和开放路径设置。
-        const matrix = mesh.ensureWorldMatrix();
         const vertices: SelectableVertex[] = [];
         // Poly2D 的输入点正是编辑器关键点，保留原始数组下标。
         for (let offset = 0; offset + 1 < geometry.points.length; offset += 2) {
@@ -182,14 +181,15 @@ const CreateContours = (mesh: Mesh): SelectableContour[] => {
             });
         }
         contours.push({ vertices, closed: geometry.closed });
+    } else if (geometry instanceof Text) {
+        // 字体输入只编辑排版框；降级 Base 后才开放轮廓关键点。
     } else if (geometry !== undefined) {
         // 其余几何按实体三角索引构建可识别的边和顶点。
         geometry.ensureGeometry();
         const vertices = geometry.geometry;
         const indices = geometry.index;
         const vertexTypes = geometry.vertexType;
-        const matrix = mesh.ensureWorldMatrix();
-        // Base2D 和文字使用实体三角面索引；边框和关键点分区不是编辑轮廓。
+        // Base2D使用实体三角面索引；边框和关键点分区不是编辑轮廓。
         if (vertices !== undefined && indices !== undefined) {
             // 每组三个索引构成一块独立三角面。
             for (let offset = 0; offset + 2 < indices.length; offset += 3) {
@@ -198,7 +198,7 @@ const CreateContours = (mesh: Mesh): SelectableContour[] => {
                 const thirdIndex = indices[offset + 2];
                 const fillTriangle = vertexTypes === undefined ||
                     (vertexTypes[firstIndex] === 0 && vertexTypes[secondIndex] === 0 && vertexTypes[thirdIndex] === 0);
-                // 生成的宽边框三角形不能被误报为 Base2D 或文字自身的边和点。
+                // 生成的宽边框三角形不能被误报为 Base2D自身的边和点。
                 if (fillTriangle) {
                     const triangleVertices: SelectableVertex[] = [];
                     // 保留实体顶点原始编号，供去重和编辑器定位。
@@ -221,15 +221,16 @@ const CreateContours = (mesh: Mesh): SelectableContour[] => {
 /**
  * 提取轮廓顶点，重复索引只返回一次。
  * @param mesh 待查询的普通 Mesh。
+ * @param matrix 可选的显示矩阵，默认使用逻辑世界矩阵
  * @example
  * const vertices = CreateSelectableVertices(mesh);
  * @returns 带顶点编号和世界坐标的列表。
  */
-const CreateSelectableVertices = (mesh: Mesh): SelectableVertex[] => {
+const CreateSelectableVertices = (mesh: Mesh, matrix: Mat3 = mesh.ensureWorldMatrix()): SelectableVertex[] => {
     const vertices: SelectableVertex[] = [];
     const seen = new Set<number>();
     // 多个三角形共享的顶点按原始编号只报告一次。
-    for (const contour of CreateContours(mesh)) {
+    for (const contour of CreateContours(mesh, matrix)) {
         // 单个轮廓的顶点保留它在原始几何中的身份。
         for (const vertex of contour.vertices) {
             if (seen.has(vertex.index)) {
@@ -246,11 +247,12 @@ const CreateSelectableVertices = (mesh: Mesh): SelectableVertex[] => {
 /**
  * 提取轮廓边，重复三角形边按无向顶点编号去重。
  * @param mesh 待查询的普通 Mesh。
+ * @param matrix 可选的显示矩阵，默认使用逻辑世界矩阵
  * @example
  * const edges = CreateSelectableEdges(mesh);
  * @returns 带边编号和世界端点的列表。
  */
-const CreateSelectableEdges = (mesh: Mesh): SelectableEdge[] => {
+const CreateSelectableEdges = (mesh: Mesh, matrix: Mat3 = mesh.ensureWorldMatrix()): SelectableEdge[] => {
     const edges: SelectableEdge[] = [];
     const candidates: { key: string; contourIndex: number; start: SelectPoint; end: SelectPoint }[] = [];
     const edgeCounts = new Map<string, number>();
@@ -258,7 +260,7 @@ const CreateSelectableEdges = (mesh: Mesh): SelectableEdge[] => {
     const triangleGeometry = geometry !== undefined &&
         !(geometry instanceof Rect2D) && !(geometry instanceof NGon2D) && !(geometry instanceof Poly2D);
     // 各轮廓内部逐段连接，开放路径不补末端到首端的边。
-    for (const contour of CreateContours(mesh)) {
+    for (const contour of CreateContours(mesh, matrix)) {
         const count = contour.vertices.length;
         let segmentCount = count - 1;
         // 闭合轮廓额外连接最后一点和第一点。
@@ -283,7 +285,7 @@ const CreateSelectableEdges = (mesh: Mesh): SelectableEdge[] => {
             }
         }
     }
-    // Base2D 与文字的共享三角面边属于内部剖分，不是可编辑轮廓。
+    // Base2D的共享三角面边属于内部剖分，不是可编辑轮廓。
     for (const candidate of candidates) {
         // 明确轮廓直接保留；三角索引只保留出现一次的外边。
         if (!triangleGeometry || edgeCounts.get(candidate.key) === 1) {

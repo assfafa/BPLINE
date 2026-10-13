@@ -1,11 +1,14 @@
 /// <reference types="@webgpu/types" preserve="true" />
-import PartStyle from "./PartStyle";
 import type { TextureLike, TextureSubscriber } from "../Texture";
+import PartStyle from "./PartStyle";
+
 /** 面、实体边框和关键点使用的贴图参数，各分区独立持有。 */
 class TexturedStyle extends PartStyle implements TextureSubscriber {
     private _texture: TextureLike | undefined;
-    private _addressModeU: GPUAddressMode = "repeat";
-    private _addressModeV: GPUAddressMode = "repeat";
+    /** U 轴默认重复；子样式可以在字段声明中指定自己的默认值。 */
+    protected _addressModeU: GPUAddressMode = "repeat";
+    /** V 轴默认重复；子样式可以在字段声明中指定自己的默认值。 */
+    protected _addressModeV: GPUAddressMode = "repeat";
     /**
      * 当前贴图，undefined 使用白色后备贴图。
      * @example
@@ -32,6 +35,30 @@ class TexturedStyle extends PartStyle implements TextureSubscriber {
         } else {
             return;
         }
+    }
+    /**
+     * 复制通用外观及贴图设置；Texture 作为资源保留同一引用。
+     * @param source 来源贴图分区
+     * @example
+     * target.copy(source);
+     * @returns 当前贴图分区。
+     */
+    public override copy(source: TexturedStyle): this {
+        super.copy(source);
+        this.texture = source.texture;
+        this.addressModeU = source.addressModeU;
+        this.addressModeV = source.addressModeV;
+        return this;
+    }
+
+    /**
+     * 创建同类贴图分区。
+     * @example
+     * const duplicate = texturedStyle.clone();
+     * @returns 新贴图分区。
+     */
+    public override clone(): TexturedStyle {
+        return new TexturedStyle(this.area).copy(this);
     }
     /**
      * 图片内容变化向上通知，但不把它当作替换贴图引用。
@@ -115,4 +142,5 @@ class TexturedStyle extends PartStyle implements TextureSubscriber {
         }
     }
 }
+
 export default TexturedStyle;

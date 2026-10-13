@@ -3,12 +3,14 @@ interface InnerSize {
     height: number;
     dpr: number;
 }
+
 interface CanvasCoord {
     dprx: number;
     dpry: number;
     x: number;
     y: number;
 }
+
 /**
  * 获取当前设备像素比
  * 服务端或无窗口环境下默认返回 1
@@ -24,6 +26,7 @@ const GetDevicePixelRatio = (): number => {
         return window.devicePixelRatio || 1;
     }
 };
+
 /**
  * 获取当前窗口实际像素尺寸
  * 宽高会乘以设备像素比
@@ -48,6 +51,7 @@ const GetInner = (): Readonly<InnerSize> => {
         });
     }
 };
+
 /**
  * 将屏幕坐标转换为画布像素坐标
  * 默认会按当前设备像素比进行换算
@@ -72,5 +76,6 @@ const ConvertEventToCanvasCoord = (
         y: coordY,
     };
 };
+
 export { ConvertEventToCanvasCoord, GetDevicePixelRatio, GetInner };
 export type { CanvasCoord, InnerSize };

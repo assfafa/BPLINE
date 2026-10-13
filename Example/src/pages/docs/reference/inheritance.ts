@@ -19,6 +19,7 @@ const publicClasses: readonly PublicClass[] = [
     { label: "Mesh", path: "/docs/bpline/mesh", parent: "/docs/bpline/group" },
     { label: "IMesh", path: "/docs/bpline/imesh", parent: "/docs/bpline/mesh" },
     { label: "Scene", path: "/docs/bpline/scene", parent: "/docs/bpline/group" },
+    { label: "EditorGroup", path: "/docs/bpline/editor/group", parent: "/docs/bpline/group" },
     { label: "Geo", path: "/docs/bpline/geometry" },
     { label: "Base2D", path: "/docs/bpline/geometry/base2d", parent: "/docs/bpline/geometry" },
     { label: "Rect2D", path: "/docs/bpline/geometry/rect2d", parent: "/docs/bpline/geometry" },

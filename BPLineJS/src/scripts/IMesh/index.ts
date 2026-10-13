@@ -1,26 +1,24 @@
-import { Mat3, Vec2 } from "bpmatrixjs/Math";
 import type { VersionedMath } from "bpmatrixjs/Math";
-import Mesh from "../Mesh";
+import { Mat3, Vec2 } from "bpmatrixjs/Math";
+import type { CameraLike } from "../Camera";
 import type { Geometry2d, Material2d } from "../global-types";
 import { GETID } from "../ID";
-import Raws, { Raw } from "../Raws";
+import type { MeshBoundingBox } from "../Mesh";
+import Mesh from "../Mesh";
 import type { RawChange, RawOptions, RawSubscriber } from "../Raws";
+import Raws, { Raw } from "../Raws";
 import Style, { STYLE_STRIDE, WriteStyleData } from "../Style";
-import TextureLayers from "../Texture/Layers";
 import type { TextureLike } from "../Texture";
-/** 实例管理设置；raw 为构建时选择，避免丢失的原始值被误认为可以恢复。 */
-export interface IMeshOptions {
-    /** 保留原始值和订阅，默认 true，构建后不可切换。 */
-    raw?: boolean;
-    /** 初始槽数，默认 2，必须是正整数。 */
-    capacity?: number;
-    /** 扩容倍率，默认 2，必须是不小于 2 的整数。 */
-    growthFactor?: number;
-}
+import TextureLayers from "../Texture/Layers";
+
 /** 共用 Geometry / Material 的实例网格，每个槽位独立储存世界矩阵和样式。 */
 class IMesh extends Mesh implements RawSubscriber {
     /** 对象类型；Scene 仍通过 Mesh 基类识别。 */
     public override readonly type: string = "IMesh";
+    /** 实例批次从空集合开始，覆盖普通 Mesh 的单实体默认值。 */
+    protected override _count: number = 0;
+    /** 由构造参数 capacity 触发首次分配；字段初始值不占用实例槽位。 */
+    protected override _capacity: number = 0;
     private readonly _raw: boolean;
     private readonly _raws: Raws = new Raws();
     private _growthFactor: number = 2;
@@ -42,6 +40,11 @@ class IMesh extends Mesh implements RawSubscriber {
         new Map<TextureLike | undefined, number>(),
     ];
     private _layersPending: boolean = false;
+    private _instanceBounds: MeshBoundingBox | null = null;
+    private _boundsGeometry: Geometry2d | undefined;
+    private _boundsGeometryVersion: number = -1;
+    private _boundsMatrixVersion: number = -1;
+    private _boundsZoom: number = Number.NaN;
     /**
      * 创建对象并建立初始状态及依赖关联。
      * @param data 共用几何模板，提前启用需要生成的分区
@@ -56,14 +59,70 @@ class IMesh extends Mesh implements RawSubscriber {
         ValidateOptions(options);
         super(data, material, false);
         this._raw = options.raw ?? true;
-        this._count = 0;
-        this._capacity = 0;
         this.growthFactor = options.growthFactor ?? 2;
         try {
             this.capacity = options.capacity ?? 2;
         } catch (error) {
             super.dispose();
             throw error;
+        }
+    }
+    /** @example iMesh.boundingBox; @returns 全部实例共用的整体包围盒；空实例集合返回 null。 */
+    public override get boundingBox(): MeshBoundingBox | null {
+        return this.aggregateBounds(1);
+    }
+    /** @param camera 本次筛选相机 @example iMesh.getRenderBoundingBox(camera); @returns 含 ignoreZoom 补偿的实例整体范围。 */
+    public override getRenderBoundingBox(camera: CameraLike): MeshBoundingBox | null {
+        let zoom = 1;
+        // 固定像素尺寸只改变每个实例的局部轴，不能缩放实例的世界原点。
+        if (this.ignoreZoom && camera.zoom > 0 && Number.isFinite(camera.zoom)) {
+            zoom = camera.zoom;
+        }
+        return this.aggregateBounds(zoom);
+    }
+    /** @param zoom 局部轴需要抵消的缩放 @example this.aggregateBounds(1); @returns 共享局部范围及所有实例的世界并集。 */
+    private aggregateBounds(zoom: number): MeshBoundingBox | null {
+        const template = super.boundingBox;
+        const geometry = this.data;
+        // 不建立逐实例包围盒对象；只按矩阵数组累计一个世界范围。
+        if (template !== null && geometry !== undefined && this.count > 0) {
+            this.updateInstanceData();
+            // 模板变更、槽位变更及 zoom 抵消变化才使整体范围失效。
+            if (this._boundsGeometry !== geometry || this._boundsGeometryVersion !== geometry.version ||
+                this._boundsMatrixVersion !== this.matrixVersion || this._boundsZoom !== zoom) {
+                const local = template.local;
+                let minX = Infinity;
+                let minY = Infinity;
+                let maxX = -Infinity;
+                let maxY = -Infinity;
+                // 所有槽位共享几何，四个局部包围角足以形成保守的整体范围。
+                for (let index = 0; index < this.count; index++) {
+                    const offset = index * 12;
+                    // 不分配逐实例包围盒，只变换模板的左右两个边界。
+                    for (const x of [local.x, local.x + local.width]) {
+                        // 配对上下边界形成四个角，再累计全批次的范围。
+                        for (const y of [local.y, local.y + local.height]) {
+                            const worldX = (this.matrixData[offset] * x + this.matrixData[offset + 4] * y) / zoom +
+                                this.matrixData[offset + 8];
+                            const worldY = (this.matrixData[offset + 1] * x + this.matrixData[offset + 5] * y) / zoom +
+                                this.matrixData[offset + 9];
+                            minX = Math.min(minX, worldX);
+                            minY = Math.min(minY, worldY);
+                            maxX = Math.max(maxX, worldX);
+                            maxY = Math.max(maxY, worldY);
+                        }
+                    }
+                }
+                this._instanceBounds = { local, world: { x: minX, y: minY, width: maxX - minX, height: maxY - minY } };
+                this._boundsGeometry = geometry;
+                this._boundsGeometryVersion = geometry.version;
+                this._boundsMatrixVersion = this.matrixVersion;
+                this._boundsZoom = zoom;
+            }
+            return this._instanceBounds;
+        } else {
+            this._instanceBounds = null;
+            return null;
         }
     }
     /**
@@ -461,7 +520,7 @@ class IMesh extends Mesh implements RawSubscriber {
      */
     private writeStyle(index: number, style: Style, enabled: boolean): void {
         const offset: number = index * STYLE_STRIDE;
-        WriteStyleData(style, this._styleData, offset);
+        WriteStyleData(style, this._styleData, offset, this.ignoreZoom);
         // 禁用实例时清空显示开关槽，保留矩阵和其他原始数据。
         if (!enabled) {
             this._styleData.fill(0, offset + 36, offset + 40);
@@ -560,8 +619,17 @@ class IMesh extends Mesh implements RawSubscriber {
         }
     }
 }
-export default IMesh;
-export type { RawOptions } from "../Raws";
+
+/** 实例管理设置；raw 为构建时选择，避免丢失的原始值被误认为可以恢复。 */
+interface IMeshOptions {
+    /** 保留原始值和订阅，默认 true，构建后不可切换。 */
+    raw?: boolean;
+    /** 初始槽数，默认 2，必须是正整数。 */
+    capacity?: number;
+    /** 扩容倍率，默认 2，必须是不小于 2 的整数。 */
+    growthFactor?: number;
+}
+
 /**
  * 检查实例化配置，避免无效容量参数进入分配流程。
  * @param options 构建选项；不创建任何订阅或分配大数组
@@ -585,3 +653,7 @@ const ValidateOptions = (options: IMeshOptions): void => {
         throw new RangeError("growthFactor must be an integer >= 2.");
     }
 };
+
+export default IMesh;
+export type { RawOptions } from "../Raws";
+export type { IMeshOptions };

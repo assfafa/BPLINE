@@ -1,16 +1,209 @@
-import { CreatePath, Cross, JoinNormal, Nonnegative, Segments, Triangulate } from "./Path.js";
 import type { Path } from "./Path.js";
+import { CreatePath, Cross, JoinNormal, Nonnegative, Segments, Triangulate } from "./Path.js";
+import { WindingFill } from "./WindingFill.js";
 import type {
-    PolyPoint,
+    PolyBorderAlign,
+    PolyBorderGeometryData,
+    PolyGeometryData,
+    PolyLike,
+    PolyLineGeometryData,
     PolyNode,
     PolyOptions,
-    PolyBorderAlign,
-    PolyGeometryData,
-    PolyBorderGeometryData,
-    PolyLineGeometryData,
+    PolyPoint,
     PolyPointGeometryData,
-    PolyLike,
 } from "./types.js";
+
+/** 单轮廓多边形/折线生成器，不持有任何 GPU 资源。 */
+class Poly implements PolyLike {
+    private _path: Path;
+    private _data: PolyGeometryData;
+    private _borderData: PolyBorderGeometryData | undefined;
+    private _lineData: PolyLineGeometryData | undefined;
+    private _pointData: PolyPointGeometryData | undefined;
+    /**
+     * 创建对象并建立初始状态及依赖关联。
+     * @param points 有序节点，默认空集；点数不足时不生成几何
+     * @param options 默认闭合并生成填充
+     * @example
+     * const poly = new Poly(points, options);
+     * @returns 创建的 Poly 对象。
+     */
+    public constructor(points: readonly PolyPoint[] = [], options: PolyOptions = {}) {
+        this._path = CreatePath(points, options);
+        this._data = Fill(this._path);
+    }
+    /**
+     * 规范化后的只读节点；闭合轮廓统一逆时针。
+     * @example
+     * const value = poly.points;
+     * @returns 规范化后的只读节点；闭合轮廓统一逆时针。
+     */
+    public get points(): readonly PolyNode[] {
+        return this._path.points;
+    }
+    /**
+     * 原始轮廓包围盒宽度。
+     * @example
+     * const value = poly.width;
+     * @returns 原始轮廓包围盒宽度。
+     */
+    public get width(): number {
+        return this._path.width;
+    }
+    /**
+     * 原始轮廓包围盒高度。
+     * @example
+     * const value = poly.height;
+     * @returns 原始轮廓包围盒高度。
+     */
+    public get height(): number {
+        return this._path.height;
+    }
+    /**
+     * 是否闭合。
+     * @example
+     * const value = poly.closed;
+     * @returns 是否闭合。
+     */
+    public get closed(): boolean {
+        return this._path.closed;
+    }
+    /**
+     * 是否生成实体面。
+     * @example
+     * const value = poly.solid;
+     * @returns 是否生成实体面。
+     */
+    public get solid(): boolean {
+        return this._path.solid;
+    }
+    /**
+     * 填充数组，关闭 solid 时为空数组。
+     * @example
+     * const value = poly.data;
+     * @returns 填充数组，关闭 solid 时为空数组。
+     */
+    public get data(): PolyGeometryData {
+        return this._data;
+    }
+    /**
+     * 最近生成的边框载体。
+     * @example
+     * const value = poly.borderData;
+     * @returns 最近生成的边框载体。
+     */
+    public get borderData(): PolyBorderGeometryData | undefined {
+        return this._borderData;
+    }
+    /**
+     * 最近生成的 line-list 数据。
+     * @example
+     * const value = poly.lineData;
+     * @returns 最近生成的 line-list 数据。
+     */
+    public get lineData(): PolyLineGeometryData | undefined {
+        return this._lineData;
+    }
+    /**
+     * 最近生成的点型数据。
+     * @example
+     * const value = poly.pointData;
+     * @returns 最近生成的点型数据。
+     */
+    public get pointData(): PolyPointGeometryData | undefined {
+        return this._pointData;
+    }
+    /**
+     * 更新输入参数并使已有生成结果失效。
+     * @param points 新节点
+     * @param options 未传时保留当前开关
+     * @example
+     * poly.set(points, options);
+     * @returns 当前生成器；旧附加数据失效
+     */
+    public set(points: readonly PolyPoint[], options: PolyOptions = {}): this {
+        const path = CreatePath(points, {
+            closed: options.closed ?? this.closed,
+            solid: options.solid ?? this.solid,
+        });
+        const data = Fill(path);
+        this._path = path;
+        this._data = data;
+        this._borderData = undefined;
+        this._lineData = undefined;
+        this._pointData = undefined;
+        return this;
+    }
+    /**
+     * 计算当前轮廓周长，供顺向 UV 重复量等计算使用。
+     * @example
+     * poly.getPerimeter();
+     * @returns 中心轮廓长度，开放路径不包含末点到首点
+     */
+    public getPerimeter(): number {
+        return this._path.length;
+    }
+    /**
+     * 生成带宽度边框的三角面及其法线、UV 和索引。
+     * @param lineWidth 统一边框宽度
+     * @param uvRepeat 顺向重复次数
+     * @param align 边框对齐
+     * @example
+     * poly.createBorderGeometry(lineWidth, uvRepeat, align);
+     * @returns Shader 外扩载体
+     */
+    public createBorderGeometry(
+        lineWidth: number,
+        uvRepeat: number = 1,
+        align: PolyBorderAlign = "normal",
+    ): PolyBorderGeometryData {
+        this._borderData = Border(this._path, lineWidth, uvRepeat, align);
+        return this._borderData;
+    }
+    /**
+     * 生成沿轮廓连接的 line-list 顶点与索引数据。
+     * @param uvRepeat 顺向重复次数
+     * @example
+     * poly.createLineGeometry(uvRepeat);
+     * @returns line-list 顶点与索引
+     */
+    public createLineGeometry(uvRepeat: number = 1): PolyLineGeometryData {
+        this._lineData = Line(this._path, uvRepeat);
+        return this._lineData;
+    }
+    /**
+     * 按顶点与中点选项生成合并点型几何。
+     * @param pointRadius 点型半径
+     * @param sides 点型边数
+     * @param vertexPoints 顶点开关
+     * @param midpointPoints 中点开关
+     * @param vertexThreshold 共边长度合计阈值
+     * @param midpointThreshold 单边长度阈值
+     * @example
+     * poly.createPointGeometry(pointRadius, sides, vertexPoints, midpointPoints, vertexThreshold, midpointThreshold);
+     * @returns 合并点型几何
+     */
+    public createPointGeometry(
+        pointRadius: number = 2,
+        sides: number = 4,
+        vertexPoints: boolean = true,
+        midpointPoints: boolean = false,
+        vertexThreshold: number = 0,
+        midpointThreshold: number = 0,
+    ): PolyPointGeometryData {
+        this._pointData = Points(
+            this._path,
+            pointRadius,
+            sides,
+            vertexPoints,
+            midpointPoints,
+            vertexThreshold,
+            midpointThreshold,
+        );
+        return this._pointData;
+    }
+}
+
 /**
  * 将轮廓属性和临时数值数组整理为类型化几何数据。
  * @param path 路径
@@ -48,8 +241,9 @@ const Pack = (
         closed: path.closed,
     };
 };
+
 /**
- * 圆盘使用中心扇形，圆环逐段缝合内外圈；不会用扇形跨过内孔。
+ * 简单轮廓用耳切，自交轮廓按非零环绕规则切分后生成填充面。
  * @param path 轮廓
  * @example
  * Fill(path);
@@ -58,15 +252,30 @@ const Pack = (
 const Fill = (path: Path): PolyGeometryData => {
     // 区分空数据和有效内容，空集合不创建可绘制资源。
     if (path.solid && path.normals.length !== 0) {
+        const windingMesh = WindingFill(path);
+        let fillPoints: readonly PolyNode[] = path.points;
+        let indices: number[];
+        // 自交点会引入新顶点；线框和辅助点仍保留原始轮廓。
+        if (windingMesh !== undefined) {
+            fillPoints = windingMesh.points;
+            indices = windingMesh.indices;
+        } else {
+            indices = Triangulate(path);
+        }
         const geometry: number[] = [];
         const normal: number[] = [];
         const uv: number[] = [];
         // 按顶点顺序写入坐标及配套属性，保持各数组长度一致。
-        for (let i = 0; i < path.points.length; i++) {
-            const p = path.points[i];
-            const n = JoinNormal(path, i);
+        for (let i = 0; i < fillPoints.length; i++) {
+            const p = fillPoints[i];
             geometry.push(p.x, p.y);
-            normal.push(n[0], n[1]);
+            // 实体面不执行边框外扩；切分产生的交点没有唯一的连接法线。
+            if (windingMesh !== undefined) {
+                normal.push(0, 0);
+            } else {
+                const n = JoinNormal(path, i);
+                normal.push(n[0], n[1]);
+            }
             let u: number = 0.5;
             let v: number = 0.5;
             // 零尺寸轴不参与除法，保持 UV 和尺寸结果为有限值。
@@ -79,11 +288,12 @@ const Fill = (path: Path): PolyGeometryData => {
             }
             uv.push(u, v);
         }
-        return Pack(path, geometry, normal, uv, Triangulate(path));
+        return Pack(path, geometry, normal, uv, indices);
     } else {
         return Pack(path);
     }
 };
+
 /**
  * 沿原始轮廓生成独立线段，不增加圆角细分点。
  * @param path 轮廓
@@ -125,6 +335,7 @@ const Line = (path: Path, uvRepeat: number): PolyLineGeometryData => {
         return { ...Pack(path, geometry, normal, uv, index), uvRepeat };
     }
 };
+
 /**
  * 生成与 Rect 相同的 Shader 外扩载体，端点为 butt 平头。
  * 尖角使用斜接；圆接只细分转弯外侧，内侧交点避免重复叠色。
@@ -331,6 +542,7 @@ const Border = (
         };
     }
 };
+
 /**
  * 顶点点型和线段中点合并成一次三角面绘制的数据。
  * 开放端点的相邻边长之和只计算实际存在的一条边。
@@ -459,196 +671,7 @@ const Points = (
         };
     }
 };
-/** 单轮廓多边形/折线生成器，不持有任何 GPU 资源。 */
-class Poly implements PolyLike {
-    private _path: Path;
-    private _data: PolyGeometryData;
-    private _borderData: PolyBorderGeometryData | undefined;
-    private _lineData: PolyLineGeometryData | undefined;
-    private _pointData: PolyPointGeometryData | undefined;
-    /**
-     * 创建对象并建立初始状态及依赖关联。
-     * @param points 有序节点，默认空集；点数不足时不生成几何
-     * @param options 默认闭合并生成填充
-     * @example
-     * const poly = new Poly(points, options);
-     * @returns 创建的 Poly 对象。
-     */
-    public constructor(points: readonly PolyPoint[] = [], options: PolyOptions = {}) {
-        this._path = CreatePath(points, options);
-        this._data = Fill(this._path);
-    }
-    /**
-     * 规范化后的只读节点；闭合轮廓统一逆时针。
-     * @example
-     * const value = poly.points;
-     * @returns 规范化后的只读节点；闭合轮廓统一逆时针。
-     */
-    public get points(): readonly PolyNode[] {
-        return this._path.points;
-    }
-    /**
-     * 原始轮廓包围盒宽度。
-     * @example
-     * const value = poly.width;
-     * @returns 原始轮廓包围盒宽度。
-     */
-    public get width(): number {
-        return this._path.width;
-    }
-    /**
-     * 原始轮廓包围盒高度。
-     * @example
-     * const value = poly.height;
-     * @returns 原始轮廓包围盒高度。
-     */
-    public get height(): number {
-        return this._path.height;
-    }
-    /**
-     * 是否闭合。
-     * @example
-     * const value = poly.closed;
-     * @returns 是否闭合。
-     */
-    public get closed(): boolean {
-        return this._path.closed;
-    }
-    /**
-     * 是否生成实体面。
-     * @example
-     * const value = poly.solid;
-     * @returns 是否生成实体面。
-     */
-    public get solid(): boolean {
-        return this._path.solid;
-    }
-    /**
-     * 填充数组，关闭 solid 时为空数组。
-     * @example
-     * const value = poly.data;
-     * @returns 填充数组，关闭 solid 时为空数组。
-     */
-    public get data(): PolyGeometryData {
-        return this._data;
-    }
-    /**
-     * 最近生成的边框载体。
-     * @example
-     * const value = poly.borderData;
-     * @returns 最近生成的边框载体。
-     */
-    public get borderData(): PolyBorderGeometryData | undefined {
-        return this._borderData;
-    }
-    /**
-     * 最近生成的 line-list 数据。
-     * @example
-     * const value = poly.lineData;
-     * @returns 最近生成的 line-list 数据。
-     */
-    public get lineData(): PolyLineGeometryData | undefined {
-        return this._lineData;
-    }
-    /**
-     * 最近生成的点型数据。
-     * @example
-     * const value = poly.pointData;
-     * @returns 最近生成的点型数据。
-     */
-    public get pointData(): PolyPointGeometryData | undefined {
-        return this._pointData;
-    }
-    /**
-     * 更新输入参数并使已有生成结果失效。
-     * @param points 新节点
-     * @param options 未传时保留当前开关
-     * @example
-     * poly.set(points, options);
-     * @returns 当前生成器；旧附加数据失效
-     */
-    public set(points: readonly PolyPoint[], options: PolyOptions = {}): this {
-        const path = CreatePath(points, {
-            closed: options.closed ?? this.closed,
-            solid: options.solid ?? this.solid,
-        });
-        const data = Fill(path);
-        this._path = path;
-        this._data = data;
-        this._borderData = undefined;
-        this._lineData = undefined;
-        this._pointData = undefined;
-        return this;
-    }
-    /**
-     * 计算当前轮廓周长，供顺向 UV 重复量等计算使用。
-     * @example
-     * poly.getPerimeter();
-     * @returns 中心轮廓长度，开放路径不包含末点到首点
-     */
-    public getPerimeter(): number {
-        return this._path.length;
-    }
-    /**
-     * 生成带宽度边框的三角面及其法线、UV 和索引。
-     * @param lineWidth 统一边框宽度
-     * @param uvRepeat 顺向重复次数
-     * @param align 边框对齐
-     * @example
-     * poly.createBorderGeometry(lineWidth, uvRepeat, align);
-     * @returns Shader 外扩载体
-     */
-    public createBorderGeometry(
-        lineWidth: number,
-        uvRepeat: number = 1,
-        align: PolyBorderAlign = "normal",
-    ): PolyBorderGeometryData {
-        this._borderData = Border(this._path, lineWidth, uvRepeat, align);
-        return this._borderData;
-    }
-    /**
-     * 生成沿轮廓连接的 line-list 顶点与索引数据。
-     * @param uvRepeat 顺向重复次数
-     * @example
-     * poly.createLineGeometry(uvRepeat);
-     * @returns line-list 顶点与索引
-     */
-    public createLineGeometry(uvRepeat: number = 1): PolyLineGeometryData {
-        this._lineData = Line(this._path, uvRepeat);
-        return this._lineData;
-    }
-    /**
-     * 按顶点与中点选项生成合并点型几何。
-     * @param pointRadius 点型半径
-     * @param sides 点型边数
-     * @param vertexPoints 顶点开关
-     * @param midpointPoints 中点开关
-     * @param vertexThreshold 共边长度合计阈值
-     * @param midpointThreshold 单边长度阈值
-     * @example
-     * poly.createPointGeometry(pointRadius, sides, vertexPoints, midpointPoints, vertexThreshold, midpointThreshold);
-     * @returns 合并点型几何
-     */
-    public createPointGeometry(
-        pointRadius: number = 2,
-        sides: number = 4,
-        vertexPoints: boolean = true,
-        midpointPoints: boolean = false,
-        vertexThreshold: number = 0,
-        midpointThreshold: number = 0,
-    ): PolyPointGeometryData {
-        this._pointData = Points(
-            this._path,
-            pointRadius,
-            sides,
-            vertexPoints,
-            midpointPoints,
-            vertexThreshold,
-            midpointThreshold,
-        );
-        return this._pointData;
-    }
-}
+
 /**
  * 生成单条多边形轮廓的填充几何。
  * @param points 有序节点
@@ -659,6 +682,7 @@ class Poly implements PolyLike {
  */
 const CreatePolyGeometry = (points: readonly PolyPoint[], options: PolyOptions = {}): PolyGeometryData =>
     Fill(CreatePath(points, options));
+
 /**
  * 生成多边形或折线的带宽度边框。
  * @param points 有序节点
@@ -678,6 +702,7 @@ const CreatePolyBorderGeometry = (
     options: PolyOptions = {},
 ): PolyBorderGeometryData =>
     Border(CreatePath(points, { ...options, solid: options.solid ?? false }), lineWidth, uvRepeat, align);
+
 /**
  * 生成多边形或折线的 line-list 几何。
  * @param points 有序节点
@@ -692,6 +717,7 @@ const CreatePolyLineGeometry = (
     uvRepeat: number = 1,
     options: PolyOptions = {},
 ): PolyLineGeometryData => Line(CreatePath(points, { ...options, solid: options.solid ?? false }), uvRepeat);
+
 /**
  * 生成多边形或折线的顶点和中点标记。
  * @param points 有序节点
@@ -725,6 +751,7 @@ const CreatePolyPointGeometry = (
         vertexThreshold,
         midpointThreshold,
     );
+
 /**
  * 计算多边形或折线的有效边长总和。
  * @param points 有序节点
@@ -735,13 +762,11 @@ const CreatePolyPointGeometry = (
  */
 const GetPolyPerimeter = (points: readonly PolyPoint[], options: PolyOptions = {}): number =>
     CreatePath(points, { ...options, solid: options.solid ?? false }).length;
-export {
-    Poly,
-    CreatePolyGeometry,
-    CreatePolyBorderGeometry,
-    CreatePolyLineGeometry,
-    CreatePolyPointGeometry,
-    GetPolyPerimeter,
-};
+
 export type * from "./types.js";
+export {
+    CreatePolyBorderGeometry, CreatePolyGeometry, CreatePolyLineGeometry,
+    CreatePolyPointGeometry,
+    GetPolyPerimeter, Poly,
+};
 export default Poly;

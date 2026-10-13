@@ -4,29 +4,19 @@ import IMesh from "../../IMesh";
 import Mesh from "../../Mesh";
 import type Render from "../../Render";
 import type Scene from "../../Scene";
+import type { SelectPoint } from "../RectSelectTool/RectSelectGeometry";
 import {
     CreateSelectableEdges,
     IsCanvasEvent,
     ProjectPoint,
 } from "../SelectionGeometry";
-import type { SelectPoint } from "../RectSelectTool/RectSelectGeometry";
-
-/** 单条模型边的命中结果，距离以画布 CSS 像素计。 */
-interface LineSelection {
-    readonly mesh: Mesh;
-    readonly edgeIndex: number;
-    readonly contourIndex: number;
-    readonly start: SelectPoint;
-    readonly end: SelectPoint;
-    readonly distance: number;
-}
 
 /** 普通 Mesh 轮廓边的屏幕半径点选工具。 */
 class LineSelectTool {
     private readonly scene: Scene;
     private readonly render: Render;
     private readonly camera: Camera;
-    private _radius: number;
+    private _radius: number = 8;
 
     /** 是否允许 SelectPicker 点选，默认开启。 */
     public picker: boolean = true;
@@ -45,7 +35,6 @@ class LineSelectTool {
         this.scene = scene;
         this.render = render;
         this.camera = camera;
-        this._radius = 8;
         this.radius = radius;
     }
 
@@ -93,8 +82,8 @@ class LineSelectTool {
             for (let index = drawList.length - 1; index >= 0; index -= 1) {
                 const mesh = drawList[index];
                 // IMesh 需要额外的实例身份，本工具只处理普通 Mesh。
-                if (mesh instanceof Mesh && !(mesh instanceof IMesh)) {
-                    const edges = CreateSelectableEdges(mesh);
+                if (mesh instanceof Mesh && !(mesh instanceof IMesh) && !mesh.noSelect) {
+                    const edges = CreateSelectableEdges(mesh, mesh.getRenderMatrix(this.camera));
                     // 距离在最终屏幕坐标计算，相机缩放和旋转不改变像素半径。
                     for (const edge of edges) {
                         const start = ProjectPoint(edge.start, this.camera, this.render);
@@ -117,6 +106,16 @@ class LineSelectTool {
         }
         return matches;
     }
+}
+
+/** 单条模型边的命中结果，距离以画布 CSS 像素计。 */
+interface LineSelection {
+    readonly mesh: Mesh;
+    readonly edgeIndex: number;
+    readonly contourIndex: number;
+    readonly start: SelectPoint;
+    readonly end: SelectPoint;
+    readonly distance: number;
 }
 
 export default LineSelectTool;

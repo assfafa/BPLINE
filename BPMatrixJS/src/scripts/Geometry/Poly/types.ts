@@ -7,15 +7,19 @@ interface PolyNode {
     /** 当前圆接的细分段数，默认 8，至少 1。 */
     readonly segments?: number;
 }
+
 /** 简单节点可直接使用 [x, y]，需要圆接时使用 PolyNode。 */
 type PolyPoint = readonly [number, number] | PolyNode;
+
 type PolyBorderAlign = "inset" | "normal" | "outset";
+
 interface PolyOptions {
     /** 默认 true；开放路径只生成线、边框或辅助点。 */
     readonly closed?: boolean;
     /** 默认 true；solid=true 且 closed=false 会报错。 */
     readonly solid?: boolean;
 }
+
 interface PolyGeometryData {
     geometry: Float32Array<ArrayBuffer>;
     normal: Float32Array<ArrayBuffer>;
@@ -28,6 +32,7 @@ interface PolyGeometryData {
     minY: number;
     closed: boolean;
 }
+
 interface PolyBorderGeometryData extends PolyGeometryData {
     /** geometry 保存中心线载体；normal*miterScale 是偏移方向和补偿。 */
     miterScale: Float32Array<ArrayBuffer>;
@@ -35,9 +40,11 @@ interface PolyBorderGeometryData extends PolyGeometryData {
     uvRepeat: number;
     align: PolyBorderAlign;
 }
+
 interface PolyLineGeometryData extends PolyGeometryData {
     uvRepeat: number;
 }
+
 interface PolyPointGeometryData extends PolyGeometryData {
     /** 每个点型顶点的中心坐标，用于 Shader 保持固定像素大小。 */
     position: Float32Array<ArrayBuffer>;
@@ -45,6 +52,7 @@ interface PolyPointGeometryData extends PolyGeometryData {
     sides: number;
     pointCount: number;
 }
+
 interface PolyLike {
     readonly width: number;
     readonly height: number;
@@ -114,14 +122,7 @@ interface PolyLike {
         midpointThreshold?: number,
     ): PolyPointGeometryData;
 }
+
 export type {
-    PolyNode,
-    PolyPoint,
-    PolyOptions,
-    PolyBorderAlign,
-    PolyGeometryData,
-    PolyBorderGeometryData,
-    PolyLineGeometryData,
-    PolyPointGeometryData,
-    PolyLike,
+    PolyBorderAlign, PolyBorderGeometryData, PolyGeometryData, PolyLike, PolyLineGeometryData, PolyNode, PolyOptions, PolyPoint, PolyPointGeometryData,
 };

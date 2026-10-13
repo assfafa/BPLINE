@@ -1,8 +1,9 @@
-import { CreateBorderBuffers, CreateFillBuffers, CreateLineBuffers, CreatePointBuffers } from "./Buffers.js";
+import { CheckPrecision } from "../../Utils/Precision.js";
 import type { TextMetadata } from "./Buffers.js";
+import { CreateBorderBuffers, CreateFillBuffers, CreateLineBuffers, CreatePointBuffers } from "./Buffers.js";
 import { HasTextFont, RegisterTextFont, UnregisterTextFont } from "./Fonts.js";
-import { CreateTextOutline } from "./Outline.js";
 import type { TextOutline } from "./Outline.js";
+import { CreateTextOutline } from "./Outline.js";
 import type {
     TextAlign,
     TextBaseline,
@@ -16,56 +17,13 @@ import type {
 } from "./types.js";
 
 /**
- * 校验有限非负的几何参数。
- * @param value 输入参数
- * @param name 参数名称
- * @example
- * Nonnegative(2, "lineWidth");
- * @returns 有效参数
- */
-const Nonnegative = (value: number, name: string): number => {
-    // 负数和非有限值不能用于 GPU 几何或 UV。
-    if (Number.isFinite(value) && value >= 0) {
-        return value;
-    } else {
-        throw new RangeError(name + " must be finite and nonnegative.");
-    }
-};
-
-/**
- * 标准化新增的文字排版参数。
- * @param options 用户设置
- * @example
- * NormalizeOptions({ lineSpacing: 4 });
- * @returns 完整排版参数
- */
-const NormalizeOptions = (options: TextOptions): Omit<TextMetadata, "text" | "fontSize" | "fontFamily"> => {
-    const lineSpacing = Nonnegative(options.lineSpacing ?? 0, "lineSpacing");
-    const letterSpacing = options.letterSpacing ?? 0;
-    const textAlign = options.textAlign ?? "center";
-    const baseline = options.baseline ?? "middle";
-    // 负字距可以用于紧排，但必须保持有限。
-    if (!Number.isFinite(letterSpacing)) {
-        throw new RangeError("letterSpacing must be finite.");
-    }
-    // 字形排布需要明确的对齐模式，避免无法定位锚点。
-    if (!["left", "center", "right"].includes(textAlign)) {
-        throw new RangeError("textAlign must be left, center or right.");
-    }
-    // 垂直基线只选择锚点，未知名称会误导调用方定位。
-    if (!["top", "middle", "bottom"].includes(baseline)) {
-        throw new RangeError("baseline must be top, middle or bottom.");
-    }
-    return { lineSpacing, letterSpacing, textAlign, baseline };
-};
-
-/**
  * WOFF2 等字体的二维文字几何生成器。
  * 字体数据须预先使用 RegisterTextFont 注册；填充网格按可见包围盒居中。
  * @implements TextLike
  */
 class Text implements TextLike {
     private _metadata: TextMetadata;
+    private _originPrecision: number;
     private _outline: TextOutline;
     private _data: TextGeometryData;
     private _borderData: TextBorderGeometryData | undefined;
@@ -84,6 +42,7 @@ class Text implements TextLike {
      */
     public constructor(text: string, fontSize: number, fontFamily: string, options: TextOptions = {}) {
         const normalized = NormalizeOptions(options);
+        this._originPrecision = normalized.precision;
         this._metadata = { text, fontSize, fontFamily, ...normalized };
         this._outline = CreateTextOutline(
             text,
@@ -92,6 +51,7 @@ class Text implements TextLike {
             normalized.lineSpacing,
             normalized.letterSpacing,
             normalized.textAlign,
+            4 / normalized.precision,
         );
         this._data = CreateFillBuffers(this._outline, this._metadata);
     }
@@ -108,6 +68,7 @@ class Text implements TextLike {
      */
     public set(text: string, fontSize: number = this.fontSize, fontFamily: string = this.fontFamily, options: TextOptions = {}): this {
         const normalized = NormalizeOptions({
+            precision: options.precision ?? this.precision,
             lineSpacing: options.lineSpacing ?? this.lineSpacing,
             letterSpacing: options.letterSpacing ?? this.letterSpacing,
             textAlign: options.textAlign ?? this.textAlign,
@@ -121,9 +82,11 @@ class Text implements TextLike {
             normalized.lineSpacing,
             normalized.letterSpacing,
             normalized.textAlign,
+            4 / normalized.precision,
         );
         const data = CreateFillBuffers(outline, metadata);
         this._metadata = metadata;
+        this._originPrecision = normalized.precision;
         this._outline = outline;
         this._data = data;
         this._borderData = undefined;
@@ -233,6 +196,19 @@ class Text implements TextLike {
             );
         }
         return this._pointData;
+    }
+
+    /** @example textGeometry.precision; @returns 当前字体曲线精度，误差为 4 / precision。 */
+    public get precision(): number {
+        return this._metadata.precision;
+    }
+    /** @param value 新精度 @example textGeometry.precision = 16; @returns 无返回值，重建曲线并清理附加缓存。 */
+    public set precision(value: number) {
+        this.set(this.text, this.fontSize, this.fontFamily, { precision: CheckPrecision(value) });
+    }
+    /** @example textGeometry.originPrecision; @returns 用户最后指定的精度。 */
+    public get originPrecision(): number {
+        return this._originPrecision;
     }
 
     /** @example textGeometry.text; @returns 当前文字内容 */
@@ -410,6 +386,50 @@ class Text implements TextLike {
 }
 
 /**
+ * 校验有限非负的几何参数。
+ * @param value 输入参数
+ * @param name 参数名称
+ * @example
+ * Nonnegative(2, "lineWidth");
+ * @returns 有效参数
+ */
+const Nonnegative = (value: number, name: string): number => {
+    // 负数和非有限值不能用于 GPU 几何或 UV。
+    if (Number.isFinite(value) && value >= 0) {
+        return value;
+    } else {
+        throw new RangeError(name + " must be finite and nonnegative.");
+    }
+};
+
+/**
+ * 标准化新增的文字排版参数。
+ * @param options 用户设置
+ * @example
+ * NormalizeOptions({ lineSpacing: 4 });
+ * @returns 完整排版参数
+ */
+const NormalizeOptions = (options: TextOptions): Omit<TextMetadata, "text" | "fontSize" | "fontFamily"> => {
+    const lineSpacing = Nonnegative(options.lineSpacing ?? 0, "lineSpacing");
+    const letterSpacing = options.letterSpacing ?? 0;
+    const textAlign = options.textAlign ?? "center";
+    const baseline = options.baseline ?? "middle";
+    // 负字距可以用于紧排，但必须保持有限。
+    if (!Number.isFinite(letterSpacing)) {
+        throw new RangeError("letterSpacing must be finite.");
+    }
+    // 字形排布需要明确的对齐模式，避免无法定位锚点。
+    if (!["left", "center", "right"].includes(textAlign)) {
+        throw new RangeError("textAlign must be left, center or right.");
+    }
+    // 垂直基线只选择锚点，未知名称会误导调用方定位。
+    if (!["top", "middle", "bottom"].includes(baseline)) {
+        throw new RangeError("baseline must be top, middle or bottom.");
+    }
+    return { lineSpacing, letterSpacing, textAlign, baseline, precision: CheckPrecision(options.precision ?? 8) };
+};
+
+/**
  * 直接创建文字填充几何。
  * @param text 文字
  * @param fontSize 字号
@@ -522,25 +542,12 @@ const GetTextPerimeter = (
 ): number => new Text(text, fontSize, fontFamily, options).getPerimeter();
 
 export {
-    Text,
-    RegisterTextFont,
-    HasTextFont,
-    UnregisterTextFont,
-    CreateTextGeometry,
-    CreateTextBorderGeometry,
-    CreateTextLineGeometry,
+    CreateTextBorderGeometry, CreateTextGeometry, CreateTextLineGeometry,
     CreateTextPointGeometry,
-    GetTextPerimeter,
+    GetTextPerimeter, HasTextFont, RegisterTextFont, Text, UnregisterTextFont,
 };
 export type {
     TextAlign,
-    TextBaseline,
-    TextOptions,
-    TextBorderAlign,
-    TextGeometryData,
-    TextBorderGeometryData,
-    TextLineGeometryData,
-    TextPointGeometryData,
-    TextLike,
+    TextBaseline, TextBorderAlign, TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 };
 export default Text;

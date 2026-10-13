@@ -1,19 +1,12 @@
-import { CreateTextGeometry, HasTextFont, RegisterTextFont } from "bpmatrixjs/Geometry/Text";
 import type { TextGeometryData, TextOptions } from "bpmatrixjs/Geometry/Text";
-
-/** 按指定字号和排版设置创建已注册字体的填充三角面。 */
-type TextGeometryFactory = (text: string, fontSize?: number, options?: TextOptions) => TextGeometryData;
-
-interface PendingFont {
-    url: string;
-    promise: Promise<TextGeometryFactory>;
-}
+import { CreateTextGeometry, HasTextFont, RegisterTextFont } from "bpmatrixjs/Geometry/Text";
 
 /** 按名称共享已加载字体，供后续文字几何直接使用。 */
 class Font {
     private static readonly _urls = new Map<string, string>();
     private static readonly _factories = new Map<string, TextGeometryFactory>();
     private static readonly _pending = new Map<string, PendingFont>();
+    private static readonly _browserFaces = new Map<string, Promise<FontFace>>();
 
     /**
      * 已成功注册的字体名称与几何创建函数。返回同一个只读 Map 视图。
@@ -105,6 +98,35 @@ class Font {
     }
 
     /**
+     * 按同一字体地址注册浏览器输入字体，用于文字编辑的光标、选区与输入法。
+     * @param fontFamily 已完成几何注册的字体名称
+     * @example await Font.browserFace("MiSans");
+     * @returns 浏览器已加载的字体；重复请求共用 Promise。
+     */
+    public static browserFace(fontFamily: string): Promise<FontFace> {
+        Font.get(fontFamily);
+        const existing = Font._browserFaces.get(fontFamily);
+        // 几何字体保持可用于 Node；只有编辑文字时才创建 DOM 字体。
+        let result: Promise<FontFace>;
+        // 已加载或在途的 DOM 字体请求复用同一个 Promise。
+        if (existing !== undefined) {
+            result = existing;
+        } else {
+            const url = Font._urls.get(fontFamily);
+            const face = new FontFace(fontFamily, `url(${JSON.stringify(url)})`);
+            /** @param loaded 浏览器加载的字体 @example Register(loaded); @returns 已加入当前文档的字体。 */
+            const Register = (loaded: FontFace): FontFace => {
+                document.fonts.add(loaded);
+                return loaded;
+            };
+            const promise = face.load().then(Register);
+            Font._browserFaces.set(fontFamily, promise);
+            result = promise;
+        }
+        return result;
+    }
+
+    /**
      * 下载字体字节并提交到 BPMatrixJS 的字体表。
      * @param fontFamily 注册名称。
      * @param url 字体文件地址。
@@ -137,6 +159,14 @@ class Font {
             throw new Error(`Font download failed (${String(response.status)}): ${url}`);
         }
     }
+}
+
+/** 按指定字号和排版设置创建已注册字体的填充三角面。 */
+type TextGeometryFactory = (text: string, fontSize?: number, options?: TextOptions) => TextGeometryData;
+
+interface PendingFont {
+    url: string;
+    promise: Promise<TextGeometryFactory>;
 }
 
 export default Font;

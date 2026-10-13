@@ -1,13 +1,17 @@
-import type { ObjectNodeLike } from "./Object/index";
-import type { Rect2DLike } from "./Geometry/Rect2D";
-import type { Poly2DLike } from "./Geometry/Poly2D";
+import type { Base2DLike } from "./Geometry/Base2D";
 import type { NGon2DLike } from "./Geometry/NGon2D";
-import type { Text2DLike } from "./Text";
+import type { Poly2DLike } from "./Geometry/Poly2D";
+import type { Rect2DLike } from "./Geometry/Rect2D";
 import type { BaseMaterialLike } from "./Material/baseMaterial";
 import type { CompositeMaterialLike } from "./Material/CompositeMaterial";
 import type { WGSLMaterialLike } from "./Material/WGSLMaterial";
-import type { Base2DLike } from "./Geometry/Base2D";
+import type { ObjectNodeLike } from "./Object/index";
+import type { Text2DLike } from "./Text";
+
 type AddObject = ObjectNodeLike;
+
 type Geometry2d = Rect2DLike | Poly2DLike | NGon2DLike | Text2DLike | Base2DLike;
+
 type Material2d = BaseMaterialLike | CompositeMaterialLike | WGSLMaterialLike;
+
 export type { AddObject, Geometry2d, Material2d };

@@ -1,5 +1,5 @@
-import { GLU_TESS, GL_LINE_LOOP, GL_TRIANGLES, GluTesselator, WINDING } from "libtess-ts";
 import type { PathCommand } from "fontkit";
+import { GLU_TESS, GL_LINE_LOOP, GL_TRIANGLES, GluTesselator, WINDING } from "libtess-ts";
 import { GetTextFont } from "./Fonts.js";
 import type { TextAlign } from "./types.js";
 
@@ -381,6 +381,10 @@ const CreateTextOutline = (
         maximumAdvance = Math.max(maximumAdvance, GetLineAdvance(run));
     }
     const lineHeight = (font.ascent - font.descent + font.lineGap) * scale + lineSpacing;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
     // 保持每行的字距和原始字形位置，换行只改变本行的起点。
     for (let lineIndex = 0; lineIndex < runs.length; lineIndex += 1) {
         const run = runs[lineIndex];
@@ -399,13 +403,24 @@ const CreateTextOutline = (
             const position = run.positions[index];
             // 零字号保留排版元数据，但不创建退化三角面。
             if (fontSize > 0) {
-                input.push(...FlattenPath(
+                const originX = penX + position.xOffset * scale;
+                const originY = penY + position.yOffset * scale;
+                const contours = FlattenPath(
                     glyph.path.commands,
-                    penX + position.xOffset * scale,
-                    penY + position.yOffset * scale,
+                    originX,
+                    originY,
                     scale,
                     tolerance,
-                ));
+                );
+                input.push(...contours);
+                // 使用字体的解析曲线范围定位，不让采样精度变化移动文字中心与输入光标。
+                if (contours.length > 0) {
+                    const bounds = glyph.bbox;
+                    minX = Math.min(minX, originX + bounds.minX * scale);
+                    minY = Math.min(minY, originY + bounds.minY * scale);
+                    maxX = Math.max(maxX, originX + bounds.maxX * scale);
+                    maxY = Math.max(maxY, originY + bounds.maxY * scale);
+                }
             }
             penX += position.xAdvance * scale;
             penY += position.yAdvance * scale;
@@ -416,10 +431,6 @@ const CreateTextOutline = (
         }
     }
     const result = Tessellate(input);
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
     let perimeter = 0;
     // 实际可见边界定义包围盒和边框长度，空格只增加排版宽度。
     for (const contour of result.contours) {
@@ -427,10 +438,6 @@ const CreateTextOutline = (
         for (let index = 0; index < contour.length; index += 1) {
             const point = contour[index];
             const next = contour[(index + 1) % contour.length];
-            minX = Math.min(minX, point[0]);
-            minY = Math.min(minY, point[1]);
-            maxX = Math.max(maxX, point[0]);
-            maxY = Math.max(maxY, point[1]);
             perimeter += Math.hypot(next[0] - point[0], next[1] - point[1]);
         }
     }

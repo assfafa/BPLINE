@@ -4,26 +4,15 @@ import Mesh from "../Mesh";
 import type Render from "../Render";
 import type Scene from "../Scene";
 import BaseSelectTool from "./BaseSelectTool";
-import LineSelectTool from "./LineSelectTool";
 import type { LineSelection } from "./LineSelectTool";
+import LineSelectTool from "./LineSelectTool";
 import NGonSelectTool from "./NGonSelectTool";
-import PointSelectTool from "./PointSelectTool";
 import type { PointSelection } from "./PointSelectTool";
+import PointSelectTool from "./PointSelectTool";
 import PolySelectTool from "./PolySelectTool";
-import RectSelectTool from "./RectSelectTool";
 import type { RectSelectionMode } from "./RectSelectTool";
-
-/** 六类点选结果；同一个 Mesh 可以同时出现于面、边和点结果中。 */
-interface SelectResult {
-    Rect2D: Mesh[];
-    NGon: Mesh[];
-    Poly2D: Mesh[];
-    Base2D: Mesh[];
-    Line: LineSelection[];
-    Point: PointSelection[];
-}
-
-type SelectSortDirection = "asc" | "desc";
+import RectSelectTool from "./RectSelectTool";
+import TextSelectTool from "./TextSelectTool";
 
 /** 统一管理面、边、点选择器及其包围盒、开关和结果排序。 */
 class Select {
@@ -35,6 +24,8 @@ class Select {
     public static readonly PolySelectTool = PolySelectTool;
     /** 可单独创建的自定义顶点面选择器。 */
     public static readonly BaseSelectTool = BaseSelectTool;
+    /** 可单独创建的文字包围盒选择器。 */
+    public static readonly TextSelectTool = TextSelectTool;
     /** 可单独创建的边选择器。 */
     public static readonly LineSelectTool = LineSelectTool;
     /** 可单独创建的顶点选择器。 */
@@ -49,6 +40,7 @@ class Select {
     public readonly ngonSelectTool: NGonSelectTool;
     public readonly polySelectTool: PolySelectTool;
     public readonly baseSelectTool: BaseSelectTool;
+    public readonly textSelectTool: TextSelectTool;
     public readonly lineSelectTool: LineSelectTool;
     public readonly pointSelectTool: PointSelectTool;
 
@@ -65,7 +57,7 @@ class Select {
     private _selectionMode: RectSelectionMode = "all";
 
     /**
-     * 创建六个选择器，并集中为现有非矩形面 Mesh 开启包围盒。
+     * 创建七个选择器，集中为 NGon、Poly 和 Base 开启几何包围盒。
      * @param scene 待查询场景。
      * @param render 提供 Canvas 位置和尺寸的渲染器。
      * @param camera 屏幕与世界坐标之间转换所用的相机。
@@ -80,6 +72,7 @@ class Select {
         this.ngonSelectTool = new NGonSelectTool(scene, render, camera, false);
         this.polySelectTool = new PolySelectTool(scene, render, camera, false);
         this.baseSelectTool = new BaseSelectTool(scene, render, camera, false);
+        this.textSelectTool = new TextSelectTool(scene, render, camera);
         this.lineSelectTool = new LineSelectTool(scene, render, camera);
         this.pointSelectTool = new PointSelectTool(scene, render, camera);
         this.enableBounding();
@@ -95,7 +88,7 @@ class Select {
         // 每次统一入口查询前处理新加入场景的 Mesh，单个 Mesh 仅在关闭时被开启。
         for (const candidate of this.scene.ensureLists()) {
             // 实例网格由独立实例数据渲染，现有面积工具仅能处理普通 Mesh。
-            if (candidate instanceof Mesh && !(candidate instanceof IMesh)) {
+            if (candidate instanceof Mesh && !(candidate instanceof IMesh) && !candidate.noSelect) {
                 const geometryType = candidate.data?.type;
                 // 只有三个非矩形面工具读取 Mesh.boundingBox。
                 if (geometryType === "NGon2D" || geometryType === "Poly2D" || geometryType === "Base2D") {
@@ -113,7 +106,7 @@ class Select {
      * @param event 带 clientX/clientY 的鼠标事件。
      * @example
      * const hits = select.SelectPicker(event);
-     * @returns 六组命中，其中边和点包含所属 Mesh 与局部编号。
+     * @returns 七组命中，其中文字按排版矩形检测，边和点带局部编号。
      */
     public SelectPicker(event: MouseEvent): SelectResult {
         this.enableBounding();
@@ -122,6 +115,7 @@ class Select {
             NGon: this.ngonSelectTool.SelectPicker(event),
             Poly2D: this.polySelectTool.SelectPicker(event),
             Base2D: this.baseSelectTool.SelectPicker(event),
+            Text: this.textSelectTool.SelectPicker(event),
             Line: this.lineSelectTool.SelectPicker(event),
             Point: this.pointSelectTool.SelectPicker(event),
         };
@@ -130,7 +124,7 @@ class Select {
     }
 
     /**
-     * 以 Rect2D、Poly2D 或 NGon2D Mesh 的填充区域查询四类面；边和点组保持为空。
+     * 以 Rect2D、Poly2D 或 NGon2D Mesh 的填充区域查询五类面；边和点组保持为空。
      * @param selectionMesh 作为选择范围的 Mesh，可以不在场景中。
      * @example
      * const hits = select.Selector(selectionMesh);
@@ -143,6 +137,7 @@ class Select {
             NGon: this.ngonSelectTool.Selector(selectionMesh),
             Poly2D: this.polySelectTool.Selector(selectionMesh),
             Base2D: this.baseSelectTool.Selector(selectionMesh),
+            Text: this.textSelectTool.Selector(selectionMesh),
             Line: [],
             Point: [],
         };
@@ -158,10 +153,10 @@ class Select {
      */
     private getOrdinaryDrawList(): Mesh[] {
         const drawList: Mesh[] = [];
-        // IMesh 内部实例需要独立身份；当前六种工具只处理普通 Mesh。
+        // IMesh 内部实例需要独立身份；当前工具只处理普通 Mesh。
         for (const candidate of this.scene.ensureLists()) {
             // 快照不收录组节点或实例网格，否则索引与可返回的 Mesh 不一致。
-            if (candidate instanceof Mesh && !(candidate instanceof IMesh)) {
+            if (candidate instanceof Mesh && !(candidate instanceof IMesh) && !candidate.noSelect) {
                 drawList.push(candidate);
             }
         }
@@ -193,6 +188,10 @@ class Select {
         }
         // 直接顶点构建的三角面也参与最终层级比较。
         for (const mesh of result.Base2D) {
+            uniqueMeshes.add(mesh);
+        }
+        // 文字以包围盒命中，仍按相同的渲染层级排序。
+        for (const mesh of result.Text) {
             uniqueMeshes.add(mesh);
         }
         // 同一 Mesh 的多条边只应在总列表中占一个位置。
@@ -345,6 +344,23 @@ class Select {
         this.baseSelectTool.selector = value;
     }
 
+    /** @example const enabled = select.textPicker; @returns 文字点选开关。 */
+    public get textPicker(): boolean {
+        return this.textSelectTool.picker;
+    }
+    /** @param value 是否允许文字点选 @example select.textPicker = false; @returns 无返回值。 */
+    public set textPicker(value: boolean) {
+        this.textSelectTool.picker = value;
+    }
+    /** @example const enabled = select.textSelector; @returns 文字框选开关。 */
+    public get textSelector(): boolean {
+        return this.textSelectTool.selector;
+    }
+    /** @param value 是否允许文字框选 @example select.textSelector = false; @returns 无返回值。 */
+    public set textSelector(value: boolean) {
+        this.textSelectTool.selector = value;
+    }
+
     /** @example select.linePicker = false; @returns 当前边点选开关。 */
     public get linePicker(): boolean {
         return this._linePicker;
@@ -376,8 +392,23 @@ class Select {
         this.ngonSelectTool.selectionMode = value;
         this.polySelectTool.selectionMode = value;
         this.baseSelectTool.selectionMode = value;
+        this.textSelectTool.selectionMode = value;
     }
 }
 
+/** 五类实体及边、点命中；同一个 Mesh 可同时出现在面、边和点结果中。 */
+interface SelectResult {
+    Rect2D: Mesh[];
+    NGon: Mesh[];
+    Poly2D: Mesh[];
+    Base2D: Mesh[];
+    Text: Mesh[];
+    Line: LineSelection[];
+    Point: PointSelection[];
+}
+
+type SelectSortDirection = "asc" | "desc";
+
 export default Select;
-export type { SelectResult, SelectSortDirection, RectSelectionMode, LineSelection, PointSelection };
+export type { TextSelection } from "./TextSelectTool";
+export type { LineSelection, PointSelection, RectSelectionMode, SelectResult, SelectSortDirection };

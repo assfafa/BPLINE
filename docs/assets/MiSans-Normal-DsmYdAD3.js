@@ -1,0 +1,1 @@
+var e=new URL(`MiSans-Normal-DM_Ec1QT.woff2`,import.meta.url).href;export{e as t};

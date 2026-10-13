@@ -1,11 +1,32 @@
 import type { PartSubscriber } from "./types";
-/** miter 尖角斜接、round 圆接、bevel 切角连接。 */
-type JoinType = "miter" | "round" | "bevel";
+
 /** 多边形节点连接样式，只控制几何拓扑，不拥有颜色、宽度或 GPU 缓存。 */
 class JoinStyle {
     private _type: JoinType = "miter";
     private _seg: number = 8;
     private readonly _subscribers = new Set<PartSubscriber>();
+    /**
+     * 复制节点连接类型及分段数。
+     * @param source 来源连接样式
+     * @example
+     * target.copy(source);
+     * @returns 当前连接样式。
+     */
+    public copy(source: JoinStyle): this {
+        this.type = source.type;
+        this.seg = source.seg;
+        return this;
+    }
+
+    /**
+     * 创建独立的节点连接样式。
+     * @example
+     * const duplicate = joinStyle.clone();
+     * @returns 新连接样式。
+     */
+    public clone(): JoinStyle {
+        return new JoinStyle().copy(this);
+    }
     /**
      * 默认尖角；bevel 切掉尖端，但不会断开边框。
      * @example
@@ -107,5 +128,9 @@ class JoinStyle {
         }
     }
 }
+
+/** miter 尖角斜接、round 圆接、bevel 切角连接。 */
+type JoinType = "miter" | "round" | "bevel";
+
 export default JoinStyle;
 export type { JoinType };

@@ -22,6 +22,7 @@ const mesh = new Mesh(geometry, new BaseMaterial(), style);`,
         entry("perimeter: number", "当前可见轮廓周长。", "Current visible contour length."),
     ],
     methods: [
+        entry("copy(source: NGon2D): this / clone(): NGon2D", "复制内外半径、边数、起始角、UV 模式与独立样式。自动精度不修改 sides。", "Copy radii, sides, start angle, UV mode and independent style. Automatic precision does not change sides."),
         entry("new NGon2D(options?: NGon2DOptions)", "接受 outer、inner、sides、uvMode、startAngle 和可选 style。", "Accept outer, inner, sides, uvMode, startAngle, and optional style."),
     ],
 };

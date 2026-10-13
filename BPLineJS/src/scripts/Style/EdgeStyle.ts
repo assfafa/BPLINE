@@ -1,8 +1,15 @@
-import TexturedStyle from "./TexturedStyle";
 import { NormalizeSize } from "./PartStyle";
+import TexturedStyle from "./TexturedStyle";
 import type { BorderAlign, PixelAligned } from "./types";
+
 /** 有宽度的实体三角面边框样式。 */
 class EdgeStyle extends TexturedStyle {
+    /** 边框横向 UV 固定，避免跨越边框宽度重复贴图。 */
+    protected override _addressModeV: GPUAddressMode = "clamp-to-edge";
+    private _width: number = 1;
+    private _borderAlign: BorderAlign = "normal";
+    private _pixelAligned: PixelAligned = "px";
+    private _uvRepeat: number = 1;
     /**
      * 创建关闭的实体边框，顺向重复、横向固定。
      * @example
@@ -11,9 +18,32 @@ class EdgeStyle extends TexturedStyle {
      */
     public constructor() {
         super("edge");
-        this.addressModeV = "clamp-to-edge";
     }
-    private _width: number = 1;
+    /**
+     * 复制边框宽度、对齐和贴图重复设置。
+     * @param source 来源边框样式
+     * @example
+     * target.copy(source);
+     * @returns 当前边框样式。
+     */
+    public override copy(source: EdgeStyle): this {
+        super.copy(source);
+        this.width = source.width;
+        this.borderAlign = source.borderAlign;
+        this.pixelAligned = source.pixelAligned;
+        this.uvRepeat = source.uvRepeat;
+        return this;
+    }
+
+    /**
+     * 创建独立的边框样式。
+     * @example
+     * const duplicate = edgeStyle.clone();
+     * @returns 新边框样式。
+     */
+    public override clone(): EdgeStyle {
+        return new EdgeStyle().copy(this);
+    }
     /**
      * 实体边框宽度，0 不生成边框。
      * @example
@@ -40,7 +70,6 @@ class EdgeStyle extends TexturedStyle {
             return;
         }
     }
-    private _borderAlign: BorderAlign = "normal";
     /**
      * 边框对齐：inset / normal / outset。
      * @example
@@ -70,7 +99,6 @@ class EdgeStyle extends TexturedStyle {
             return;
         }
     }
-    private _pixelAligned: PixelAligned = "px";
     /**
      * px 固定像素，zoom 随相机缩放。
      * @example
@@ -100,7 +128,6 @@ class EdgeStyle extends TexturedStyle {
             return;
         }
     }
-    private _uvRepeat: number = 1;
     /**
      * 沿完整轮廓的 UV 重复次数。
      * @example
@@ -128,4 +155,5 @@ class EdgeStyle extends TexturedStyle {
         }
     }
 }
+
 export default EdgeStyle;

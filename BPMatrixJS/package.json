@@ -1,12 +1,13 @@
 {
     "name": "bpmatrixjs",
-    "version": "0.1.104-beta.11",
+    "version": "0.1.104-beta.13",
     "type": "module",
     "main": "./lib/index.js",
     "module": "./lib/index.js",
     "types": "./lib/index.d.ts",
     "files": [
         "lib",
+        "agent.md",
         "releases"
     ],
     "exports": {
@@ -47,7 +48,10 @@
         "dev": "vite --host",
         "build": "npm run build:lib && npm run build:app",
         "build:app": "tsc && vite build",
-        "build:lib": "tsc -p tsconfig.lib.json",
+        "build:lib": "npm run guides && tsc -p tsconfig.lib.json && node ../scripts/PackageGuides.mjs .",
+        "check": "tsc --noEmit && npm run lint && npm run guides:check",
+        "guides": "node ../scripts/DirectoryGuides.mjs BPMatrixJS",
+        "guides:check": "node ../scripts/DirectoryGuides.mjs BPMatrixJS --check",
         "preview": "vite preview",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",

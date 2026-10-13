@@ -1,32 +1,12 @@
 import type { Material2d } from "../global-types";
-import Texture from "../Texture";
 import IMesh from "../IMesh";
 import type { MeshLike } from "../Mesh";
 import type Scene from "../Scene";
+import Texture from "../Texture";
 import DepthManager from "./DepthManager";
 import SamplerManager from "./SamplerManager";
 import type { GeometryBufferLike, PipelineLike, PipelineTemplateLike } from "./types";
-interface DrawCallManagerLike {
-    /**
-     * warmup 只创建深度附件，不提交绘制。
-     * @param width 画布物理像素宽度
-     * @param height 画布物理像素高度
-     * @example
-     * drawCallManager.prepare(width, height);
-     * @returns 无返回值。
-     */
-    prepare(width: number, height: number): void;
-    /**
-     * 编码并提交当前场景的基础绘制命令。
-     * @param scene 场景对象
-     * @param backgroundColor 清空画布使用的 RGBA 颜色
-     * @param alphaMode Canvas Alpha 合成方式
-     * @example
-     * drawCallManager.draw(scene, backgroundColor, alphaMode);
-     * @returns 无返回值
-     */
-    draw(scene: Scene, backgroundColor: GPUColorDict, alphaMode: GPUCanvasAlphaMode): void;
-}
+
 /**
  * 负责编码 BindGroup、DrawCall 并向 GPUQueue 提交命令。
  * @class
@@ -110,9 +90,10 @@ class DrawCallManager implements DrawCallManagerLike {
                 const viewBuffer: GPUBuffer = this.pipeline.buffers.cameraUniform[0];
                 const orthogonalBuffer: GPUBuffer = this.pipeline.buffers.cameraUniform[1];
                 const renderCameraBuffer: GPUBuffer = this.pipeline.buffers.cameraUniform[2];
+                const drawList = scene.getRenderDrawList();
                 // 只反向提交可安全提前写深度的不透明对象，drawList 本身不重排。
-                for (let index = scene.drawList.length - 1; index >= 0; index--) {
-                    const mesh = scene.drawList[index];
+                for (let index = drawList.length - 1; index >= 0; index--) {
+                    const mesh = drawList[index];
                     const material = mesh.material;
                     // 区分深度和透明状态，保持当前阶段的遮挡与混合约定。
                     if (material?.depthTest && material.depthWrite && !material.transparent) {
@@ -127,7 +108,7 @@ class DrawCallManager implements DrawCallManagerLike {
                     }
                 }
                 // 透明 / 不写深度对象仍按原始后→前顺序，测试已有的不透明深度。
-                for (const mesh of scene.drawList) {
+                for (const mesh of drawList) {
                     const material = mesh.material;
                     // 区分深度和透明状态，保持当前阶段的遮挡与混合约定。
                     if (material?.depthTest && (!material.depthWrite || material.transparent)) {
@@ -142,7 +123,7 @@ class DrawCallManager implements DrawCallManagerLike {
                     }
                 }
                 // 关闭测试意味着忽略世界遮挡：作为覆盖层最后绘制，层内仍遵循原队列顺序。
-                for (const mesh of scene.drawList) {
+                for (const mesh of drawList) {
                     // 区分深度和透明状态，保持当前阶段的遮挡与混合约定。
                     if (mesh.material !== undefined && !mesh.material.depthTest) {
                         this.drawMesh(
@@ -544,5 +525,28 @@ class DrawCallManager implements DrawCallManagerLike {
         }
     }
 }
+
+interface DrawCallManagerLike {
+    /**
+     * warmup 只创建深度附件，不提交绘制。
+     * @param width 画布物理像素宽度
+     * @param height 画布物理像素高度
+     * @example
+     * drawCallManager.prepare(width, height);
+     * @returns 无返回值。
+     */
+    prepare(width: number, height: number): void;
+    /**
+     * 编码并提交当前场景的基础绘制命令。
+     * @param scene 场景对象
+     * @param backgroundColor 清空画布使用的 RGBA 颜色
+     * @param alphaMode Canvas Alpha 合成方式
+     * @example
+     * drawCallManager.draw(scene, backgroundColor, alphaMode);
+     * @returns 无返回值
+     */
+    draw(scene: Scene, backgroundColor: GPUColorDict, alphaMode: GPUCanvasAlphaMode): void;
+}
+
 export default DrawCallManager;
 export type { DrawCallManagerLike };

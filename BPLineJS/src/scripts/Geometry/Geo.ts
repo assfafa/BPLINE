@@ -1,96 +1,10 @@
 import { GETID } from "../ID";
-import Style from "../Style";
 import type { StyleChange, StyleSubscriber } from "../Style";
+import Style from "../Style";
 /** 边框对齐类型沿用 Style 定义。 */
+import { CheckPrecision } from "bpmatrixjs/Utils";
 import type { BorderAlign } from "../Style";
-interface GeoBuffersLike {
-    vertex?: number;
-    normal?: number;
-    uv?: number;
-    index?: number;
-}
-/** 单个几何分区的顶点属性。 */
-interface GeoPartDataLike {
-    geometry: Float32Array;
-    normal: Float32Array;
-    uv: Float32Array;
-    index: Uint16Array | Uint32Array;
-    /** 点型逐顶点中心坐标，长度与 geometry 相同。 */
-    position?: Float32Array;
-    /** 每个顶点的用途：0 为实体面，0.5 为宽边框，1 为关键点。 */
-    vertexType?: Float32Array;
-    miterScale?: Float32Array;
-}
-/** 几何消费者；通知只标记后续工作，不在回调中生成几何或操作 GPU。 */
-interface GeometrySubscriber {
-    /**
-     * 接收几何变化通知，标记下一次渲染需要同步的数据。
-     * @param geometry 几何对象或顶点数组
-     * @example
-     * geometrySubscriber.onGeometryChange(geometry);
-     * @returns 无返回值。
-     */
-    onGeometryChange(geometry: GeoData): void;
-}
-interface GeoData extends StyleSubscriber {
-    readonly id: number;
-    readonly type: string;
-    readonly version: number;
-    style: Style;
-    geometry: Float32Array | undefined;
-    normal: Float32Array | undefined;
-    uv: Float32Array | undefined;
-    index: Uint16Array | Uint32Array | undefined;
-    linePoints: GeoPartDataLike | undefined;
-    vertexType: Float32Array | undefined;
-    position: Float32Array | undefined;
-    miterScale: Float32Array | undefined;
-    readonly uniformData: Float32Array<ArrayBuffer>;
-    /**
-     * 关联消费者，使后续版本变化能通知该对象。
-     * @param subscriber 接收变化通知的消费者
-     * @example
-     * geoData.add(subscriber);
-     * @returns 无返回值。
-     */
-    add(subscriber: GeometrySubscriber): void;
-    /**
-     * 解除消费者关联，不销毁被共享的对象。
-     * @param subscriber 接收变化通知的消费者
-     * @example
-     * geoData.delete(subscriber);
-     * @returns 无返回值。
-     */
-    delete(subscriber: GeometrySubscriber): void;
-    /**
-     * 递增当前版本，使使用该对象的缓存能够识别变化。
-     * @example
-     * geoData.updateVersion();
-     * @returns 无返回值。
-     */
-    updateVersion(): void;
-    /**
-     * 在参数版本变化后生成几何；版本未变时复用已有数组。
-     * @example
-     * geoData.ensureGeometry();
-     * @returns 当前对象，可继续链式调用。
-     */
-    ensureGeometry(): this;
-    /**
-     * 重新生成并提交几何数组，使渲染器在下一帧更新缓存。
-     * @example
-     * geoData.updateGeometry();
-     * @returns 当前对象，可继续链式调用。
-     */
-    updateGeometry(): this;
-    /**
-     * 释放当前对象持有的订阅关联，不代替 Render 销毁共享 GPU 资源。
-     * @example
-     * geoData.dispose();
-     * @returns 无返回值。
-     */
-    dispose(): void;
-}
+
 /** CPU 几何及其单一版本；样式订阅只响应影响几何生成的字段。 */
 class Geo implements GeoData {
     /** 全局几何 ID。 */
@@ -99,6 +13,8 @@ class Geo implements GeoData {
     public readonly type: string = "Geo";
     private _version: number = 0;
     private _generatedVersion: number = -1;
+    private _precision: number = 8;
+    private _originPrecision: number = 8;
     private _style: Style;
     private _disposed: boolean = false;
     private readonly _subscribers = new Set<GeometrySubscriber>();
@@ -130,6 +46,82 @@ class Geo implements GeoData {
     public constructor(style: Style = new Style()) {
         this._style = style;
         style.add(this);
+    }
+    /** @example geo.precision; @returns 当前曲线细分精度；不改变 NGon 边数或 Base 顶点。 */
+    public get precision(): number {
+        return this._precision;
+    }
+    /** @param value 用户设置的基准精度 @example geo.precision = 16; @returns 无返回值，参数变化后延迟重建。 */
+    public set precision(value: number) {
+        const precision = CheckPrecision(value);
+        const baselineChanged = this._originPrecision !== precision;
+        this._originPrecision = precision;
+        // 当前显示精度可能已经等于新的用户值，基准变化也需要通知消费者。
+        if (this._precision !== precision) {
+            this.setRenderPrecision(precision);
+        } else if (baselineChanged) {
+            // 自动模式的基准由用户更新，不能被相同的显示值掩盖。
+            this.updateVersion();
+        }
+    }
+    /** @example geo.originPrecision; @returns 最后手动设置的精度，不受 Render 的临时调整影响。 */
+    public get originPrecision(): number {
+        return this._originPrecision;
+    }
+    /** @param value 本次显示精度 @example geo.setRenderPrecision(32); @returns 无返回值，保持基准精度。 */
+    public setRenderPrecision(value: number): void {
+        const precision = CheckPrecision(value);
+        // 相邻 zoom 可能落到相同整数精度，不重复生成或上传顶点。
+        if (this._precision !== precision) {
+            this._precision = precision;
+            this.updateVersion();
+        }
+    }
+    /** @param source 来源几何体 @example this.copyPrecision(source); @returns 无返回值，复制当前与基准精度。 */
+    protected copyPrecision(source: Geo): void {
+        this.precision = source.originPrecision;
+        this.setRenderPrecision(source.precision);
+    }
+    /**
+     * 深拷贝通用顶点数据与样式，不共享可修改的数组。
+     * @param source 来源几何体
+     * @example
+     * target.copy(source);
+     * @returns 当前几何体。
+     */
+    public copy(source: Geo): this {
+        this.copyPrecision(source);
+        this.style = source.style.clone();
+        this._geometry = source.geometry?.slice();
+        this.normal = source.normal?.slice();
+        this.uv = source.uv?.slice();
+        this.index = source.index?.slice();
+        const linePoints = source.linePoints;
+        // 线段缓冲也属于可变几何数据，副本不能共用任何顶点数组。
+        if (linePoints !== undefined) {
+            this.linePoints = {
+                geometry: linePoints.geometry.slice(),
+                normal: linePoints.normal.slice(),
+                uv: linePoints.uv.slice(),
+                index: linePoints.index.slice(),
+                position: linePoints.position?.slice(),
+                vertexType: linePoints.vertexType?.slice(),
+                miterScale: linePoints.miterScale?.slice(),
+            };
+        } else {
+            this.linePoints = undefined;
+        }
+        this.vertexType = source.vertexType?.slice();
+        this.position = source.position?.slice();
+        this.miterScale = source.miterScale?.slice();
+        this.uniformData.set(source.uniformData);
+        this.updateVersion();
+        return this;
+    }
+
+    /** @example const duplicate = geometry.clone(); @returns 独立的通用几何体。 */
+    public clone(): Geo {
+        return new Geo().copy(this);
     }
     /**
      * 当前共享样式，分区 enabled 决定生成内容。
@@ -172,10 +164,14 @@ class Geo implements GeoData {
     public onStyleChange(change: StyleChange): void {
         // 检查生命周期状态，防止已释放对象重新建立订阅或资源。
         if (!this._disposed && change.source === this._style) {
+            // 圆接的样式精度也是用户指定值；自动调整不反写共享 Style。
+            if (this.type === "Poly2D" && change.area === "join" && change.field === "seg") {
+                this.precision = Math.min(4095, this.style.join.seg);
+            }
             // 根据变化字段选择更新范围，避免无关属性触发资源重建。
             if (
                 change.field === "enabled" ||
-                (change.area === "join" && this.type === "Poly2D") ||
+                (change.area === "join" && this.type === "Poly2D" && change.field !== "seg") ||
                 (change.area === "edge" && ["width", "borderAlign", "uvRepeat"].includes(change.field)) ||
                 (change.area === "points" &&
                     [
@@ -397,5 +393,102 @@ class Geo implements GeoData {
         return this;
     }
 }
+
+interface GeoBuffersLike {
+    vertex?: number;
+    normal?: number;
+    uv?: number;
+    index?: number;
+}
+
+/** 单个几何分区的顶点属性。 */
+interface GeoPartDataLike {
+    geometry: Float32Array;
+    normal: Float32Array;
+    uv: Float32Array;
+    index: Uint16Array | Uint32Array;
+    /** 点型逐顶点中心坐标，长度与 geometry 相同。 */
+    position?: Float32Array;
+    /** 每个顶点的用途：0 为实体面，0.5 为宽边框，1 为关键点。 */
+    vertexType?: Float32Array;
+    miterScale?: Float32Array;
+}
+
+/** 几何消费者；通知只标记后续工作，不在回调中生成几何或操作 GPU。 */
+interface GeometrySubscriber {
+    /**
+     * 接收几何变化通知，标记下一次渲染需要同步的数据。
+     * @param geometry 几何对象或顶点数组
+     * @example
+     * geometrySubscriber.onGeometryChange(geometry);
+     * @returns 无返回值。
+     */
+    onGeometryChange(geometry: GeoData): void;
+}
+
+interface GeoData extends StyleSubscriber {
+    readonly id: number;
+    readonly type: string;
+    readonly version: number;
+    precision: number;
+    readonly originPrecision: number;
+    style: Style;
+    geometry: Float32Array | undefined;
+    normal: Float32Array | undefined;
+    uv: Float32Array | undefined;
+    index: Uint16Array | Uint32Array | undefined;
+    linePoints: GeoPartDataLike | undefined;
+    vertexType: Float32Array | undefined;
+    position: Float32Array | undefined;
+    miterScale: Float32Array | undefined;
+    readonly uniformData: Float32Array<ArrayBuffer>;
+    /**
+     * 关联消费者，使后续版本变化能通知该对象。
+     * @param subscriber 接收变化通知的消费者
+     * @example
+     * geoData.add(subscriber);
+     * @returns 无返回值。
+     */
+    add(subscriber: GeometrySubscriber): void;
+    /**
+     * 解除消费者关联，不销毁被共享的对象。
+     * @param subscriber 接收变化通知的消费者
+     * @example
+     * geoData.delete(subscriber);
+     * @returns 无返回值。
+     */
+    delete(subscriber: GeometrySubscriber): void;
+    /**
+     * 递增当前版本，使使用该对象的缓存能够识别变化。
+     * @example
+     * geoData.updateVersion();
+     * @returns 无返回值。
+     */
+    updateVersion(): void;
+    /** @param value 本次显示精度 @example geo.setRenderPrecision(32); @returns 无返回值，保留基准精度。 */
+    setRenderPrecision(value: number): void;
+    /**
+     * 在参数版本变化后生成几何；版本未变时复用已有数组。
+     * @example
+     * geoData.ensureGeometry();
+     * @returns 当前对象，可继续链式调用。
+     */
+    ensureGeometry(): this;
+    /**
+     * 重新生成并提交几何数组，使渲染器在下一帧更新缓存。
+     * @example
+     * geoData.updateGeometry();
+     * @returns 当前对象，可继续链式调用。
+     */
+    updateGeometry(): this;
+    /**
+     * 释放当前对象持有的订阅关联，不代替 Render 销毁共享 GPU 资源。
+     * @example
+     * geoData.dispose();
+     * @returns 无返回值。
+     */
+    dispose(): void;
+}
+
 export default Geo;
-export type { BorderAlign, GeoBuffersLike, GeoData, GeoPartDataLike, GeometrySubscriber };
+export type { BorderAlign, GeoBuffersLike, GeoData, GeometrySubscriber, GeoPartDataLike };

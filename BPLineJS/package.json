@@ -1,6 +1,6 @@
 {
     "name": "bplinejs",
-    "version": "0.1.104-beta.12",
+    "version": "0.1.104-beta.14",
     "description": "A WebGPU-first 2D rendering library focused on line and border rendering.",
     "type": "module",
     "main": "./lib/index.js",
@@ -8,7 +8,9 @@
     "types": "./lib/index.d.ts",
     "files": [
         "lib",
-        "releases"
+        "agent.md",
+        "releases",
+        "src/scripts/Editor/cursors/LICENSE"
     ],
     "exports": {
         ".": {
@@ -38,6 +40,34 @@
         "./Control/CameraControl": {
             "types": "./lib/Control/CameraControl/index.d.ts",
             "import": "./lib/Control/CameraControl/index.js"
+        },
+        "./Editor/RectEditTool": {
+            "types": "./lib/Editor/RectEditTool/index.d.ts",
+            "import": "./lib/Editor/RectEditTool/index.js"
+        },
+        "./Editor": {
+            "types": "./lib/Editor/index.d.ts",
+            "import": "./lib/Editor/index.js"
+        },
+        "./Editor/NGonEditTool": {
+            "types": "./lib/Editor/NGonEditTool/index.d.ts",
+            "import": "./lib/Editor/NGonEditTool/index.js"
+        },
+        "./Editor/PolyEditTool": {
+            "types": "./lib/Editor/PolyEditTool/index.d.ts",
+            "import": "./lib/Editor/PolyEditTool/index.js"
+        },
+        "./Editor/TextEditTool": {
+            "types": "./lib/Editor/TextEditTool/index.d.ts",
+            "import": "./lib/Editor/TextEditTool/index.js"
+        },
+        "./Helper": {
+            "types": "./lib/Helper/index.d.ts",
+            "import": "./lib/Helper/index.js"
+        },
+        "./Helper/HelperGrid": {
+            "types": "./lib/Helper/HelperGrid/index.d.ts",
+            "import": "./lib/Helper/HelperGrid/index.js"
         },
         "./Geometry": {
             "types": "./lib/Geometry/index.d.ts",
@@ -119,6 +149,10 @@
             "types": "./lib/Select/BaseSelectTool/index.d.ts",
             "import": "./lib/Select/BaseSelectTool/index.js"
         },
+        "./Select/TextSelectTool": {
+            "types": "./lib/Select/TextSelectTool/index.d.ts",
+            "import": "./lib/Select/TextSelectTool/index.js"
+        },
         "./Select/LineSelectTool": {
             "types": "./lib/Select/LineSelectTool/index.d.ts",
             "import": "./lib/Select/LineSelectTool/index.js"
@@ -145,8 +179,10 @@
         "dev": "vite --host",
         "build": "npm run build:app",
         "build:app": "tsc --noEmit && vite build",
-        "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json",
-        "check": "tsc --noEmit && npm run lint",
+        "build:lib": "npm run guides && vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json && node ../scripts/PackageGuides.mjs .",
+        "check": "tsc --noEmit && npm run lint && npm run guides:check",
+        "guides": "node ../scripts/DirectoryGuides.mjs BPLineJS",
+        "guides:check": "node ../scripts/DirectoryGuides.mjs BPLineJS --check",
         "pack:check": "npm run build:lib && npm pack --dry-run",
         "preview": "vite preview",
         "lint": "eslint .",
@@ -175,6 +211,6 @@
     },
     "dependencies": {
         "@webgpu/types": "^0.1.71",
-        "bpmatrixjs": "0.1.104-beta.11"
+        "bpmatrixjs": "0.1.104-beta.13"
     }
 }

@@ -5,12 +5,12 @@ import { HasSeparatingAxis, SignedDoubleArea, TriangleOverlapArea } from "bpmatr
 import NGon2D from "../Geometry/NGon2D";
 import Poly2D from "../Geometry/Poly2D";
 import type Mesh from "../Mesh";
+import type { RectFootprint, SelectBounds, SelectPoint } from "./RectSelectTool/RectSelectGeometry";
 import {
     ContainsWorldPoint,
     CreateRectFootprint,
     CreateWorldOutline,
 } from "./RectSelectTool/RectSelectGeometry";
-import type { RectFootprint, SelectBounds, SelectPoint } from "./RectSelectTool/RectSelectGeometry";
 import type { SelectTriangle } from "./SelectionGeometry";
 
 interface SelectionArea {
@@ -100,12 +100,13 @@ const WorldTriangles = (fill: IndexedFill, matrix: Mat3): SelectTriangle[] => {
 /**
  * 根据 Mesh 的几何类型取得独立于显示样式的选择范围。
  * @param mesh 可不在 Scene 中的 Rect2D、Poly2D 或 NGon2D Mesh。
+ * @param matrix 可选的显示或选择空间矩阵，默认使用逻辑世界矩阵
  * @example
  * const area = CreateSelectionArea(frame);
  * @returns 有面积的选择区域；其他类型或退化形状返回 undefined。
  */
-const CreateSelectionArea = (mesh: Mesh): SelectionArea | undefined => {
-    const rectangle = CreateRectFootprint(mesh);
+const CreateSelectionArea = (mesh: Mesh, matrix: Mat3 = mesh.ensureWorldMatrix()): SelectionArea | undefined => {
+    const rectangle = CreateRectFootprint(mesh, matrix);
     // 非矩形区域由填充剖分定义，矩形保留原有精确圆角路径。
     if (rectangle === undefined) {
         const geometry = mesh.data;
@@ -131,7 +132,7 @@ const CreateSelectionArea = (mesh: Mesh): SelectionArea | undefined => {
         }
         // 开放多边形、其他类型以及没有填充面索引的形状都不构成框选区域。
         if (fill !== undefined) {
-            const triangles = WorldTriangles(fill, mesh.ensureWorldMatrix());
+            const triangles = WorldTriangles(fill, matrix);
             // 剖分后确实存在面积时才返回，避免无限包围盒进入粗筛。
             if (triangles.length > 0) {
                 return { bounds: BoundsFromTriangles(triangles), triangles };

@@ -1,121 +1,9 @@
 /// <reference types="@webgpu/types" preserve="true" />
 import { GETID } from "../ID";
+import type { BorderAlign, PixelAligned, StyleChange, StyleSubscriber } from "../Style";
 import Style from "../Style";
-import type { StyleChange, StyleSubscriber, BorderAlign, PixelAligned } from "../Style";
 import type ShaderValues from "./ShaderValues";
-interface MaterialBuffersLike {
-    uniform?: number;
-    texture?: number;
-    sampler?: number;
-}
-interface ShadersLike {
-    ngonVertexShader?: string;
-    ngonFragmentShader?: string;
-    polyVertexShader?: string;
-    polyFragmentShader?: string;
-    rectVertexShader?: string;
-    rectFragmentShader?: string;
-}
-/** 通知类别不是独立版本；材质仍只有一个 version。 */
-type MaterialChangeKind = "all" | "style" | "pipeline" | "texture" | "textureData" | "sampler";
-/** 材质变化影响：样式数组、场景资源引用分别处理。 */
-interface MaterialChange {
-    readonly source: MaterialLike;
-    readonly style: boolean;
-    readonly resources: boolean;
-}
-/** 材质消费者，回调只安排下一帧工作。 */
-interface MaterialSubscriber {
-    /**
-     * 接收材质变化通知，区分样式数据与资源引用的更新。
-     * @param change 变化来源、区域及字段信息
-     * @example
-     * materialSubscriber.onMaterialChange(change);
-     * @returns 无返回值。
-     */
-    onMaterialChange(change: MaterialChange): void;
-}
-interface MaterialLike extends StyleSubscriber {
-    readonly id: number;
-    readonly type: string;
-    readonly key: string;
-    readonly version: number;
-    style: Style;
-    transparent: boolean;
-    depthTest: boolean;
-    depthWrite: boolean;
-    cullMode: GPUCullMode;
-    readonly values: ShaderValues | undefined;
-    /**
-     * 获取指定几何类型最终使用的顶点和片元 WGSL。
-     * @param geometryType 几何类型
-     * @example
-     * material.getShaderSource("Rect2D");
-     * @returns 对应的着色器源码。
-     */
-    getShaderSource(geometryType: string): { vertex: string | undefined; fragment: string | undefined };
-    /**
-     * 追加已使用的几何类型标记；Rect2D 对应 rect，重复绑定不递增版本。
-     * @param type Geometry.type
-     * @example
-     * material.addGeometryType(type);
-     * @returns 无返回值
-     */
-    addGeometryType(type: string): void;
-    /**
-     * 获取指定几何类型的管线缓存键。
-     * 材质 key 描述共享状态，类型后缀区分同一材质的不同几何模板。
-     * @param type Geometry.type
-     * @example
-     * material.getPipelineKey(type);
-     * @returns 当前几何对应的管线键
-     */
-    getPipelineKey(type: string): string;
-    rectVertexShader: string | undefined;
-    rectFragmentShader: string | undefined;
-    polyVertexShader: string | undefined;
-    polyFragmentShader: string | undefined;
-    ngonVertexShader: string | undefined;
-    ngonFragmentShader: string | undefined;
-    /**
-     * 原生线开关决定是否需要附加 line-list 管线，其余分区通过 Uniform 控制。
-     * @example
-     * material.updateKey();
-     * @returns 无返回值。
-     */
-    updateKey(): void;
-    /**
-     * 递增单一版本并通知消费者，颜色变化不会改变 key。
-     * @param kind 影响范围，手动调用默认全部失效
-     * @example
-     * material.updateVersion(kind);
-     * @returns 无返回值。
-     */
-    updateVersion(kind?: MaterialChangeKind): void;
-    /**
-     * 关联使用当前材质的消费者，Set 自动去重。
-     * @param subscriber Mesh 或其他材质消费者
-     * @example
-     * material.add(subscriber);
-     * @returns 无返回值。
-     */
-    add(subscriber: MaterialSubscriber): void;
-    /**
-     * 解绑消费者，不销毁共享 Style、Texture 或 GPU 缓存。
-     * @param subscriber 需要解绑的消费者
-     * @example
-     * material.delete(subscriber);
-     * @returns 无返回值。
-     */
-    delete(subscriber: MaterialSubscriber): void;
-    /**
-     * 最终停止使用时解绑 Style，不销毁共享贴图或 GPU 缓存。
-     * @example
-     * material.dispose();
-     * @returns 无返回值。
-     */
-    dispose(): void;
-}
+
 /** 材质只持有 Shader、固定管线状态及 Style 引用，不重复保存显示参数。 */
 abstract class Material implements MaterialLike {
     /** 全局材质 ID。 */
@@ -141,7 +29,7 @@ abstract class Material implements MaterialLike {
      * 创建对象并建立初始状态及依赖关联。
      * @param style 共享样式，默认各分区关闭
      * @example
-     * const this = new Material(style);
+     * // Material 为抽象类，通过 new BaseMaterial(style) 创建标准材质。
      * @returns 创建的 Material 对象。
      */
     protected constructor(style: Style = new Style()) {
@@ -673,6 +561,126 @@ abstract class Material implements MaterialLike {
         }
     }
 }
+
+interface MaterialBuffersLike {
+    uniform?: number;
+    texture?: number;
+    sampler?: number;
+}
+
+interface ShadersLike {
+    ngonVertexShader?: string;
+    ngonFragmentShader?: string;
+    polyVertexShader?: string;
+    polyFragmentShader?: string;
+    rectVertexShader?: string;
+    rectFragmentShader?: string;
+}
+
+/** 通知类别不是独立版本；材质仍只有一个 version。 */
+type MaterialChangeKind = "all" | "style" | "pipeline" | "texture" | "textureData" | "sampler";
+
+/** 材质变化影响：样式数组、场景资源引用分别处理。 */
+interface MaterialChange {
+    readonly source: MaterialLike;
+    readonly style: boolean;
+    readonly resources: boolean;
+}
+
+/** 材质消费者，回调只安排下一帧工作。 */
+interface MaterialSubscriber {
+    /**
+     * 接收材质变化通知，区分样式数据与资源引用的更新。
+     * @param change 变化来源、区域及字段信息
+     * @example
+     * materialSubscriber.onMaterialChange(change);
+     * @returns 无返回值。
+     */
+    onMaterialChange(change: MaterialChange): void;
+}
+
+interface MaterialLike extends StyleSubscriber {
+    readonly id: number;
+    readonly type: string;
+    readonly key: string;
+    readonly version: number;
+    style: Style;
+    transparent: boolean;
+    depthTest: boolean;
+    depthWrite: boolean;
+    cullMode: GPUCullMode;
+    readonly values: ShaderValues | undefined;
+    /**
+     * 获取指定几何类型最终使用的顶点和片元 WGSL。
+     * @param geometryType 几何类型
+     * @example
+     * material.getShaderSource("Rect2D");
+     * @returns 对应的着色器源码。
+     */
+    getShaderSource(geometryType: string): { vertex: string | undefined; fragment: string | undefined };
+    /**
+     * 追加已使用的几何类型标记；Rect2D 对应 rect，重复绑定不递增版本。
+     * @param type Geometry.type
+     * @example
+     * material.addGeometryType(type);
+     * @returns 无返回值
+     */
+    addGeometryType(type: string): void;
+    /**
+     * 获取指定几何类型的管线缓存键。
+     * 材质 key 描述共享状态，类型后缀区分同一材质的不同几何模板。
+     * @param type Geometry.type
+     * @example
+     * material.getPipelineKey(type);
+     * @returns 当前几何对应的管线键
+     */
+    getPipelineKey(type: string): string;
+    rectVertexShader: string | undefined;
+    rectFragmentShader: string | undefined;
+    polyVertexShader: string | undefined;
+    polyFragmentShader: string | undefined;
+    ngonVertexShader: string | undefined;
+    ngonFragmentShader: string | undefined;
+    /**
+     * 原生线开关决定是否需要附加 line-list 管线，其余分区通过 Uniform 控制。
+     * @example
+     * material.updateKey();
+     * @returns 无返回值。
+     */
+    updateKey(): void;
+    /**
+     * 递增单一版本并通知消费者，颜色变化不会改变 key。
+     * @param kind 影响范围，手动调用默认全部失效
+     * @example
+     * material.updateVersion(kind);
+     * @returns 无返回值。
+     */
+    updateVersion(kind?: MaterialChangeKind): void;
+    /**
+     * 关联使用当前材质的消费者，Set 自动去重。
+     * @param subscriber Mesh 或其他材质消费者
+     * @example
+     * material.add(subscriber);
+     * @returns 无返回值。
+     */
+    add(subscriber: MaterialSubscriber): void;
+    /**
+     * 解绑消费者，不销毁共享 Style、Texture 或 GPU 缓存。
+     * @param subscriber 需要解绑的消费者
+     * @example
+     * material.delete(subscriber);
+     * @returns 无返回值。
+     */
+    delete(subscriber: MaterialSubscriber): void;
+    /**
+     * 最终停止使用时解绑 Style，不销毁共享贴图或 GPU 缓存。
+     * @example
+     * material.dispose();
+     * @returns 无返回值。
+     */
+    dispose(): void;
+}
+
 export default Material;
 export type {
     BorderAlign,

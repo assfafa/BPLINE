@@ -1,4 +1,5 @@
 let currentId = 0;
+
 /**
  * 获取全局唯一的递增对象 ID。
  * @example
@@ -10,4 +11,5 @@ const GETID = (): number => {
     currentId += 1;
     return id;
 };
+
 export { GETID };

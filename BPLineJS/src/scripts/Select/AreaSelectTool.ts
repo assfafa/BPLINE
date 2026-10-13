@@ -2,18 +2,19 @@ import { Vec2 } from "bpmatrixjs/Math";
 import { ContainsTrianglePoint } from "bpmatrixjs/Utils";
 import type Camera from "../Camera";
 import IMesh from "../IMesh";
-import Mesh from "../Mesh";
 import type { MeshBoundingBox, MeshLike } from "../Mesh";
+import Mesh from "../Mesh";
 import type Render from "../Render";
 import type Scene from "../Scene";
-import type { SelectPoint, SelectBounds } from "./RectSelectTool/RectSelectGeometry";
+import type { RectSelectionMode } from "./RectSelectTool";
+import type { SelectBounds, SelectPoint } from "./RectSelectTool/RectSelectGeometry";
 import {
     ContainsSelectionTriangles,
     CreateSelectionArea,
     IntersectsSelectionTriangles,
 } from "./SelectionAreaGeometry";
 import { CreateFillTriangles, IsCanvasEvent } from "./SelectionGeometry";
-import type { RectSelectionMode } from "./RectSelectTool";
+import { CreateSelectionBounds, CreateSelectionMatrix, CreateSelectionPoint } from "./SelectionSpace";
 
 /** 三种非矩形填充几何共享的点选与面积框选流程。 */
 class AreaSelectTool {
@@ -73,7 +74,7 @@ class AreaSelectTool {
      * @returns 是否可由当前面积选择器处理。
      */
     private accepts(candidate: MeshLike): candidate is Mesh {
-        return candidate instanceof Mesh && !(candidate instanceof IMesh) && candidate.data?.type === this.geometryType;
+        return candidate instanceof Mesh && !(candidate instanceof IMesh) && !candidate.noSelect && candidate.data?.type === this.geometryType;
     }
 
     /**
@@ -88,7 +89,7 @@ class AreaSelectTool {
         if (this.autoEnableBounding && !mesh.bounding) {
             mesh.bounding = true;
         }
-        return mesh.boundingBox;
+        return CreateSelectionBounds(mesh, this.camera);
     }
 
     /**
@@ -103,6 +104,7 @@ class AreaSelectTool {
         // 指针在画布内并且点选开启时才查询世界位置。
         if (this.picker && IsCanvasEvent(event, this.render)) {
             const world = this.camera.windowToWorld(new Vec2(event.clientX, event.clientY), this.render);
+            const selectionPoint = CreateSelectionPoint(world, this.camera);
             const drawList = this.scene.ensureLists();
             // 逆序遍历保留与 RectSelectTool 相同的层级优先级。
             for (let index = drawList.length - 1; index >= 0; index -= 1) {
@@ -111,12 +113,12 @@ class AreaSelectTool {
                 if (this.accepts(mesh)) {
                     const boundingBox = this.getBounds(mesh);
                     // 先利用世界轴向范围排除大部分非命中对象。
-                    if (boundingBox !== null && this.containsPoint(boundingBox, world)) {
-                        const triangles = CreateFillTriangles(mesh);
+                    if (boundingBox !== null && this.containsPoint(boundingBox, selectionPoint)) {
+                        const triangles = CreateFillTriangles(mesh, CreateSelectionMatrix(mesh, this.camera));
                         // 多个三角面命中同一个 Mesh 时只返回一次。
                         for (const triangle of triangles) {
                             // 任一实体三角面包含指针即可确认此 Mesh 命中。
-                            if (ContainsTrianglePoint(triangle, world)) {
+                            if (ContainsTrianglePoint(triangle, selectionPoint)) {
                                 matches.push(mesh);
                                 break;
                             }
@@ -171,7 +173,7 @@ class AreaSelectTool {
      */
     public Selector(selectionMesh: Mesh): Mesh[] {
         const matches: Mesh[] = [];
-        const selection = CreateSelectionArea(selectionMesh);
+        const selection = CreateSelectionArea(selectionMesh, CreateSelectionMatrix(selectionMesh, this.camera));
         // 退化或无效形状无法定义选择范围。
         if (this.selector && selection !== undefined) {
             const complete = this.selectionMode === "all" || this.selectionMode === "left";
@@ -184,7 +186,7 @@ class AreaSelectTool {
                     const bounds = this.getBounds(mesh);
                     // 轴向包围盒只用于拒绝不可能命中的候选。
                     if (bounds !== null && this.matchesBounds(bounds, selection.bounds)) {
-                        const triangles = CreateFillTriangles(mesh);
+                        const triangles = CreateFillTriangles(mesh, CreateSelectionMatrix(mesh, this.camera));
                         let selected = false;
                         // 凹形与带孔区域按填充三角面判断，矩形沿用精确圆角边界。
                         if (complete && triangles.length > 0) {

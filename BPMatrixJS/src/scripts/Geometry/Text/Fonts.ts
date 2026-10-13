@@ -1,5 +1,5 @@
-import { create } from "fontkit";
 import type { Font } from "fontkit";
+import { create } from "fontkit";
 
 const fonts = new Map<string, Font>();
 
@@ -66,4 +66,4 @@ const GetTextFont = (fontFamily: string): Font => {
     }
 };
 
-export { RegisterTextFont, HasTextFont, UnregisterTextFont, GetTextFont };
+export { GetTextFont, HasTextFont, RegisterTextFont, UnregisterTextFont };

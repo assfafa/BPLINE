@@ -170,12 +170,35 @@ const Left = ({ section: activeSection, onNavigate }: LeftProps): JSX.Element =>
                 >
                     {translator.translate(language, "menu.cameraControl")}
                 </NavLink>
+                <span className="mt-3 block border-t border-border px-4 py-2 text-sm font-semibold text-foreground">
+                    {translator.translate(language, "menu.selectors")}
+                </span>
                 <NavLink
                     to="/example/select"
                     onClick={onNavigate}
                     className="block py-2 pr-4 pl-8 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
                 >
                     {translator.translate(language, "menu.select")}
+                </NavLink>
+                <span className="mt-3 block border-t border-border px-4 py-2 text-sm font-semibold text-foreground">
+                    {translator.translate(language, "menu.editors")}
+                </span>
+                <NavLink
+                    to="/example/editor"
+                    onClick={onNavigate}
+                    className="block py-2 pr-4 pl-8 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+                >
+                    {translator.translate(language, "menu.editor")}
+                </NavLink>
+                <span className="mt-3 block border-t border-border px-4 py-2 text-sm font-semibold text-foreground">
+                    {translator.translate(language, "menu.helpers")}
+                </span>
+                <NavLink
+                    to="/example/helper/grid"
+                    onClick={onNavigate}
+                    className="block py-2 pr-4 pl-8 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+                >
+                    {translator.translate(language, "menu.helperGrid")}
                 </NavLink>
             </>
         );

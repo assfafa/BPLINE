@@ -12,8 +12,19 @@ export const config: ReferenceConfig = {
 const scene = new Scene();
 const mesh = new Mesh(new Rect2D({ width: 80, height: 50 }), new BaseMaterial());
 scene.add(mesh);
+scene.box = camera; // Viewport filtering.
+// Alternatively: scene.quad = camera;
+// scene.quadTreeDepth = 2;
+// scene.quadTreeUpdate();
 scene.removeChild(mesh);`,
+    properties: [
+        entry("box: Camera | null = null / quad: Camera | null = null", "互斥筛选开关：赋值其中一个相机会关闭另一个，null 关闭。box 精确按视口与实体包围盒相交筛选；quad 按四叉树分区筛选。", "Mutually exclusive filters: assigning a camera disables the other; null disables. box intersects viewport and entity bounds; quad queries quadtree regions."),
+        entry("drawList / boxDrawList / quadDrawList", "完整绘制序列 / 视口筛选结果 / 四叉树结果；由 Render 更新，保留原绘制层级，不改变完整资源引用。", "Complete draw sequence / viewport-filtered sequence / quadtree results. Updated by Render with original ordering and full resource references preserved."),
+        entry("quadTreeDepth: number = 2 / quadTree: QuadTree | null", "四叉树根范围取场景包围盒向下分区；深度默认 2。IMesh 使用一个整体包围盒，不逐实例入树。", "Partition downward from the scene's aggregate bounds, with default depth 2. IMesh uses one aggregate box rather than per-instance tree entries."),
+    ],
     methods: [
+        entry("quadTreeUpdate(): void", "标记四叉树需要重建；add/remove、包围盒或深度变更会自动处理。相机变化重新查询筛选结果。", "Request rebuilding; add/remove, bounds and depth changes are handled automatically. Camera changes refresh the query."),
+        entry("getRenderDrawList(): DrawList[]", "返回当前启用筛选模式对应的序列。普通调用 render.render(scene, camera) 即可。", "Return the sequence for the active filter. Ordinary rendering only requires render.render(scene, camera)."),
         entry("new Scene()", "创建场景根节点。", "Create a scene root."),
         entry("add(child: AddObject): void", "把网格体或子组加入场景。", "Add a mesh or child group to the scene."),
         entry("removeChild(child: AddObject): boolean", "移除直接子节点。", "Remove a direct child."),

@@ -1,91 +1,8 @@
+import type { TextOptions as MatrixTextOptions, TextAlign, TextBaseline } from "bpmatrixjs/Geometry/Text";
 import { Text as MatrixText } from "bpmatrixjs/Geometry/Text";
-import type { TextAlign, TextBaseline, TextOptions as MatrixTextOptions } from "bpmatrixjs/Geometry/Text";
-import Geo from "../Geometry/Geo";
 import type { GeoData, GeoPartDataLike } from "../Geometry/Geo";
+import Geo from "../Geometry/Geo";
 import Font from "./font";
-
-/** 常规横排，或列从右往左、字从上往下的竖排。 */
-type TextWritingMode = "horizontal-tb" | "vertical-rl";
-
-interface Text2DOptions extends MatrixTextOptions {
-    /** 排列顺序，默认 horizontal-tb。 */
-    writingMode?: TextWritingMode;
-}
-
-/**
- * 选择静态字体表中最先注册的字体作为默认字体。
- * @example
- * const fontFamily = GetDefaultFontFamily();
- * @returns 首个字体名称；空字体表时抛出明确错误。
- */
-const GetDefaultFontFamily = (): string => {
-    const first = Font.map.keys().next();
-    // 创建文字前必须先完成至少一份字体的异步注册。
-    if (first.done) {
-        throw new Error("Register a font with Font.register before creating Text.");
-    } else {
-        return first.value;
-    }
-};
-
-interface Text2DLike extends GeoData {
-    text: string;
-    fontSize: number;
-    fontFamily: string;
-    lineSpacing: number;
-    letterSpacing: number;
-    textAlign: TextAlign;
-    baseline: TextBaseline;
-    writingMode: TextWritingMode;
-    readonly layoutText: string;
-    readonly width: number;
-    readonly height: number;
-    readonly advanceWidth: number;
-    readonly anchorX: number;
-    readonly anchorY: number;
-    readonly perimeter: number;
-}
-
-/**
- * 将每个输入行作为一列，并按上到下、右到左转成横排生成器可读的行。
- * @param text 用户输入的原始文字，换行分隔竖排列。
- * @param writingMode 文字排列顺序。
- * @example
- * ConvertText("你好\n世界", "vertical-rl"); // "世你\n界好"
- * @returns 交给 BPMatrixJS 的文字。
- */
-const ConvertText = (text: string, writingMode: TextWritingMode): string => {
-    // 横排保持原文；BPMatrixJS 自行规范化换行符。
-    if (writingMode === "horizontal-tb") {
-        return text;
-    } else {
-        const lines = text.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
-        const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-        const columns: string[][] = [];
-        let rowCount = 0;
-        // 字素簇保持组合符号和 emoji 完整，输入的每一行对应一列。
-        for (const line of lines) {
-            const column: string[] = [];
-            // 每次只取完整字素，避免将组合字符拆成独立单元。
-            for (const segment of segmenter.segment(line)) {
-                column.push(segment.segment);
-            }
-            columns.push(column);
-            rowCount = Math.max(rowCount, column.length);
-        }
-        const rows: string[] = [];
-        // 逆序取列，使首个输入行位于最右侧，行内字符继续从上往下。
-        for (let row = 0; row < rowCount; row += 1) {
-            const cells: string[] = [];
-            for (let column = columns.length - 1; column >= 0; column -= 1) {
-                // 全角空格保留短列中的缺字位置，防止后续列向左收缩。
-                cells.push(columns[column][row] ?? "\u3000");
-            }
-            rows.push(cells.join(""));
-        }
-        return rows.join("\n");
-    }
-};
 
 /** 可编辑文字几何；填充、实体边框、关键点和线框共享同一次字体排版。 */
 class Text extends Geo implements Text2DLike {
@@ -127,6 +44,7 @@ class Text extends Geo implements Text2DLike {
         super();
         const settings = options ?? {};
         try {
+            this.precision = settings.precision ?? 8;
             this.fontSize = fontSize;
             this.fontFamily = fontFamily;
             this.lineSpacing = settings.lineSpacing ?? 0;
@@ -140,6 +58,33 @@ class Text extends Geo implements Text2DLike {
             this.dispose();
             throw error;
         }
+    }
+    /** @param source 来源文字几何体 @example target.copy(source); @returns 当前文字几何体。 */
+    public override copy(source: Text): this {
+        this.copyPrecision(source);
+        this.style = source.style.clone();
+        this.fontSize = source.fontSize;
+        this.fontFamily = source.fontFamily;
+        this.lineSpacing = source.lineSpacing;
+        this.letterSpacing = source.letterSpacing;
+        this.textAlign = source.textAlign;
+        this.baseline = source.baseline;
+        this.writingMode = source.writingMode;
+        this.text = source.text;
+        this.updateGeometry();
+        return this;
+    }
+
+    /** @example const duplicate = text.clone(); @returns 独立的文字几何体。 */
+    public override clone(): Text {
+        return new Text(this.text, this.fontSize, this.fontFamily, {
+            precision: this.originPrecision,
+            lineSpacing: this.lineSpacing,
+            letterSpacing: this.letterSpacing,
+            textAlign: this.textAlign,
+            baseline: this.baseline,
+            writingMode: this.writingMode,
+        }).copy(this);
     }
 
     /** @example text.text; @returns 未经排列转换的输入文字。 */
@@ -381,6 +326,7 @@ class Text extends Geo implements Text2DLike {
         // 字体必须由 Font 静态类加载，避免几何对象隐式下载资源。
         Font.get(this._fontFamily);
         const shape = new MatrixText(this._layoutText, this._fontSize, this._fontFamily, {
+            precision: this.precision,
             lineSpacing: this._lineSpacing,
             letterSpacing: this._letterSpacing,
             textAlign: this._textAlign,
@@ -434,7 +380,90 @@ class Text extends Geo implements Text2DLike {
     }
 }
 
+/** 常规横排，或列从右往左、字从上往下的竖排。 */
+type TextWritingMode = "horizontal-tb" | "vertical-rl";
+
+interface Text2DOptions extends MatrixTextOptions {
+    /** 排列顺序，默认 horizontal-tb。 */
+    writingMode?: TextWritingMode;
+}
+
+interface Text2DLike extends GeoData {
+    text: string;
+    fontSize: number;
+    fontFamily: string;
+    lineSpacing: number;
+    letterSpacing: number;
+    textAlign: TextAlign;
+    baseline: TextBaseline;
+    writingMode: TextWritingMode;
+    readonly layoutText: string;
+    readonly width: number;
+    readonly height: number;
+    readonly advanceWidth: number;
+    readonly anchorX: number;
+    readonly anchorY: number;
+    readonly perimeter: number;
+}
+
+/**
+ * 选择静态字体表中最先注册的字体作为默认字体。
+ * @example
+ * const fontFamily = GetDefaultFontFamily();
+ * @returns 首个字体名称；空字体表时抛出明确错误。
+ */
+const GetDefaultFontFamily = (): string => {
+    const first = Font.map.keys().next();
+    // 创建文字前必须先完成至少一份字体的异步注册。
+    if (first.done) {
+        throw new Error("Register a font with Font.register before creating Text.");
+    } else {
+        return first.value;
+    }
+};
+
+/**
+ * 将每个输入行作为一列，并按上到下、右到左转成横排生成器可读的行。
+ * @param text 用户输入的原始文字，换行分隔竖排列。
+ * @param writingMode 文字排列顺序。
+ * @example
+ * ConvertText("你好\n世界", "vertical-rl"); // "世你\n界好"
+ * @returns 交给 BPMatrixJS 的文字。
+ */
+const ConvertText = (text: string, writingMode: TextWritingMode): string => {
+    // 横排保持原文；BPMatrixJS 自行规范化换行符。
+    if (writingMode === "horizontal-tb") {
+        return text;
+    } else {
+        const lines = text.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
+        const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+        const columns: string[][] = [];
+        let rowCount = 0;
+        // 字素簇保持组合符号和 emoji 完整，输入的每一行对应一列。
+        for (const line of lines) {
+            const column: string[] = [];
+            // 每次只取完整字素，避免将组合字符拆成独立单元。
+            for (const segment of segmenter.segment(line)) {
+                column.push(segment.segment);
+            }
+            columns.push(column);
+            rowCount = Math.max(rowCount, column.length);
+        }
+        const rows: string[] = [];
+        // 逆序取列，使首个输入行位于最右侧，行内字符继续从上往下。
+        for (let row = 0; row < rowCount; row += 1) {
+            const cells: string[] = [];
+            for (let column = columns.length - 1; column >= 0; column -= 1) {
+                // 全角空格保留短列中的缺字位置，防止后续列向左收缩。
+                cells.push(columns[column][row] ?? "\u3000");
+            }
+            rows.push(cells.join(""));
+        }
+        return rows.join("\n");
+    }
+};
+
+export type { TextGeometryFactory } from "./font";
 export { Font, Text };
 export type { Text2DLike, Text2DOptions, TextWritingMode };
-export type { TextGeometryFactory } from "./font";
 export default Text;

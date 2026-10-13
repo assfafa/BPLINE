@@ -14,11 +14,13 @@ const camera = new Camera(800, 600, 1);
 camera.position.set(40, 20);
 const screen = camera.worldToScreen(new Vec2(100, 50));`,
     properties: [
-        entry("width: number; height: number", "视口逻辑宽高。", "Logical viewport width and height."),
+        entry("zoomVersion: number", "只读 zoom 变化版本，用于精度与显示尺寸缓存；位置/旋转使用节点版本。", "Read-only zoom revision for precision and display-size caches. Position/rotation use the node revision."),
+        entry("width: number; height: number", "视口物理像素宽高，与 Render.dpr 同步。", "Viewport dimensions in physical pixels, synchronized with Render.dpr."),
         entry("zoom: number", "正交相机缩放倍率。", "Orthographic zoom factor."),
         entry("top / bottom / left / right: number", "当前正交视野边界。", "Current orthographic view bounds."),
     ],
     methods: [
+        entry("setViewport(containerWidth * render.dpr, containerHeight * render.dpr)", "与 Render 物理像素一致；容器 resize 后同步，避免标尺和拾取位置偏移。", "Match Render physical pixels and synchronize on container resize to avoid ruler and picking offsets."),
         entry("new Camera(width?: number, height?: number, zoom?: number)", "创建正交相机。", "Create an orthographic camera."),
         entry("setViewport(width?: number, height?: number): void", "更新视口尺寸。", "Update viewport dimensions."),
         entry("worldToNdc(position: Vec2): Vec2", "世界坐标转归一化设备坐标。", "Convert world coordinates to normalized device coordinates."),

@@ -98,7 +98,7 @@ const ShapePreview = ({ advanced, controlsId, mountScene }: ShapePreviewProps): 
 
     // On wide layouts the canvas centers the shape in the space beside the floating GUI.
     if (advanced) {
-        canvasClass = "absolute inset-0 lg:right-[205px]";
+        canvasClass = "absolute inset-0 lg:right-[230px]";
     }
 
     // Keep the GUI mounted while hidden so lil-gui retains its controls.

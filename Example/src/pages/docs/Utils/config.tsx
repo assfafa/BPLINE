@@ -21,6 +21,8 @@ const firstTriangle = [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 0, y: 4 }] as const;
 const secondTriangle = [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 0, y: 2 }] as const;
 const overlap = TriangleOverlapArea(firstTriangle, secondTriangle);`,
     methods: [
+        entry("CheckPrecision(value: number): number", "曲线细分整数校验，范围 1…4095。", "Validate an integer curve subdivision value in 1…4095."),
+        entry("TransformPoint2D / InverseTransformPoint2D / ProjectSegmentPoint / ContainsPolygonPoint", "公共双精度变换、线段投影和单轮廓包含判断，详见 PointGeometry。", "Shared double-precision transforms, segment projection and contour containment; see PointGeometry."),
         entry("Clamp(value: number, min: number, max: number): number", "把数值限制在最小值与最大值之间。", "Constrain a number between minimum and maximum values."),
         entry("SignedDoubleArea(points: readonly Point2D[]): number", "按顶点顺序计算有向两倍面积；符号表示绕向。", "Compute signed double area; its sign indicates winding."),
         entry("HasSeparatingAxis(axesSource: readonly Point2D[], other: readonly Point2D[]): boolean", "查找来自第一个凸轮廓的分离轴；相切不算分离。", "Find a separating axis from the first convex outline; touching is not separated."),
@@ -29,6 +31,9 @@ const overlap = TriangleOverlapArea(firstTriangle, secondTriangle);`,
         entry("TriangleOverlapArea(candidate: Triangle2D, selection: Triangle2D): number", "计算两个三角形的交叠面积，支持两种绕向。", "Compute overlap area for two triangles regardless of winding."),
     ],
     links: [
+        { label: "PointGeometry", to: "/docs/utils/point-geometry" },
+        { label: "PlanarGeometry", to: "/docs/utils/planar-geometry" },
+        { label: "CheckPrecision", to: "/docs/utils/precision" },
         { label: "Inner", to: "/docs/utils/inner" },
         { label: "Time", to: "/docs/utils/time" },
         { label: "UUID", to: "/docs/utils/uuid" },

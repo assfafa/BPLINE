@@ -8,7 +8,7 @@ struct MaterialUniform {
     solid: vec4f,
     // opacity、实体 width、align、pixelAligned。
     edge: vec4f,
-    // opacity、pixelAligned、补位、补位。
+    // opacity、pixelAligned、Mesh.ignoreZoom、补位。
     points: vec4f,
     // opacity，其余为补位。
     wireframe: vec4f,

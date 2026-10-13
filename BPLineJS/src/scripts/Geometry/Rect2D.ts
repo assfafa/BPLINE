@@ -5,28 +5,10 @@ import {
     CreateRectPointGeometry,
     GetRectPerimeter,
 } from "bpmatrixjs/Geometry/Rect";
-import Geo from "./Geo";
 import type Style from "../Style";
 import type { GeoData, GeoPartDataLike } from "./Geo";
-/**
- * 矩形初始化选项；所有生成开关均默认关闭，辅助点型独立于面与边框。
- */
-interface Rect2DOptions {
-    /** 矩形宽度，默认 1，允许为 0。 */
-    width?: number;
-    /** 矩形高度，默认 1，允许为 0。 */
-    height?: number;
-    /** 圆角半径，默认 1，生成时限制到半宽和半高的较小值。 */
-    radius?: number;
-    /** 共享样式；未传入时全部生成分区关闭。 */
-    style?: Style;
-}
-interface Rect2DLike extends GeoData {
-    width: number;
-    height: number;
-    radius: number;
-    readonly perimeter: number;
-}
+import Geo from "./Geo";
+
 class Rect2D extends Geo implements Rect2DLike {
     /**
      * 对象类型
@@ -56,7 +38,23 @@ class Rect2D extends Geo implements Rect2DLike {
         this._width = options.width ?? 1;
         this._height = options.height ?? 1;
         this._radius = options.radius ?? 1;
+        this.precision = options.precision ?? 8;
         this.updateGeometry();
+    }
+    /** @param source 来源矩形 @example target.copy(source); @returns 当前矩形几何体。 */
+    public override copy(source: Rect2D): this {
+        this.copyPrecision(source);
+        this.style = source.style.clone();
+        this._width = source.width;
+        this._height = source.height;
+        this._radius = source.radius;
+        this.updateGeometry();
+        return this;
+    }
+
+    /** @example const duplicate = rect.clone(); @returns 独立的矩形几何体。 */
+    public override clone(): Rect2D {
+        return new Rect2D().copy(this);
     }
     /**
      * 重新生成矩形三角面、UV、索引与 Shader 参数。
@@ -78,22 +76,23 @@ class Rect2D extends Geo implements Rect2DLike {
         } else {
             this._height = 0;
         }
-        // 校验数值有效性，防止非有限值进入几何或 GPU 数据。
+        // 保留用户设置的圆角值；拖边穿过零宽时只临时限制绘制半径。
         if (Number.isFinite(this._radius)) {
-            this._radius = Math.max(0, Math.min(this._radius, this._width * 0.5, this._height * 0.5));
+            this._radius = Math.max(0, this._radius);
         } else {
             this._radius = 0;
         }
+        const visibleRadius = Math.min(this._radius, this._width * 0.5, this._height * 0.5);
         let geometry;
         // 只为启用的样式区域生成数据，关闭区域不占用额外几何。
         if (this.style.solid.enabled) {
-            geometry = CreateRectGeometry(this._width, this._height, this._radius);
+            geometry = CreateRectGeometry(this._width, this._height, visibleRadius, this.precision);
         } else {
             geometry = undefined;
         }
         // 只为启用的样式区域生成数据，关闭区域不占用额外几何。
         if (this.style.wireframe.enabled) {
-            this.linePoints = CreateRectLineGeometry(this._width, this._height, this._radius, 1);
+            this.linePoints = CreateRectLineGeometry(this._width, this._height, visibleRadius, 1, this.precision);
         } else {
             this.linePoints = undefined;
         }
@@ -103,10 +102,11 @@ class Rect2D extends Geo implements Rect2DLike {
             border = CreateRectBorderGeometry(
                 this._width,
                 this._height,
-                this._radius,
+                visibleRadius,
                 this.style.edge.width,
                 this.style.edge.uvRepeat,
                 this.style.edge.borderAlign,
+                this.precision,
             );
         } else {
             border = undefined;
@@ -118,13 +118,14 @@ class Rect2D extends Geo implements Rect2DLike {
             points = CreateRectPointGeometry(
                 this._width,
                 this._height,
-                this._radius,
+                visibleRadius,
                 this.style.points.radius,
                 this.style.points.segments,
                 this.style.points.vertices,
                 this.style.points.midpoints,
                 this.style.points.minPointsLength,
                 this.style.points.minEdgePointsLength,
+                this.precision,
             );
         } else {
             points = undefined;
@@ -147,7 +148,7 @@ class Rect2D extends Geo implements Rect2DLike {
         }
         this.mergeGeometry(parts);
         // Rect2D Shader 参数：宽度、高度、圆角半径、wide 三角面边框宽度。
-        this.uniformData.set([this._width, this._height, this._radius, this.style.edge.width]);
+        this.uniformData.set([this._width, this._height, visibleRadius, this.style.edge.width]);
         super.updateGeometry();
         return this;
     }
@@ -218,10 +219,10 @@ class Rect2D extends Geo implements Rect2DLike {
         }
     }
     /**
-     * 获取圆角半径。
+     * 获取设置的圆角半径；绘制时按当前宽高临时限制，不丢失原值。
      * @example
      * const value = rect2D.radius;
-     * @returns 圆角半径
+     * @returns 用户设置的圆角半径
      */
     public get radius(): number {
         return this._radius;
@@ -234,8 +235,33 @@ class Rect2D extends Geo implements Rect2DLike {
      * @returns 矩形轮廓周长
      */
     public get perimeter(): number {
-        return GetRectPerimeter(this._width, this._height, this._radius);
+        return GetRectPerimeter(this._width, this._height,
+            Math.min(this._radius, this._width * 0.5, this._height * 0.5), this.precision);
     }
 }
+
+/**
+ * 矩形初始化选项；所有生成开关均默认关闭，辅助点型独立于面与边框。
+ */
+interface Rect2DOptions {
+    /** 矩形宽度，默认 1，允许为 0。 */
+    width?: number;
+    /** 圆角每段的精度，默认 8。 */
+    precision?: number;
+    /** 矩形高度，默认 1，允许为 0。 */
+    height?: number;
+    /** 圆角半径，默认 1，生成时限制到半宽和半高的较小值。 */
+    radius?: number;
+    /** 共享样式；未传入时全部生成分区关闭。 */
+    style?: Style;
+}
+
+interface Rect2DLike extends GeoData {
+    width: number;
+    height: number;
+    radius: number;
+    readonly perimeter: number;
+}
+
 export default Rect2D;
 export type { Rect2DLike, Rect2DOptions };
