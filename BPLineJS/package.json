@@ -1,6 +1,6 @@
 {
     "name": "bplinejs",
-    "version": "0.1.104-beta.14",
+    "version": "0.1.104-beta.15",
     "description": "A WebGPU-first 2D rendering library focused on line and border rendering.",
     "type": "module",
     "main": "./lib/index.js",

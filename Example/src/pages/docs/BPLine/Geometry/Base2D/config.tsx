@@ -8,8 +8,8 @@ export const config: ReferenceConfig = {
         en: "Supply 2D triangle vertices and optional attributes directly, useful for external triangulators, dynamic geometry, and custom WGSL.",
     },
     detail: {
-        cn: "options.vertices 按 x、y 排列；没有 index 时，每连续三个顶点组成三角形。可传 contours 指定外轮廓与内轮廓；省略时尝试从规则三角网提取边界，再按 Style 生成边框与关键点。复杂或不规则拓扑建议显式提供 contours。轮廓编辑不操作内部三角点；这不是多轮廓布尔剖分接口。",
-        en: "options.vertices contains x/y pairs; without index, each three consecutive vertices form a triangle. Supply contours for outer and inner boundaries, or let regular triangle meshes attempt boundary extraction. Style generates borders and points from those contours. Provide explicit contours for complex topology. Editing excludes interior triangle vertices; this is not a multi-contour Boolean tessellator.",
+        cn: "options.vertices 按 x、y 排列；没有 index 时，每连续三个顶点组成三角形。可传 contours 指定外轮廓与内轮廓；省略时尝试从规则三角网提取全部边界。提取支持 T 接点两侧的长短共享边，文字降级时保留多个外环和孔环，再按 Style 生成边框与关键点，不改变原填充三角面。复杂或不规则拓扑建议显式提供 contours。轮廓编辑不操作内部三角点；这不是多轮廓布尔剖分接口。",
+        en: "options.vertices contains x/y pairs; without index, each three consecutive vertices form a triangle. Supply contours for outer and inner boundaries, or let regular triangle meshes extract all boundaries. Extraction handles long and short shared edges at T-junctions, retaining multiple outer loops and holes when converting text. Style generates borders and points without changing the original fill triangles. Provide explicit contours for complex topology. Editing excludes interior triangle vertices; this is not a multi-contour Boolean tessellator.",
     },
     code: `import { Base2D, BaseMaterial, Mesh, Style } from "bplinejs";
 

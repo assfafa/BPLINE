@@ -3,6 +3,7 @@ import { CreatePolyBorderGeometry, CreatePolyPointGeometry } from "bpmatrixjs/Ge
 import type Style from "../Style";
 import type { GeoData, GeoPartDataLike } from "./Geo";
 import Geo from "./Geo";
+import { InferContours } from "./BaseContours";
 
 /** 用户直接提供已三角剖分的顶点；缺省属性补零，索引缺省为顺序三角形。 */
 class Base2D extends Geo implements Base2DLike {
@@ -695,129 +696,6 @@ const CopyOptions = (options: Base2DOptions): Base2DOptions => {
         linePoints,
         style: options.style,
     };
-};
-
-/**
- * 从一致绕向的三角网中提取外环和孔环，内部剖分顶点不会成为编辑手柄。
- * @param options 原始顶点、索引和分区标记
- * @example const rings = InferContours(options);
- * @returns 可闭合的边界环；非流形或开放边界不猜测轮廓。
- */
-const InferContours = (options: Base2DOptions): Float32Array[] => {
-    interface BoundaryEdge {
-        start: string;
-        end: string;
-        count: number;
-    }
-    const vertices = options.vertices;
-    const indices = options.index;
-    const triangleCount = (indices?.length ?? vertices.length / 2) / 3;
-    const edges = new Map<string, BoundaryEdge>();
-    const positions = new Map<string, [number, number]>();
-    /** @param index 顶点编号 @example const key = VertexKey(0); @returns 精确坐标键。 */
-    const VertexKey = (index: number): string => {
-        const x = vertices[index * 2];
-        const y = vertices[index * 2 + 1];
-        const key = String(x) + "," + String(y);
-        positions.set(key, [x, y]);
-        return key;
-    };
-    // 只读取实体三角面；宽边和点标记本身不定义填充边界。
-    for (let triangle = 0; triangle < triangleCount; triangle++) {
-        const first = indices?.[triangle * 3] ?? triangle * 3;
-        const second = indices?.[triangle * 3 + 1] ?? triangle * 3 + 1;
-        const third = indices?.[triangle * 3 + 2] ?? triangle * 3 + 2;
-        // 逐顶点同步相关属性，防止三角面接缝或索引越界。
-        if (options.vertexType === undefined ||
-            (options.vertexType[first] === 0 && options.vertexType[second] === 0 && options.vertexType[third] === 0)) {
-            const corners = [VertexKey(first), VertexKey(second), VertexKey(third)];
-            // 两个三角面共享的无向边会抵消，剩余边只属于外环或孔环。
-            for (let edge = 0; edge < 3; edge++) {
-                const start = corners[edge];
-                const end = corners[(edge + 1) % 3];
-                // 输入必须保持完整且有限，避免无效坐标进入 GPU 缓冲。
-                if (start !== end) {
-                    const key = [start, end].sort().join("|");
-                    const existing = edges.get(key);
-                    // 输入必须保持完整且有限，避免无效坐标进入 GPU 缓冲。
-                    if (existing !== undefined) {
-                        existing.count += 1;
-                    } else {
-                        edges.set(key, { start, end, count: 1 });
-                    }
-                }
-            }
-        }
-    }
-    const adjacent = new Map<string, string[]>();
-    // 依次处理当前集合，保持对象顺序并避免遗漏成员。
-    for (const edge of edges.values()) {
-        // 输入必须保持完整且有限，避免无效坐标进入 GPU 缓冲。
-        if (edge.count === 1) {
-            adjacent.set(edge.start, [...(adjacent.get(edge.start) ?? []), edge.end]);
-            adjacent.set(edge.end, [...(adjacent.get(edge.end) ?? []), edge.start]);
-        }
-    }
-    const contours: Float32Array[] = [];
-    const visited = new Set<string>();
-    // 依次处理当前集合，保持对象顺序并避免遗漏成员。
-    for (const start of adjacent.keys()) {
-        // 输入必须保持完整且有限，避免无效坐标进入 GPU 缓冲。
-        if (!visited.has(start)) {
-            const ring: number[] = [];
-            let current = start;
-            let previous: string | null = null;
-            let closed = false;
-            // 分叉或开放的三角网不提供不可靠的编辑环。
-            for (let step = 0; step <= adjacent.size; step++) {
-                const neighbors = adjacent.get(current);
-                const coordinate = positions.get(current);
-                // 边界节点须形成可追踪的轮廓，内部剖分点不参与编辑。
-                if (neighbors?.length !== 2 || coordinate === undefined) {
-                    break;
-                }
-                visited.add(current);
-                ring.push(coordinate[0], coordinate[1]);
-                let next = neighbors[0];
-                // 输入必须保持完整且有限，避免无效坐标进入 GPU 缓冲。
-                if (next === previous) {
-                    next = neighbors[1];
-                }
-                // 输入必须保持完整且有限，避免无效坐标进入 GPU 缓冲。
-                if (next === start) {
-                    closed = true;
-                    break;
-                }
-                // 输入必须保持完整且有限，避免无效坐标进入 GPU 缓冲。
-                if (visited.has(next)) {
-                    break;
-                }
-                previous = current;
-                current = next;
-            }
-            // 边界节点须形成可追踪的轮廓，内部剖分点不参与编辑。
-            if (closed && ring.length >= 6) {
-                contours.push(new Float32Array(ring));
-            }
-        }
-    }
-    /** @param first 第一轮廓 @param second 第二轮廓 @example CompareContourArea(outer, inner); @returns 面积降序的比较值。 */
-    const CompareContourArea = (first: Float32Array, second: Float32Array): number =>
-        Math.abs(ContourArea(second)) - Math.abs(ContourArea(first));
-    // 最大闭合边界先于孔边界，导入规则单体三角网时保持外环在前。
-    contours.sort(CompareContourArea);
-    return contours;
-};
-
-/** @param contour 有序闭合环 @example const area = ContourArea(ring); @returns 有向面积。 */
-const ContourArea = (contour: Float32Array): number => {
-    let twiceArea = 0;
-    // 面积只用于边界排序，方向取决于输入三角面的绕向。
-    for (let offset = 0; offset < contour.length; offset += 2) {
-        const next = (offset + 2) % contour.length;
-        twiceArea += contour[offset] * contour[next + 1] - contour[next] * contour[offset + 1];
-    }
-    return twiceArea / 2;
 };
 
 /** @param contour 来源轮廓 @example const copy = CloneContour(contour); @returns 自有坐标数组。 */

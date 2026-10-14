@@ -9,6 +9,7 @@
 | 文件 / 子目录 | 作用 |
 | --- | --- |
 | `Base2D.ts` | 用户直接提供已三角剖分的顶点；缺省属性补零，索引缺省为顺序三角形。 |
+| `BaseContours.ts` | 从实体三角网提取所有闭合边界，包括分离的外环和多个孔环。；记录无向边的出现次数，忽略重合端点形成的零长度边。；将未抵消的长边按共线节点拆分，使 T 接点两侧的长短边能够逐段抵消。 |
 | `CloneGeometry.ts` | 按实际类型复制二维几何，保留各类型的生成参数。 |
 | `Geo.ts` | CPU 几何及其单一版本；样式订阅只响应影响几何生成的字段。 |
 | `index.ts` | 类型、桶导出或模块入口；具体符号见下面的文件索引。 |
@@ -83,8 +84,6 @@ const geometry = new Base2D({ vertices: new Float32Array([0, 0, 1, 0, 0, 1]) });
 | `AppendBaseVertex` | 把源顶点或边上插值点的全部属性写入新的实体三角面。 |
 | `AppendBaseEdgeVertex` | 插入边界节点时固定几何与轮廓使用同一 Float32 坐标。 |
 | `CopyOptions` | 复制并验证全部顶点数组，避免外部原地修改绕过版本通知。 |
-| `InferContours` | 从一致绕向的三角网中提取外环和孔环，内部剖分顶点不会成为编辑手柄。 |
-| `ContourArea` | 有向面积。 |
 | `CloneContour` | 自有坐标数组。 |
 
 ```ts
@@ -100,6 +99,33 @@ ToFloat32([0, 1]);
 ```ts
 export default Base2D;
 export type { Base2DLike, Base2DOptions };
+```
+
+### 文件：BaseContours.ts
+
+
+### 顶层函数
+
+| 名称 | 用途 |
+| --- | --- |
+| `InferContours` | 从实体三角网提取所有闭合边界，包括分离的外环和多个孔环。 |
+| `AddEdge` | 记录无向边的出现次数，忽略重合端点形成的零长度边。 |
+| `SplitBoundaryEdges` | 将未抵消的长边按共线节点拆分，使 T 接点两侧的长短边能够逐段抵消。 |
+| `LowerBound` | 在已排序的节点中查找坐标范围边界。 |
+| `ContourArea` | 有向面积。 |
+
+```ts
+const rings = InferContours(options);
+```
+
+### 类型索引
+
+`BoundaryPoint`、`BoundaryEdge`、`EdgeNode`
+
+### 导出关系
+
+```ts
+export { InferContours };
 ```
 
 ### 文件：CloneGeometry.ts
@@ -402,7 +428,7 @@ export type { Rect2DLike, Rect2DOptions };
 - 库构建把 src/scripts 的目录说明复制到 lib 同名目录；TS 对应 JS/声明，WGSL 作为导入资源编译。Examples 说明只保留在源码，不进入 npm。
 
 <!-- agent-notes:start -->
-暂无额外目录约定。
+- Base2D 从三角网推导边界时，必须拆分 T 接点两侧的长短共线边后再抵消内部边；保留全部外环和孔环，不能把未配对的内部边当成轮廓。轮廓修复不得重新剖分或改变原填充三角面。
 <!-- agent-notes:end -->
 
 ## 5. 中英文搜索关键词

@@ -33,3 +33,6 @@ BPLineJS/src/scripts/Examples/
 *.njsproj
 *.sln
 *.sw?
+
+# WorkBuddy agent workspace memory
+.workbuddy/
