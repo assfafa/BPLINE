@@ -44,12 +44,12 @@ npm install bplinejs@0.1.103
 The current beta adds the editor and helper workflows described above:
 
 ~~~bash
-npm install bplinejs@0.1.104-beta.15 bpmatrixjs@0.1.104-beta.13
+npm install bplinejs@0.1.104-beta.16 bpmatrixjs@0.1.104-beta.13
 # For the complete examples with GUI controls:
 npm install lil-gui
 ~~~
 
-Release notes: [BPLineJS 0.1.104-beta.15](BPLineJS/releases/0.1.104-beta.15.md) and [BPMatrixJS 0.1.104-beta.13](BPMatrixJS/releases/0.1.104-beta.13.md). The renderer beta preserves every outer contour and hole when converting text to editable Base2D geometry. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
+Release notes: [BPLineJS 0.1.104-beta.16](BPLineJS/releases/0.1.104-beta.16.md) and [BPMatrixJS 0.1.104-beta.13](BPMatrixJS/releases/0.1.104-beta.13.md). Rectangle creation keeps its world origin fixed during camera changes and supports snapping with or without stepping. Text conversion preserves every outer contour and hole in editable Base2D geometry. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
 
 ## Docker
 

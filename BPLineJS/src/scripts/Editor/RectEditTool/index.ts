@@ -1460,8 +1460,10 @@ class RectEditTool {
         this._groupFrameCustomized = false;
         // 选择集合变化时按屏幕投影生成组框，拖动时仍只改 Mesh 变换。
         if (this.isGroupMode() && bounds !== null) {
+            const startClient = new Vec2(bounds.left, bounds.top);
             const frame = this.drawFrame({
-                startClient: new Vec2(bounds.left, bounds.top),
+                startClient,
+                startWorld: this.camera.windowToWorld(startClient, this.render),
                 currentClient: new Vec2(bounds.right, bounds.bottom),
             }, false);
             // 零尺寸投影无法形成可命中的组边界。
@@ -1830,7 +1832,7 @@ class RectEditTool {
     }
 
     /**
-     * 同步选中样式和画框预览 Mesh；画框使用当前相机的屏幕坐标系。
+     * 同步选中样式和画框预览 Mesh；画框按屏幕轴对齐，创建起点固定在世界坐标。
      * @example
      * tool.update();
      * @returns 无返回值。
@@ -2122,12 +2124,18 @@ class RectEditTool {
                 }
                 frameState = this.snapshots([this._groupFrame])[0];
             }
+            let creationStartWorld: Vec2 | undefined;
+            // 创建起点在按下时完成定位，之后缩放、平移相机不能改变这个世界锚点。
+            if (mode === "create") {
+                creationStartWorld = this.resolveCreationPoint(world, true);
+            }
             this._gesture = {
                 mode,
                 pointerId: event.pointerId,
                 startClient: client,
                 currentClient: client.clone(),
                 startWorld: world,
+                creationStartWorld,
                 currentWorld: world.clone(),
                 moved: false,
                 snapshots,
@@ -2486,58 +2494,27 @@ class RectEditTool {
 
     /**
      * 将浏览器中的水平画框转换成世界矩形，预览、创建和框选使用同一结果。
-     * @param gesture 画框起点与终点的浏览器坐标
+     * @param gesture 固定的世界创建起点与当前浏览器指针；框选仍采用屏幕起点
      * @param applyLimits 是否应用新建矩形的起点、尺寸和活动区域限制
      * @example
      * const frame = this.drawFrame(gesture, true);
      * @returns 可绘制的世界矩形；尺寸或活动区域无效时为 null。
      */
-    private drawFrame(gesture: Pick<EditGesture, "startClient" | "currentClient">, applyLimits: boolean): DrawFrame | null {
+    private drawFrame(gesture: Pick<EditGesture, "startClient" | "currentClient" | "startWorld" | "creationStartWorld">,
+        applyLimits: boolean): DrawFrame | null {
         let start = gesture.startClient;
         let current = gesture.currentClient;
-        let startWorld = this.camera.windowToWorld(start, this.render);
-        // 新建时起点若落在活动区域外，沿用原先将它压到世界边界的行为。
+        let startWorld = gesture.startWorld;
+        // 新建锚点跟随世界位置重新投影；只有终点按当前相机解释和吸附。
         if (applyLimits) {
-            let boundedX = Math.max(this.left, Math.min(this.right, startWorld.x));
-            let boundedY = Math.max(this.bottom, Math.min(this.top, startWorld.y));
-            // 步进开启时对齐世界起点与鼠标终点；相机旋转时仍按屏幕轴画框。
-            if (this.translationStepEnabled && Number.isFinite(this.translationStep) && this.translationStep > 0) {
-                boundedX = Math.max(this.left, Math.min(this.right, this.snapWorldCoordinate(boundedX)));
-                boundedY = Math.max(this.bottom, Math.min(this.top, this.snapWorldCoordinate(boundedY)));
-                const currentWorld = this.camera.windowToWorld(current, this.render);
-                const snappedCurrent = new Vec2(
-                    this.snapWorldCoordinate(currentWorld.x),
-                    this.snapWorldCoordinate(currentWorld.y),
-                );
-                current = this.camera.worldToWindow(snappedCurrent, this.render);
-            }
-            // 世界网格点投回屏幕后，预览与最终矩形使用同一组对角点。
-            if (boundedX !== startWorld.x || boundedY !== startWorld.y) {
-                startWorld = new Vec2(boundedX, boundedY);
-                start = this.camera.worldToWindow(startWorld, this.render);
-            }
-            // 新建矩形的两个对角点比较步进与四类吸附候选的屏幕距离。
-            if (this.snap) {
-                const targets = CollectSnapGeometry(this.snapScene, this.snapExcluded, this.camera);
-                const rawStart = this.camera.windowToWorld(gesture.startClient, this.render);
-                const startCandidate = FindPointSnap(rawStart, targets, this.snapOptions,
-                    this.radius, this.camera, this.render);
-                const startStepDistance = Math.hypot(start.x - gesture.startClient.x, start.y - gesture.startClient.y);
-                // 起点已经由步进对齐时，只有更贴近原始指针的目标才覆盖。
-                if (startCandidate !== null && startCandidate.distance < startStepDistance) {
-                    startWorld = startCandidate.point;
-                    start = this.camera.worldToWindow(startWorld, this.render);
-                }
-                const rawCurrent = this.camera.windowToWorld(gesture.currentClient, this.render);
-                const currentCandidate = FindPointSnap(rawCurrent, targets, this.snapOptions,
-                    this.radius, this.camera, this.render);
-                const currentStepDistance = Math.hypot(current.x - gesture.currentClient.x,
-                    current.y - gesture.currentClient.y);
-                // 终点同样只采用更短的屏幕修正，避免吸附和步进相互拉扯。
-                if (currentCandidate !== null && currentCandidate.distance < currentStepDistance) {
-                    current = this.camera.worldToWindow(currentCandidate.point, this.render);
-                }
-            }
+            startWorld = gesture.creationStartWorld ?? gesture.startWorld;
+            start = this.camera.worldToWindow(startWorld, this.render);
+            const currentWorld = this.camera.windowToWorld(current, this.render);
+            const endpoint = this.resolveCreationPoint(currentWorld, false);
+            current = this.camera.worldToWindow(endpoint, this.render);
+        } else {
+            // add/sub 框选及自动组包围框维持屏幕对齐的既有语义。
+            startWorld = this.camera.windowToWorld(start, this.render);
         }
         const rightWorld = this.camera.windowToWorld(new Vec2(start.x + 1, start.y), this.render).sub(startWorld);
         const downWorld = this.camera.windowToWorld(new Vec2(start.x, start.y + 1), this.render).sub(startWorld);
@@ -2624,6 +2601,57 @@ class RectEditTool {
             }
         }
         return null;
+    }
+
+    /**
+     * 在按下或拖动位置选择创建定位，步进与四类吸附按屏幕距离竞争。
+     * @param world 原始指针对应的世界坐标
+     * @param limitOrigin 是否将起点限制在世界活动区域内
+     * @example const origin = this.resolveCreationPoint(world, true);
+     * @returns 独立的世界定位点，未开启步进时吸附仍然可用。
+     */
+    private resolveCreationPoint(world: Vec2, limitOrigin: boolean): Vec2 {
+        let point = world.clone();
+        // 创建起点在活动区域外时压到边界，不能由吸附再次移出范围。
+        if (limitOrigin) {
+            point.set(Math.max(this.left, Math.min(this.right, point.x)),
+                Math.max(this.bottom, Math.min(this.top, point.y)));
+        }
+        let stepDistance = Infinity;
+        const stepEnabled = this.translationStepEnabled && Number.isFinite(this.translationStep) &&
+            this.translationStep > 0;
+        // 只有实际开启步进才提供竞争距离；未开启时不能以零距离挡住所有吸附。
+        if (stepEnabled) {
+            point.set(this.snapWorldCoordinate(point.x), this.snapWorldCoordinate(point.y));
+            // 网格对齐后起点仍须满足活动范围。
+            if (limitOrigin) {
+                point.set(Math.max(this.left, Math.min(this.right, point.x)),
+                    Math.max(this.bottom, Math.min(this.top, point.y)));
+            }
+            const steppedClient = this.camera.worldToWindow(point, this.render);
+            const rawClient = this.camera.worldToWindow(world, this.render);
+            stepDistance = Math.hypot(steppedClient.x - rawClient.x, steppedClient.y - rawClient.y);
+        }
+        // 起点只在按下时查询，终点随拖动和相机更新重新查询。
+        if (this.snap) {
+            const targets = CollectSnapGeometry(this.snapScene, this.snapExcluded, this.camera);
+            const candidate = FindPointSnap(world, targets, this.snapOptions,
+                this.radius, this.camera, this.render);
+            // 采用更近的吸附目标，保持与其他尺寸和移动操作相同的步进优先规则。
+            if (candidate !== null && candidate.distance < stepDistance) {
+                let allowed = true;
+                // 创建的固定起点必须在活动范围内，终点交由尺寸和活动范围裁剪处理。
+                if (limitOrigin) {
+                    allowed = candidate.point.x >= this.left && candidate.point.x <= this.right &&
+                        candidate.point.y >= this.bottom && candidate.point.y <= this.top;
+                }
+                // 边界外的候选不能覆盖合法的创建起点。
+                if (allowed) {
+                    point = candidate.point.clone();
+                }
+            }
+        }
+        return point;
     }
 
     /**

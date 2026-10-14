@@ -158,6 +158,9 @@ export const mountEditorScene = (options: SceneMountOptions): (() => void) => {
                         transformGui.add(transforms, "translationStepEnabled").onChange(applyTransforms).listen();
                         transformGui.add(transforms, "rotationStepEnabled").onChange(applyTransforms).listen();
                         transformGui.close();
+                        const rect = gui.addFolder("Rect");
+                        rect.add(collection.rectEditTool, "origin", ["left", "center"]).listen();
+                        rect.close();
                         const ngon = gui.addFolder("NGon");
                         ngon.add(collection.ngonEditTool, "sides", 3, 90, 1).listen();
                         ngon.add(collection.ngonEditTool, "uvMode", ["bounding", "polar"]);

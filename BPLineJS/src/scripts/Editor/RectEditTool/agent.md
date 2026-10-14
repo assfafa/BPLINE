@@ -232,7 +232,7 @@ const tool = new RectEditTool(scene, render, camera, true, false);
 | `copySelected(): number`  | 已复制的矩形数量。 |
 | `paste(): Mesh[]`  | 本次粘贴的新矩形。 |
 | `cutSelected(): Mesh[]`  | 已剪切的矩形。 |
-| `update(): void`  | 同步选中样式和画框预览 Mesh；画框使用当前相机的屏幕坐标系。 |
+| `update(): void`  | 同步选中样式和画框预览 Mesh；画框按屏幕轴对齐，创建起点固定在世界坐标。 |
 | `destroy(): void`  | 销毁指针监听和辅助组；把编辑 Mesh 放回场景根节点。 |
 | `cancel(): void`  | 清除正在进行的画框或变换，不回滚已完成的逐帧编辑。 |
 | `beginViewPointer(event: PointerEvent): void` （内部） | 查看模式按下时同步画布与容器光标，以覆盖相机控制器的容器指针捕获。 |
@@ -254,7 +254,8 @@ const tool = new RectEditTool(scene, render, camera, true, false);
 | `applyRectRotation(gesture: EditGesture): void` （内部） | 绕单个矩形自身中心旋转完整仿射轴，同时保留父级层次与历史快照。 |
 | `applyGroupTransform(gesture: EditGesture): void` （内部） | 在虚线组边界上缩放或在外侧旋转各个 Mesh，不改变它们的父节点。 |
 | `uniqueGeometry(mesh: Mesh): Rect2D` （内部） | 避免缩放一个 Mesh 时意外改变共用同一 Geometry 的其他实例。 |
-| `drawFrame(gesture: Pick<EditGesture, "startClient" \| "currentClient">, applyLimits: boolean): DrawFrame \| null` （内部） | 将浏览器中的水平画框转换成世界矩形，预览、创建和框选使用同一结果。 |
+| `drawFrame(gesture: Pick<EditGesture, "startClient" \| "currentClient" \| "startWorld" \| "creationStartWorld">, applyLimits: boolean): DrawFrame \| null` （内部） | 将浏览器中的水平画框转换成世界矩形，预览、创建和框选使用同一结果。 |
+| `resolveCreationPoint(world: Vec2, limitOrigin: boolean): Vec2` （内部） | 在按下或拖动位置选择创建定位，步进与四类吸附按屏幕距离竞争。 |
 | `clipDrawFrame(frame: DrawFrame, origin: Vec2): DrawFrame \| null` （内部） | 沿起点到画框各角的世界线段截取活动区域内最大的合法矩形。 |
 | `applyDrawFrame(mesh: Mesh, frame: DrawFrame): void` （内部） | 把同一屏幕画框变换写到预览、选择或新建的 Mesh。 |
 | `finishCreate(gesture: EditGesture): void` （内部） | 创建有效面积的新矩形并加入场景。 |
@@ -589,7 +590,8 @@ export type { AffineTransform, DrawFrame, EditGesture, GestureMode, GroupAction,
 - 库构建把 src/scripts 的目录说明复制到 lib 同名目录；TS 对应 JS/声明，WGSL 作为导入资源编译。Examples 说明只保留在源码，不进入 npm。
 
 <!-- agent-notes:start -->
-暂无额外目录约定。
+- 创建手势在按下时完成起点的世界范围限制、步进及吸附，并固定世界锚点；相机缩放、平移或旋转后只重新投影该锚点，不能用旧 startClient 重新求世界起点。框选与自动组框继续使用屏幕对齐逻辑。
+- 创建的终点支持顶点、边线、交点和网格吸附；仅在步进实际开启时使用步进候选距离竞争，否则使用 Infinity，避免零距离挡住全部吸附。
 <!-- agent-notes:end -->
 
 ## 5. 中英文搜索关键词

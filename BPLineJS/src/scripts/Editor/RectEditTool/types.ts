@@ -105,6 +105,8 @@ interface EditGesture {
     startClient: Vec2;
     currentClient: Vec2;
     startWorld: Vec2;
+    /** 新建时在按下瞬间完成范围限制、步进和吸附的世界起点；不随相机变化重算。 */
+    creationStartWorld?: Vec2;
     currentWorld: Vec2;
     moved: boolean;
     lockedAxis?: "horizontal" | "vertical";

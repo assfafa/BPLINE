@@ -181,6 +181,11 @@ transformGui.add(transforms, "rotationStep", 1, 90, 1).onChange(applyTransforms)
 transformGui.add(transforms, "translationStepEnabled").onChange(applyTransforms).listen();
 transformGui.add(transforms, "rotationStepEnabled").onChange(applyTransforms).listen();
 transformGui.close();
+// Rectangle creation pins its world origin on pointer down; wheel zoom keeps that origin fixed.
+// Enable snapping with editor.snap; stepping is optional and the closer screen-space result wins.
+const rect = gui.addFolder("Rect");
+rect.add(editor.rectEditTool, "origin", ["left", "center"]).listen();
+rect.close();
 const ngon = gui.addFolder("NGon");
 ngon.add(editor.ngonEditTool, "sides", 3, 90, 1).listen();
 ngon.add(editor.ngonEditTool, "uvMode", ["bounding", "polar"]);
