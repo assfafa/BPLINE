@@ -202,6 +202,18 @@ const InitialRouteFallback = () => {
     );
 };
 
+/** @example await loadWgslPage(); @returns WGSL example route. */
+const loadWgslPage = async () => {
+    const page = await import("@/pages/example/Material/WGSL/index.tsx");
+    return { Component: page.default };
+};
+
+/** @example await loadVideoPage(); @returns Video example route. */
+const loadVideoPage = async () => {
+    const page = await import("@/pages/example/Texture/Video/index.tsx");
+    return { Component: page.default };
+};
+
 /** Keep all public example routes inside the URL hash for static hosting. */
 export const router = createHashRouter([
     {
@@ -252,12 +264,20 @@ export const router = createHashRouter([
                 lazy: loadTextPage,
             },
             {
+                path: "example/material/wgsl",
+                lazy: loadWgslPage,
+            },
+            {
                 path: "example/material/custom",
                 lazy: loadCustomMaterialPage,
             },
             {
                 path: "example/instancing/imesh",
                 lazy: loadInstancePage,
+            },
+            {
+                path: "example/texture/video",
+                lazy: loadVideoPage,
             },
             {
                 path: "example/texture/image",

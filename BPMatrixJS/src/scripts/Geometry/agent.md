@@ -15,6 +15,7 @@
 | `Rect/` | 矩形与圆角轮廓、UV、周长、边框和标记点。 详见该目录的 agent.md。 |
 | `Rect.ts` | 矩形几何生成器。 按需维护填充三角面、边框三角面、line-list 轮廓和线框点位数据。 |
 | `Text/` | 字体注册、布局、曲线离散及带孔字形剖分。 详见该目录的 agent.md。 |
+| `Wasm/` | C++ 字体解码、HarfBuzz 排版、曲线采样、nonzero 三角化与有界缓存。 详见该目录的 agent.md。 |
 
 ## 2. index 入口、案例与类接口
 
@@ -55,9 +56,10 @@ export type {
 export {
     CreateTextBorderGeometry, CreateTextGeometry, CreateTextLineGeometry,
     CreateTextPointGeometry,
-    GetTextPerimeter, HasTextFont, RegisterTextFont, Text, UnregisterTextFont,
+    GetTextFont, GetTextPerimeter, HasTextFont, RegisterTextFont, Text, TextFont, UnregisterTextFont,
 } from "./Text/index.js";
 export type {
+    TextCacheStats, TextGlyph, TextGlyphPosition, TextRun,
     TextAlign,
     TextBaseline, TextBorderAlign, TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 } from "./Text/index.js";

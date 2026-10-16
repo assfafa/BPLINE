@@ -1,7 +1,8 @@
 import { CheckPrecision } from "../../Utils/Precision.js";
 import type { TextMetadata } from "./Buffers.js";
 import { CreateBorderBuffers, CreateFillBuffers, CreateLineBuffers, CreatePointBuffers } from "./Buffers.js";
-import { HasTextFont, RegisterTextFont, UnregisterTextFont } from "./Fonts.js";
+import { GetTextFont, HasTextFont, RegisterTextFont, TextFont, UnregisterTextFont } from "./Fonts.js";
+import type { TextCacheStats, TextGlyph, TextGlyphPosition, TextRun } from "./Fonts.js";
 import type { TextOutline } from "./Outline.js";
 import { CreateTextOutline } from "./Outline.js";
 import type {
@@ -254,6 +255,21 @@ class Text implements TextLike {
     /** @example textGeometry.data; @returns 填充三角面数据 */
     public get data(): TextGeometryData {
         return this._data;
+    }
+    /** @example textGeometry.contours; @returns 全部可见外圈与孔圈的独立 Float32 副本，不含剖分添加的直边节点。 */
+    public get contours(): Float32Array[] {
+        const result: Float32Array[] = [];
+        // Copy at the geometry boundary so callers cannot mutate shared outline caches.
+        for (const contour of this._outline.contours) {
+            const coordinates = new Float32Array(contour.length * 2);
+            // Keep the original contour nodes, without horizontal-band subdivision points.
+            for (let index = 0; index < contour.length; index += 1) {
+                coordinates[index * 2] = contour[index][0];
+                coordinates[index * 2 + 1] = contour[index][1];
+            }
+            result.push(coordinates);
+        }
+        return result;
     }
     /** @example textGeometry.borderData; @returns 最近生成的边框数据 */
     public get borderData(): TextBorderGeometryData | undefined {
@@ -544,9 +560,10 @@ const GetTextPerimeter = (
 export {
     CreateTextBorderGeometry, CreateTextGeometry, CreateTextLineGeometry,
     CreateTextPointGeometry,
-    GetTextPerimeter, HasTextFont, RegisterTextFont, Text, UnregisterTextFont,
+    GetTextFont, GetTextPerimeter, HasTextFont, RegisterTextFont, Text, TextFont, UnregisterTextFont,
 };
 export type {
+    TextCacheStats, TextGlyph, TextGlyphPosition, TextRun,
     TextAlign,
     TextBaseline, TextBorderAlign, TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 };

@@ -17,10 +17,10 @@ const text = new Text("你好", 48, "MiSans");`,
         entry("Font.map: ReadonlyMap<string, TextGeometryFactory>", "已加载字体名到几何创建函数的只读视图；首个字体是 Text 默认字体。", "Read-only view of loaded factories; its first font is Text's default family."),
     ],
     methods: [
-        entry("Font.register(fontFamily: string, url: string): Promise<TextGeometryFactory>", "下载并注册字体；同名同址并发加载共用请求。", "Download and register a font; concurrent calls for the same name and URL share a request."),
+        entry("Font.register(fontFamily: string, url: string): Promise<TextGeometryFactory>", "下载字体并等待 WASM 初始化与注册；支持 TTF/OTF/WOFF/WOFF2。同名同址并发加载共用请求，此时不生成全部字形三角面。", "Download TTF/OTF/WOFF/WOFF2 and await WASM initialization and registration. Concurrent requests share loading; registration does not triangulate all glyphs."),
         entry("Font.get(fontFamily: string): TextGeometryFactory", "获取可调用函数；如 Font.get(\"MiSans\")(\"啊\", 48)。", "Get a callable factory, for example Font.get(\"MiSans\")(\"啊\", 48)."),
         entry("Font.has(fontFamily: string): boolean", "查询字体是否已完成注册。", "Check whether a font has finished registering."),
-        entry("TextGeometryFactory(text, fontSize?, options?): TextGeometryData", "按该字体生成填充三角面及排版度量。", "Generate fill triangles and layout metrics for this font."),
+        entry("TextGeometryFactory(text, fontSize?, options?): TextGeometryData", "同步生成填充三角面及排版度量；相同字形、精度及文字排版复用缓存，未使用 Worker。", "Synchronously generate fill triangles and metrics, reusing glyph, precision and layout caches. No Worker is used."),
     ],
     links: [{ label: "Text", to: "/docs/bpline/geometry/text" }],
 };

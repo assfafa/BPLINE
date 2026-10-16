@@ -15,8 +15,20 @@ const require = createRequire(join(PackageRootPath(packages[0]), "package.json")
 const ts = require("typescript");
 const excluded = new Set(["node_modules", "lib", "dist"]);
 const sourceExtensions = new Set([".ts", ".js", ".mjs", ".cjs"]);
+const nativePurposes = new Map([
+    ["Bridge.cpp", "C ABI 入口；字体句柄所有权、异常转错误字符串、结果内存和缓存统计。"],
+    ["Font.hpp", "原生 Font 字段、构造/销毁、shape/glyph/clear 接口和字形 LRU 缓存。"],
+    ["FontBytes.cpp", "解码 TTF/OTF/WOFF/WOFF2，校验字节范围，构造字体与 UTF-16 字形排版。"],
+    ["Geometry.hpp", "双精度点、轮廓、三角面结构及 nonzero 剖分接口。"],
+    ["Glyph.cpp", "HarfBuzz 原生路径回调、贝塞尔细分、字形网格缓存和内存上限。"],
+    ["Tessellation.cpp", "交点与重叠分段、nonzero 填充带、全部可见外轮廓和孔洞追踪。"],
+    ["Text.cpp", "多行排版、字距/行距/对齐、重叠字形合并、居中与批量几何输出。"],
+    ["CMakeLists.txt", "固定原生源文件与编译选项，生成 Emscripten 模块和独立 WASM。"],
+    ["build.py", "按 SHA-256 校验下载依赖，在项目缓存编译，将运行产物复制到 lib。"],
+]);
 
 const sections = new Map([
+    ["Geometry/Wasm", ["文字原生计算 Text WASM", "C++ 字体解码、HarfBuzz 排版、曲线采样、nonzero 三角化与有界缓存。", "文字 字体 原生 编译 缓存 孔洞", "text font wasm native build cache winding holes", "build:wasm 在 build 生成加载器和 WASM；src 保存 C++。依赖与对象缓存位于根目录 .local/wasm-text。只使用 MIT 依赖，LICENSE 随包复制。注册必须 await，几何创建同步。"]],
     ["Camera", ["相机 Camera", "正交视口、坐标投影、缩放和相机版本。", "相机 视口 投影 缩放 旋转", "camera viewport projection zoom rotation", "zoomVersion 只记录实际缩放变化；变换与投影按版本同步，Y 正方向向上。"]],
     ["Color", ["颜色 Color", "归一化 RGBA、十六进制转换和颜色订阅。", "颜色 色值 透明度 订阅", "color rgba hex opacity subscription", "修改颜色必须通过 setter 或方法提交；订阅按消费者和字段区分。"]],
     ["Control", ["相机控制 Control", "鼠标、单指、双指操作和相机惯性。", "控制器 拖动 缩放 旋转 惯性 单指 双指 回调", "controller drag zoom rotation inertia touch callback", "drag 是平移总开关，leftDrag/rightDrag/oFDrag/tFDrag 分开控制；通知使用局部变换，新值和旧值是独立快照。"]],
@@ -70,7 +82,8 @@ const Directories = (root, directory) => {
     const result = [directory];
     // 只扫描维护目录，生成产物和依赖目录由打包流程处理。
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
-        if (entry.isDirectory() && !entry.name.startsWith(".") && !excluded.has(entry.name)) {
+        if (entry.isDirectory() && !entry.name.startsWith(".") && !excluded.has(entry.name) &&
+            !(entry.name === "build" && directory.replaceAll("\\", "/").endsWith("/Geometry/Wasm"))) {
             result.push(...Directories(root, join(directory, entry.name)));
         }
     }
@@ -294,7 +307,9 @@ const DescribeSource = (source) => {
 
 /** @param name 文件名 @returns 非 TypeScript 文件的作用。 @example FilePurpose("fragment.wgsl"); */
 const FilePurpose = (name) => {
-    if (name.endsWith(".wgsl")) {
+    if (nativePurposes.has(name)) {
+        return nativePurposes.get(name);
+    } else if (name.endsWith(".wgsl")) {
         return "WGSL 阶段源码；由对应材质/Helper 以 ?raw 引入。";
     } else if (name.endsWith(".svg")) {
         return "矢量光标资源，通过模块 URL 引入；方向由编辑器投影计算。";
@@ -321,7 +336,8 @@ const FilePurpose = (name) => {
 const BuildGuide = (root, directory, notes) => {
     const path = relative(root, directory).replaceAll("\\", "/");
     const metadata = Description(path);
-    const entries = readdirSync(directory, { withFileTypes: true }).filter((entry) => entry.name !== "agent.md" && !entry.name.startsWith(".") && !excluded.has(entry.name));
+    const entries = readdirSync(directory, { withFileTypes: true }).filter((entry) => entry.name !== "agent.md" && !entry.name.startsWith(".") && !excluded.has(entry.name) &&
+        !(entry.name === "build" && path === "src/scripts/Geometry/Wasm"));
     entries.sort((left, right) => left.name.localeCompare(right.name, "en"));
     const name = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).name;
     const lines = ["# " + metadata[0], "", "目录：`" + name + "/" + (path || ".") + "`", "", "## 1. 文件结构与作用", "", metadata[1], "", "| 文件 / 子目录 | 作用 |", "| --- | --- |"];

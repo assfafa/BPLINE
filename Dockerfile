@@ -8,6 +8,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         bash \
         ca-certificates \
+        emscripten \
+        cmake \
+        ninja-build \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

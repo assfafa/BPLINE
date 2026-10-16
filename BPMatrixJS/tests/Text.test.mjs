@@ -16,7 +16,7 @@ import {
 } from "../lib/Geometry/index.js";
 
 const fontBytes = readFileSync(new URL("./fixtures/MiSans-subset.woff2", import.meta.url));
-RegisterTextFont("MiSansTest", fontBytes);
+await RegisterTextFont("MiSansTest", fontBytes);
 
 /**
  * 计算一个三角面的有向两倍面积。
@@ -155,9 +155,9 @@ test("empty and invalid values do not create broken buffers", () => {
     assert.throws(() => CreateTextPointGeometry("B", 32, "MiSansTest", 2, 2), RangeError);
 });
 
-test("font registration may be removed and restored", () => {
+test("font registration may be removed and restored", async () => {
     assert.equal(UnregisterTextFont("MiSansTest"), true);
     assert.equal(HasTextFont("MiSansTest"), false);
-    RegisterTextFont("MiSansTest", fontBytes);
+    await RegisterTextFont("MiSansTest", fontBytes);
     assert.equal(HasTextFont("MiSansTest"), true);
 });

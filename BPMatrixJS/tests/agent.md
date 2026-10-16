@@ -9,6 +9,7 @@
 | 文件 / 子目录 | 作用 |
 | --- | --- |
 | `fixtures/` | 数学、几何、字体与边界行为的 Node 检查。 详见该目录的 agent.md。 |
+| `generate-text-fixtures.py` | 本目录维护的配置、资源或验证文件。 |
 | `math-versions.test.mjs` | 本目录维护的配置、资源或验证文件。 |
 | `NGon.test.mjs` | 本目录维护的配置、资源或验证文件。 |
 | `PlanarGeometry.test.mjs` | 本目录维护的配置、资源或验证文件。 |
@@ -17,6 +18,7 @@
 | `readability.test.mjs` | 本目录维护的配置、资源或验证文件。 |
 | `RectPoints.test.mjs` | 本目录维护的配置、资源或验证文件。 |
 | `Text.test.mjs` | 本目录维护的配置、资源或验证文件。 |
+| `TextWasm.test.mjs` | 本目录维护的配置、资源或验证文件。 |
 
 ## 2. index 入口、案例与类接口
 
@@ -96,6 +98,21 @@ Verify("class A {}", { "class-layout": "error" });
 
 ```ts
 TriangleCross(data, 0);
+```
+
+### 文件：TextWasm.test.mjs
+
+
+### 顶层函数
+
+| 名称 | 用途 |
+| --- | --- |
+| `Fixture` | Original test-font bytes. |
+| `Area` | Total area, asserting finite CW triangles. |
+| `Loops` | Number of closed visible contours. |
+
+```ts
+Fixture("woff2");
 ```
 
 ## 4. 注意事项

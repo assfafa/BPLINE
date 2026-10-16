@@ -36,3 +36,6 @@ BPLineJS/src/scripts/Examples/
 
 # WorkBuddy agent workspace memory
 .workbuddy/
+
+# Native text outputs; C++ and build recipes remain tracked.
+BPMatrixJS/src/scripts/Geometry/Wasm/build/

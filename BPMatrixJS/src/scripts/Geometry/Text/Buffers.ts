@@ -12,6 +12,8 @@ type TextMetadata = Pick<
     "precision" | "text" | "fontSize" | "fontFamily" | "lineSpacing" | "letterSpacing" | "textAlign" | "baseline"
 >;
 
+const fillTemplates = new WeakMap<TextOutline, TextGeometryData>();
+
 /**
  * 根据总顶点数挑选索引位宽。
  * @param count 顶点数量
@@ -111,7 +113,7 @@ const FillUv = (point: TextPoint, outline: TextOutline): TextPoint => {
  * CreateFillBuffers(outline, metadata);
  * @returns 填充几何数据
  */
-const CreateFillBuffers = (outline: TextOutline, metadata: TextMetadata): TextGeometryData => {
+const BuildFillBuffers = (outline: TextOutline, metadata: TextMetadata): TextGeometryData => {
     const geometry: number[] = [];
     const normal: number[] = [];
     const uv: number[] = [];
@@ -172,6 +174,38 @@ const CreateFillBuffers = (outline: TextOutline, metadata: TextMetadata): TextGe
         }
     }
     return Pack(outline, metadata, geometry, normal, uv, index);
+};
+
+/**
+ * 复用完整填充模板，仅复制公开可修改的类型化数组；轮廓释放后模板自动回收。
+ * @param outline 内部只读共享轮廓
+ * @param metadata 当前实例文字与基线参数
+ * @example CreateFillBuffers(outline, metadata);
+ * @returns 当前实例独占的填充、法线、UV 和索引缓冲。
+ */
+const CreateFillBuffers = (outline: TextOutline, metadata: TextMetadata): TextGeometryData => {
+    let template = fillTemplates.get(outline);
+    // Identical layouts avoid rebuilding vertex maps and UVs after a native cache hit.
+    if (template === undefined) {
+        template = BuildFillBuffers(outline, metadata);
+        const bytes = template.geometry.byteLength + template.normal.byteLength +
+            template.uv.byteLength + template.index.byteLength;
+        // Large one-off buffers remain valid without retaining an additional template.
+        if (bytes <= 8 * 1024 * 1024) {
+            fillTemplates.set(outline, template);
+        }
+    }
+    let anchorY = 0;
+    // Baseline only changes the anchor, so all three choices can share one fill template.
+    if (metadata.baseline === "top") {
+        anchorY = outline.minY + outline.height;
+    } else if (metadata.baseline === "bottom") {
+        // Geometry remains centered even when selecting the bottom baseline anchor.
+        anchorY = outline.minY;
+    }
+    return { ...template, ...metadata, anchorY,
+        geometry: template.geometry.slice(), normal: template.normal.slice(),
+        uv: template.uv.slice(), index: template.index.slice() };
 };
 
 /**

@@ -1,4 +1,6 @@
 import { Camera, Render, Scene } from "bplinejs";
+import type { HelperGrid } from "bplinejs";
+import type { Theme } from "@/theme/context.ts";
 import type { SceneMountOptions } from "./ShapePreview.tsx";
 
 /** Own the GPU, animation and viewport lifecycle of a preview. */
@@ -11,6 +13,8 @@ export default class SceneRuntime {
     private readonly _options: SceneMountOptions;
     private _frame: number = 0;
     private _observer: ResizeObserver | null = null;
+    public helper: HelperGrid | null = null;
+    private _theme: Theme | null = null;
     private _fitted: boolean = false;
 
     /**
@@ -22,7 +26,6 @@ export default class SceneRuntime {
     public constructor(options: SceneMountOptions) {
         this._options = options;
         this.render = new Render(options.container, "production");
-        this.render.backgroundColor = { r: 0.08, g: 0.1, b: 0.14, a: 1 };
     }
 
     /**
@@ -74,6 +77,12 @@ export default class SceneRuntime {
     private draw = (): void => {
         // Disposal prevents another frame from touching a destroyed GPU device.
         if (this.mounted) {
+            const theme = this._options.getTheme();
+            // Apply only on theme changes so custom GUI palettes remain editable between changes.
+            if (this.helper !== null && this._theme !== theme) {
+                this.helper.mode = theme;
+                this._theme = theme;
+            }
             this.update();
             this.render.render(this.scene, this.camera);
             this._frame = requestAnimationFrame(this.draw);

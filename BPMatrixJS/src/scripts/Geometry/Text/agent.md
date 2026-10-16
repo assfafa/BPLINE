@@ -9,9 +9,9 @@
 | 文件 / 子目录 | 作用 |
 | --- | --- |
 | `Buffers.ts` | 根据总顶点数挑选索引位宽。；包装文字几何公共度量及缓冲。；为填充区域生成包围盒 UV；零尺寸轴返回中线 UV。 |
-| `Fonts.ts` | 按名称注册字体字节；字体解析由 fontkit 完成，注册结果供所有 Text 实例共享。；查询字体名称是否已注册。；注销字体名称；已创建的几何缓冲不受影响。 |
+| `Fonts.ts` | 已注册的 WASM 字体；字体字节、曲线和三角化均由 C++ 管理。 |
 | `index.ts` | WOFF2 等字体的二维文字几何生成器。 字体数据须预先使用 RegisterTextFont 注册；填充网格按可见包围盒居中。 |
-| `Outline.ts` | 求控制点相对弦的距离，作为曲线细分的停止条件。；将互不重复的点追加到当前轮廓。；递归细分二次 Bézier，误差以最终几何单位衡量。 |
+| `Outline.ts` | 读取 WASM 排版及三角化结果，按完整生成参数共享内部缓存。 |
 | `types.ts` | 类型、桶导出或模块入口；具体符号见下面的文件索引。 |
 
 ## 2. index 入口、案例与类接口
@@ -68,6 +68,7 @@ const textGeometry = new Text("你好\n世界", 32, "MiSans", { lineSpacing: 4 }
 | `get textAlign(): TextAlign`  | 当前水平对齐方式 |
 | `get baseline(): TextBaseline`  | 当前垂直基线锚点 |
 | `get data(): TextGeometryData`  | 填充三角面数据 |
+| `get contours(): Float32Array[]`  | 全部可见外圈与孔圈的独立 Float32 副本，不含剖分添加的直边节点。 |
 | `get borderData(): TextBorderGeometryData \| undefined`  | 最近生成的边框数据 |
 | `get lineData(): TextLineGeometryData \| undefined`  | 最近生成的线框数据 |
 | `get pointData(): TextPointGeometryData \| undefined`  | 最近生成的点位数据 |
@@ -99,9 +100,10 @@ Nonnegative(2, "lineWidth");
 export {
     CreateTextBorderGeometry, CreateTextGeometry, CreateTextLineGeometry,
     CreateTextPointGeometry,
-    GetTextPerimeter, HasTextFont, RegisterTextFont, Text, UnregisterTextFont,
+    GetTextFont, GetTextPerimeter, HasTextFont, RegisterTextFont, Text, TextFont, UnregisterTextFont,
 };
 export type {
+    TextCacheStats, TextGlyph, TextGlyphPosition, TextRun,
     TextAlign,
     TextBaseline, TextBorderAlign, TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 };
@@ -120,7 +122,8 @@ export default Text;
 | `PackIndices` | 根据总顶点数挑选索引位宽。 |
 | `Pack` | 包装文字几何公共度量及缓冲。 |
 | `FillUv` | 为填充区域生成包围盒 UV；零尺寸轴返回中线 UV。 |
-| `CreateFillBuffers` | 将剖分器输出的三角面统一改为顺时针绕序。 |
+| `BuildFillBuffers` | 将剖分器输出的三角面统一改为顺时针绕序。 |
+| `CreateFillBuffers` | 复用完整填充模板，仅复制公开可修改的类型化数组；轮廓释放后模板自动回收。 |
 | `GetJoin` | 计算字形轮廓在一个节点处的外法线和斜接倍数。 剖分器边界的填充总在路径左侧，右法线指向非填充区，包括内孔。 |
 | `GetDistances` | 计算闭合边界各节点的累计长度和总长。 |
 | `CreateLineBuffers` | 生成每条填充边界独立闭合的 line-list。 |
@@ -145,24 +148,70 @@ export type { TextMetadata };
 
 ### 文件：Fonts.ts
 
+### TextFont
+
+已注册的 WASM 字体；字体字节、曲线和三角化均由 C++ 管理。
+
+#### 变量与默认值
+
+| 字段 | 类型 / 默认值 | 用途 |
+| --- | --- | --- |
+| `version`（公开） | `number`；`由构造参数或初始化过程赋值` | 状态由 `constructor`、`shape`、`mesh`、`cacheStats` 读取或维护；完整处理见对应函数。 |
+| `unitsPerEm`（公开） | `number`；`由构造参数或初始化过程赋值` | 状态由 `constructor` 读取或维护；完整处理见对应函数。 |
+| `ascent`（公开） | `number`；`由构造参数或初始化过程赋值` | 状态由 `constructor` 读取或维护；完整处理见对应函数。 |
+| `descent`（公开） | `number`；`由构造参数或初始化过程赋值` | 状态由 `constructor` 读取或维护；完整处理见对应函数。 |
+| `lineGap`（公开） | `number`；`由构造参数或初始化过程赋值` | 状态由 `constructor` 读取或维护；完整处理见对应函数。 |
+| `_module`（内部） | `TextWasmModule`；`由构造参数或初始化过程赋值` | 原生模块（构造参数引用）。 |
+| `_disposed`（内部） | `按初始化值推断`；`false` | 状态由 `dispose`、`requireActive` 读取或维护；完整处理见对应函数。 |
+| `_shapes`（内部） | `按初始化值推断`；`new TextCache<TextRun>()` | 状态由 `shape`、`cacheStats`、`clearCache`、`dispose` 读取或维护；完整处理见对应函数。 |
+| `_outlines`（内部） | `按初始化值推断`；`new TextCache<TextOutline>()` | 状态由 `outline`、`cacheStats`、`clearCache`、`dispose` 读取或维护；完整处理见对应函数。 |
+
+#### 构造与案例
+
+```ts
+constructor(module: TextWasmModule, metrics: Float64Array)
+```
+
+原生字体的 JS 所有者。
+
+```ts
+new TextFont(module, metrics);
+```
+
+#### 函数与访问器
+
+| 签名 | 作用 |
+| --- | --- |
+| `shape(text: string): TextRun`  | 只读字形定位和 UTF-16 簇信息，不生成三角面。 |
+| `outline(key: string, create: () => TextOutline): TextOutline`  | 内部共享的只读轮廓。 |
+| `mesh(text: string, fontSize: number, lineSpacing: number, letterSpacing: number, align: number, tolerance: number): Float64Array`  | 调用 C++ 的完整文字几何管线。 |
+| `get cacheStats(): TextCacheStats`  | 缓存命中、构建次数及内存估算快照。 |
+| `clearCache(): void`  | 清空缓存及统计，保留字体注册。 |
+| `dispose(): void`  | 释放字体及缓存，重复调用安全。 |
+| `requireActive(): void` （内部） | 已释放字体抛错，避免访问无效句柄。 |
 
 ### 顶层函数
 
 | 名称 | 用途 |
 | --- | --- |
-| `RegisterTextFont` | 按名称注册字体字节；字体解析由 fontkit 完成，注册结果供所有 Text 实例共享。 |
-| `HasTextFont` | 查询字体名称是否已注册。 |
-| `UnregisterTextFont` | 注销字体名称；已创建的几何缓冲不受影响。 |
-| `GetTextFont` | 获取已注册的字体，避免每次构建几何时重复解析。 |
+| `RegisterTextFont` | 异步初始化 WASM 并注册字体，完成后可同步创建几何。 |
+| `HasTextFont` | 注册完成状态。 |
+| `UnregisterTextFont` | 是否删除已有字体；同时取消在途注册。 |
+| `GetTextFont` | 已注册 WASM 字体。 |
 
 ```ts
-RegisterTextFont("MiSans", await response.arrayBuffer());
+await RegisterTextFont("MiSans", await response.arrayBuffer());
 ```
+
+### 类型索引
+
+`TextGlyph`、`TextGlyphPosition`、`TextRun`、`TextCacheStats`
 
 ### 导出关系
 
 ```ts
-export { GetTextFont, HasTextFont, RegisterTextFont, UnregisterTextFont };
+export { GetTextFont, HasTextFont, RegisterTextFont, TextFont, UnregisterTextFont };
+export type { TextCacheStats, TextGlyph, TextGlyphPosition, TextRun };
 ```
 
 ### 文件：Outline.ts
@@ -172,16 +221,10 @@ export { GetTextFont, HasTextFont, RegisterTextFont, UnregisterTextFont };
 
 | 名称 | 用途 |
 | --- | --- |
-| `ControlDistance` | 求控制点相对弦的距离，作为曲线细分的停止条件。 |
-| `PushPoint` | 将互不重复的点追加到当前轮廓。 |
-| `FlattenQuadratic` | 递归细分二次 Bézier，误差以最终几何单位衡量。 |
-| `FlattenCubic` | 递归细分三次 Bézier，两个控制点都必须接近端点弦。 |
-| `FlattenPath` | 将一个字形的路径命令转成独立闭合轮廓。 |
-| `Tessellate` | 使用 nonzero 填充规则同时取得填充三角面与真正可见的边界。 |
-| `CreateTextOutline` | 排列多行字形，并提取填充三角面、实际边界与度量。 |
+| `CreateTextOutline` | 读取 WASM 排版及三角化结果，按完整生成参数共享内部缓存。 |
 
 ```ts
-ControlDistance(point, start, end);
+CreateTextOutline("你好", 16, "MiSans");
 ```
 
 ### 类型索引

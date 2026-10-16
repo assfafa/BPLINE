@@ -13,6 +13,7 @@ import { createSimpleHelper } from "./simple.ts";
 export const mountHelperScene = (options: SceneMountOptions): (() => void) => {
     const runtime = new SceneRuntime(options);
     const helper = createSimpleHelper(runtime.scene, runtime.render, runtime.camera);
+    runtime.helper = helper;
     let control: CameraControl | null = null;
     let gui: GUI | null = null;
 

@@ -38,6 +38,7 @@
 | `_anchorX`（内部） | `number`；`0` | 按 textAlign 选取的局部水平锚点。（anchorX 的内部状态）。 |
 | `_anchorY`（内部） | `number`；`0` | 按 baseline 选取的局部垂直锚点。（anchorY 的内部状态）。 |
 | `_perimeter`（内部） | `number`；`0` | 可见字形边界总长度。（perimeter 的内部状态）。 |
+| `_contours`（内部） | `Float32Array[]`；`[]` | 全部可见字形边界的独立副本，用于降级编辑，不改变文字的包围盒选取方式。（contours 的内部状态）。 |
 
 #### 构造与案例
 
@@ -86,6 +87,7 @@ const vertical = new Text("你好\n世界", 48, "MiSans", { writingMode: "vertic
 | `get anchorX(): number`  | 按 textAlign 选取的局部水平锚点。 |
 | `get anchorY(): number`  | 按 baseline 选取的局部垂直锚点。 |
 | `get perimeter(): number`  | 可见字形边界总长度。 |
+| `get contours(): Float32Array[]`  | 全部可见字形边界的独立副本，用于降级编辑，不改变文字的包围盒选取方式。 |
 | `updateGeometry(): this`  | 按当前排版与样式重建填充、实体边框、关键点及线框。 |
 
 ### 顶层函数

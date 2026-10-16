@@ -7,6 +7,7 @@ import type { SceneMountOptions } from "@/pages/example/reference/ShapePreview.t
 interface TextControls {
     content: string;
     fontSize: number;
+    precision: number;
     lineSpacing: number;
     letterSpacing: number;
     textAlign: "left" | "center" | "right";
@@ -30,14 +31,15 @@ interface TextControls {
  */
 export const mountTextScene = (options: SceneMountOptions): (() => void) => {
     const parameters: TextControls = {
-        content: "你好世界\\n文字几何",
+        content: "再次单击\\n文字几何",
         fontSize: 52,
+        precision: 8,
         lineSpacing: 12,
         letterSpacing: 2,
         textAlign: "center",
         baseline: "middle",
         writingMode: "horizontal-tb",
-        fill: "#f4f7ff",
+        fill: "#5584dc",
         edgeEnabled: true,
         edgeWidth: 3,
         edgeColor: "#67d8ff",
@@ -67,6 +69,7 @@ export const mountTextScene = (options: SceneMountOptions): (() => void) => {
      */
     const initialize = async (): Promise<void> => {
         try {
+            // 字体加载与 WASM 初始化是异步的，后续文字几何按需同步生成并复用缓存。
             await Font.register("MiSans", fontUrl);
             // React may unmount a preview while the font request is in flight.
             if (lifecycle.mounted) {
@@ -87,6 +90,7 @@ export const mountTextScene = (options: SceneMountOptions): (() => void) => {
                 }
 
                 const layout: Text2DOptions = {
+                    precision: parameters.precision,
                     lineSpacing: parameters.lineSpacing,
                     letterSpacing: parameters.letterSpacing,
                     textAlign: parameters.textAlign,
@@ -101,7 +105,6 @@ export const mountTextScene = (options: SceneMountOptions): (() => void) => {
                 const camera = new Camera();
                 const renderer = new Render(options.container, "production");
                 render = renderer;
-                renderer.backgroundColor = { r: 0.06, g: 0.09, b: 0.15, a: 1 };
 
                 /**
                  * Apply GUI edits through the public geometry and style setters.
@@ -112,6 +115,7 @@ export const mountTextScene = (options: SceneMountOptions): (() => void) => {
                 const updateText = (): void => {
                     geometry.text = parameters.content.replaceAll("\\n", "\n");
                     geometry.fontSize = parameters.fontSize;
+                    geometry.precision = parameters.precision;
                     geometry.lineSpacing = parameters.lineSpacing;
                     geometry.letterSpacing = parameters.letterSpacing;
                     geometry.textAlign = parameters.textAlign;
@@ -131,6 +135,7 @@ export const mountTextScene = (options: SceneMountOptions): (() => void) => {
                     gui = new GUI({ autoPlace: false, container: options.guiContainer, title: "Text", width: 200 });
                     gui.add(parameters, "content").name("text (\\n = line)").onFinishChange(updateText);
                     gui.add(parameters, "fontSize", 16, 96, 1).onChange(updateText);
+                    gui.add(parameters, "precision", 3, 100, 1).onChange(updateText);
                     gui.add(parameters, "lineSpacing", 0, 40, 1).onChange(updateText);
                     gui.add(parameters, "letterSpacing", -10, 20, 1).onChange(updateText);
                     gui.add(parameters, "textAlign", ["left", "center", "right"]).onChange(updateText);

@@ -722,7 +722,7 @@ const BakeBase = (geometry: Geometry2d, matrix: ArrayLike<number>): Base2D => {
     const contours: Float32Array[] = [];
     const fallbackContours: Float32Array[] = [];
     // 按几何归属执行对应操作，避免跨类型工具改动同一个 Mesh。
-    if (geometry instanceof Base2D) {
+    if (geometry instanceof Base2D || geometry instanceof Text) {
         // 边界节点须形成可追踪的轮廓，内部剖分点不参与编辑。
         for (const contour of geometry.contours) {
             contours.push(TransformCoordinates(contour, matrix));

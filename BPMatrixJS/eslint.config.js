@@ -14,7 +14,7 @@ const typedConfigs = [
 
 export default tseslint.config(
     {
-        ignores: ["dist/**", "lib/**", "node_modules/**", "eslint.config.js"],
+        ignores: ["dist/**", "lib/**", "node_modules/**", "eslint.config.js", "src/scripts/Geometry/Wasm/build/**/TextWasm.js"],
     },
     js.configs.recommended,
     ...typedConfigs,

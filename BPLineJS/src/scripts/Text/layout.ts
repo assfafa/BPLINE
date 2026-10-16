@@ -44,14 +44,14 @@ const layouts = new WeakMap<Text, { key: string; layout: TextLayout }>();
  * @returns 独立于生成样式的排版度量，参数未变时复用缓存。
  */
 const MeasureText = (text: Text): TextLayout => {
+    const font = GetTextFont(text.fontFamily);
     const key = JSON.stringify([text.text, text.fontFamily, text.fontSize, text.letterSpacing,
-        text.lineSpacing, text.textAlign, text.writingMode]);
+        text.lineSpacing, text.textAlign, text.writingMode, font.version]);
     const cached = layouts.get(text);
     // 相机和选中样式变化不会改变字体排版。
     if (cached?.key === key) {
         return cached.layout;
     } else {
-        const font = GetTextFont(text.fontFamily);
         const scale = text.fontSize / font.unitsPerEm;
         const ascent = font.ascent * scale;
         const descent = font.descent * scale;
@@ -64,7 +64,7 @@ const MeasureText = (text: Text): TextLayout => {
             sourceStarts.push(newline.index + newline[0].length);
         }
         /** @param line 一行布局文字 @example Shape("Hello"); @returns 字体塑形与定位度量。 */
-        const Shape = (line: string) => font.layout(line);
+        const Shape = (line: string) => font.shape(line);
         const runs = lines.map(Shape);
         /** @param run 一行塑形结果 @example Advance(run); @returns 包含额外字距的行宽。 */
         const Advance = (run: ReturnType<typeof Shape>): number => run.advanceWidth * scale +

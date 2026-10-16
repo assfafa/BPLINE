@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useLocale } from "@/locale/context.ts";
+import { useTheme } from "@/theme/context.ts";
+import type { Theme } from "@/theme/context.ts";
 import { translator } from "@/locale/index.ts";
 
 export interface SceneMountOptions {
     container: HTMLDivElement;
     guiContainer: HTMLDivElement | null;
     advanced: boolean;
+    getTheme: () => Theme;
     onError: (error: unknown) => void;
 }
 
@@ -25,6 +28,13 @@ interface ShapePreviewProps {
  */
 const ShapePreview = ({ advanced, controlsId, mountScene }: ShapePreviewProps): JSX.Element => {
     const { language } = useLocale();
+    const { theme } = useTheme();
+    const themeRef = useRef(theme);
+    /** @example syncTheme(); @returns No value; preserve the scene while the theme changes. */
+    const syncTheme = (): void => {
+        themeRef.current = theme;
+    };
+    useEffect(syncTheme, [theme]);
     const canvasHost = useRef<HTMLDivElement>(null);
     const guiHost = useRef<HTMLDivElement>(null);
     const [error, setError] = useState<string | null>(null);
@@ -68,7 +78,10 @@ const ShapePreview = ({ advanced, controlsId, mountScene }: ShapePreviewProps): 
                 }
             };
 
+            /** @example getTheme(); @returns Current React theme without remounting the scene. */
+            const getTheme = (): Theme => themeRef.current;
             dispose = mountScene({
+                getTheme,
                 container,
                 guiContainer: guiHost.current,
                 advanced,

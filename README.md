@@ -44,12 +44,12 @@ npm install bplinejs@0.1.103
 The current beta adds the editor and helper workflows described above:
 
 ~~~bash
-npm install bplinejs@0.1.104-beta.16 bpmatrixjs@0.1.104-beta.13
+npm install bplinejs@0.1.104-beta.18 bpmatrixjs@0.1.104-beta.14
 # For the complete examples with GUI controls:
 npm install lil-gui
 ~~~
 
-Release notes: [BPLineJS 0.1.104-beta.16](BPLineJS/releases/0.1.104-beta.16.md) and [BPMatrixJS 0.1.104-beta.13](BPMatrixJS/releases/0.1.104-beta.13.md). Rectangle creation keeps its world origin fixed during camera changes and supports snapping with or without stepping. Text conversion preserves every outer contour and hole in editable Base2D geometry. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
+Release notes: [BPLineJS 0.1.104-beta.18](BPLineJS/releases/0.1.104-beta.18.md) and [BPMatrixJS 0.1.104-beta.14](BPMatrixJS/releases/0.1.104-beta.14.md). Text parsing, shaping, and triangulation use WebAssembly with reusable caches; await font registration before creating text synchronously. Render adds configurable box culling debounce. Examples include CompositeMaterial, WGSLMaterial, video textures, and editors and grids that follow light/dark themes. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
 
 ## Docker
 
@@ -99,7 +99,11 @@ Source files place the main class directly after imports, with field defaults an
 
 ## Font parsing
 
-The text geometry pipeline uses [fontkit](https://github.com/foliojs/fontkit) to parse TTF, OTF, WOFF, and WOFF2 files, lay out glyphs, and read their vector outlines. fontkit is licensed under [MIT](https://github.com/foliojs/fontkit/blob/master/package.json); its copyright and permission notices must be retained when redistributing copies of its code.
+Text registration, shaping, curve sampling, and triangulation run in WebAssembly. Await `RegisterTextFont(name, bytes)` in BPMatrixJS or `Font.register(name, url)` in BPLineJS before creating text. Repeated glyphs and identical text layouts reuse bounded caches. TTF, OTF, WOFF, and WOFF2 are supported.
+
+Run `npm run build:wasm` in BPMatrixJS to compile the C++ sources with Emscripten; `npm run build:lib` includes this step. The Dockerfile provides the compiler. Verified dependency sources and object files stay in the project's `.local/wasm-text` directory. npm consumers receive the prebuilt WASM module and need no C++ toolchain. Third-party notices are retained in [Geometry/Wasm/LICENSE](BPMatrixJS/src/scripts/Geometry/Wasm/LICENSE) and included in the package.
+
+In BPMatrixJS, `npm pack` and `npm publish` run `prepack` automatically: build WASM, compile TypeScript, then package the matching outputs. A failed build stops packaging. Do not use `--ignore-scripts` when preparing a release.
 
 ## Editor cursor icons
 

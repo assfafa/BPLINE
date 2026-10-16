@@ -70,6 +70,8 @@ interface TextLike {
     readonly textAlign: TextAlign;
     readonly baseline: TextBaseline;
     readonly data: TextGeometryData;
+    /** 原始可见轮廓的独立坐标副本，包含全部外圈及孔圈。 */
+    readonly contours: Float32Array[];
     readonly borderData: TextBorderGeometryData | undefined;
     readonly lineData: TextLineGeometryData | undefined;
     readonly pointData: TextPointGeometryData | undefined;

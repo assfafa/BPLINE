@@ -18,7 +18,7 @@ class PrecisionManager {
         const stamp = CameraStamp(camera);
         const entries = PrecisionEntries(scene);
         const changed = state.stamp !== stamp || !SameEntries(state.entries, entries);
-        // 连续拖动相机只延后精度更新；视口筛选仍然每帧及时执行。
+        // 精度防抖独立于 box 查询防抖，分别维护最后一次相机输入。
         if (changed || (delay === 0 && state.timer !== null)) {
             // 新的相机变化覆盖未执行任务，连续操作只处理最后状态。
             if (state.timer !== null) {

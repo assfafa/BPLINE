@@ -9,6 +9,10 @@
 | 文件 / 子目录 | 作用 |
 | --- | --- |
 | `MiSans-subset.woff2` | 本地字体验证资源，保持原始二进制。 |
+| `WasmTextTest.otf` | 本目录维护的配置、资源或验证文件。 |
+| `WasmTextTest.ttf` | 本地字体验证资源，保持原始二进制。 |
+| `WasmTextTest.woff` | 本目录维护的配置、资源或验证文件。 |
+| `WasmTextTest.woff2` | 本地字体验证资源，保持原始二进制。 |
 
 ## 2. index 入口、案例与类接口
 

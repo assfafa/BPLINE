@@ -14,7 +14,7 @@ export const config: ReferenceConfig = {
     code: `import { RegisterTextFont, Text } from "bpmatrixjs/Geometry/Text";
 
 const response = await fetch(fontUrl);
-RegisterTextFont("MiSans", await response.arrayBuffer());
+await RegisterTextFont("MiSans", await response.arrayBuffer());
 const text = new Text("你好\\n世界", 48, "MiSans", {
     lineSpacing: 8,
     letterSpacing: 2,
@@ -28,14 +28,16 @@ const points = text.createPointGeometry(2, 4, true, false);`,
     properties: [
         entry("originPrecision: number", "用户最后设置的字形细分基准。", "Last user-set glyph subdivision baseline."),
         entry("precision: number", "Text options 的字形曲线细分精度，BPLineJS Text 会传递。", "Glyph curve flattening precision in Text options, forwarded by BPLineJS Text."),
-        entry("data: TextGeometryData", "填充顶点、法线、UV、索引和排版度量。", "Fill vertices, normals, UVs, indices, and layout metrics."),
+        entry("data: TextGeometryData", "填充顶点、法线、UV、索引和排版度量；相同请求复用内部缓存，返回缓冲区互相独立。", "Fill vertices, normals, UVs, indices, and layout metrics; identical requests reuse internal caches while returned buffers remain independent."),
+        entry("contours: Float32Array[]", "真实内外边界的独立副本，不包含填充三角化额外分段点。", "Independent copies of outer and hole boundaries, excluding extra fill triangulation subdivisions."),
         entry("width; height; advanceWidth: number", "可见包围盒宽高，以及最大排版行宽。", "Visible bounds and maximum advance width."),
         entry("data.anchorX; data.anchorY: number", "按对齐和基线选择的局部锚点；几何仍居中。", "Local alignment anchors; geometry remains centered."),
         entry("text; fontSize; fontFamily; lineSpacing; letterSpacing; textAlign; baseline", "当前文字、字体和排版参数。", "Current text, font, and layout settings."),
         entry("borderData; lineData; pointData", "最近一次生成的附加几何数据。", "Most recently generated auxiliary geometry."),
     ],
     methods: [
-        entry("RegisterTextFont(fontFamily, data): void", "按名称注册字体字节。", "Register font bytes under a name."),
+        entry("RegisterTextFont(fontFamily, data): Promise<string>", "等待 WASM 初始化与字体注册，返回注册名称；不预先生成全部字形。注册后生成几何为同步操作。", "Await WASM initialization and registration, returning the font name without eagerly generating every glyph. Subsequent geometry generation is synchronous."),
+        entry("GetTextFont(fontFamily): TextFont", "取得 WASM 字体；shape(text) 返回排版度量，cacheStats 查看缓存，clearCache() 释放缓存。", "Get the WASM font: shape(text) returns layout metrics, cacheStats reports cache usage, and clearCache() releases caches."),
         entry("HasTextFont(fontFamily): boolean; UnregisterTextFont(fontFamily): boolean", "查询或移除已注册字体。", "Check or remove a registered font."),
         entry("new Text(text, fontSize, fontFamily, options?)", "创建支持换行、额外行距和字距的文字几何。", "Create multiline geometry with extra line and letter spacing."),
         entry("set(text, fontSize?, fontFamily?, options?): this", "更新文字与排版，并清除附加几何缓存。", "Update text and layout, clearing auxiliary geometry caches."),

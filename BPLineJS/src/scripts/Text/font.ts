@@ -139,7 +139,7 @@ class Font {
         // HTTP 错误不能交给字体解析器处理，否则会掩盖实际下载问题。
         if (response.ok) {
             const data = await response.arrayBuffer();
-            RegisterTextFont(fontFamily, data);
+            await RegisterTextFont(fontFamily, data);
             /**
              * 使用当前已注册字体创建填充三角面，并允许每次设置字号与排版。
              * @param text 支持换行的文字。

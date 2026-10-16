@@ -22,6 +22,7 @@ if (container) {
     // Call render.destroy() when the canvas is no longer needed.
 }`,
     properties: [
+        entry("boxDebounce: number = 100", "box 视口查询防抖毫秒；0 即时查询。相机连续变化期间使用完整有序列表避免漏画，停止后恢复筛选；不影响 quad。", "Box viewport query debounce in milliseconds; 0 queries immediately. During camera changes, draw the full ordered list to avoid stale culling, then resume filtering. Does not debounce quad."),
         entry("precisionDebounce: number = 100", "自动精度重建防抖，单位毫秒；0 立即更新。每个 Render 独立管理并在 destroy 清理。", "Automatic precision rebuild debounce in milliseconds; 0 updates immediately. Owned and cleaned up per Render."),
         entry("ready: Promise<void>", "WebGPU 初始化完成信号。", "WebGPU initialization promise."),
         entry("container: HTMLElement; canvas: HTMLCanvasElement", "渲染宿主与创建的画布。", "Render host and its canvas."),

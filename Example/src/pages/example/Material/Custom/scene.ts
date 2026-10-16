@@ -74,7 +74,6 @@ const createColorTexture = (red: number, green: number, blue: number): Texture =
  */
 export const mountCustomMaterialScene = (options: SceneMountOptions): (() => void) => {
     const render = new Render(options.container, "production");
-    render.backgroundColor = { r: 0.08, g: 0.11, b: 0.19, a: 1 };
     const scene = new Scene();
     const camera = new Camera();
     const style = new Style();

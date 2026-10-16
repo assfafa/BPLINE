@@ -31,6 +31,7 @@ mesh.style = style;`,
     properties: [
         entry("precision: number = 8", "创建 options.precision 或 setter 控制字形曲线展开精度，保留 originPrecision。", "Constructor options.precision or setter controls glyph curve flattening, retaining originPrecision."),
         entry("text: string; layoutText: string", "原文可读写；layoutText 为转换后的只读排版文本。", "Read/write source text; layoutText is the converted read-only layout text."),
+        entry("contours: Float32Array[]", "真实内外轮廓的独立副本；降级 Base 使用这些边界保留孔洞。", "Independent copies of outer and hole contours, used when converting to Base to preserve holes."),
         entry("fontSize: number; fontFamily: string", "字号默认 16；字体默认 Font.map 的首项。", "Font size defaults to 16; family defaults to the first Font.map entry."),
         entry("lineSpacing: number; letterSpacing: number", "额外行距与字距；修改后重新生成几何。", "Extra line and letter spacing; edits rebuild geometry."),
         entry("textAlign: \"left\" | \"center\" | \"right\"", "多行水平对齐，并决定 anchorX。", "Align lines horizontally and select anchorX."),

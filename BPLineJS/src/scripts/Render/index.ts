@@ -7,6 +7,7 @@ import type { MeshLike } from "../Mesh";
 import type Scene from "../Scene";
 import type { TextureResource } from "../Texture/Layers";
 import BufferManager from "./BufferManager";
+import BoxManager from "./BoxManager";
 import DepthManager from "./DepthManager";
 import DestroyManager from "./DestroyManager";
 import DevelopmentValidator from "./DevelopmentValidator";
@@ -81,6 +82,8 @@ class Render implements RenderLike {
     private _dpr: number = GetInner().dpr;
     private _renderMode: RenderMode;
     private _precisionDebounce: number = 100;
+    private _boxDebounce: number = 100;
+    private readonly boxManager: BoxManager = new BoxManager();
     private readonly precisionManager: PrecisionManager = new PrecisionManager();
     private _renderScene: Scene | null = null;
     private _renderCamera: Camera | null = null;
@@ -120,6 +123,19 @@ class Render implements RenderLike {
         this.container.appendChild(this.canvas);
         this._renderMode = renderMode;
         this.ready = this.initWebGPU();
+    }
+    /** @example render.boxDebounce; @returns 视口查询防抖毫秒，默认 100；等待期间保守绘制完整列表。 */
+    public get boxDebounce(): number {
+        return this._boxDebounce;
+    }
+    /** @param value 非负有限毫秒；0 关闭防抖 @example render.boxDebounce = 0; @returns 无返回值。 */
+    public set boxDebounce(value: number) {
+        // 拒绝非有限或负延迟，避免浏览器隐式截断成意外的零延迟。
+        if (Number.isFinite(value) && value >= 0) {
+            this._boxDebounce = value;
+        } else {
+            throw new RangeError("boxDebounce must be finite and nonnegative.");
+        }
     }
     /** @example render.precisionDebounce; @returns 自动精度重建防抖毫秒，默认 100。 */
     public get precisionDebounce(): number {
@@ -274,7 +290,14 @@ class Render implements RenderLike {
             this.precisionManager.update(scene, camera, this._precisionDebounce, RebuildPendingPrecision);
             // 精度隔离可能替换资源；空间范围必须在几何和世界变换同步后获取。
             this.initScene(scene);
-            scene.updateSpatialLists();
+            /** @param pendingScene 已完成查询的场景 @example RedrawBox(scene); @returns 无返回值，保持 warmup 与旧场景不提交绘制。 */
+            const RedrawBox = (pendingScene: Scene): void => {
+                // 只有当前画面的查询完成才触发重绘，避免旧场景覆盖新页面。
+                if (redraw && this._renderScene === pendingScene && this._renderCamera === camera) {
+                    this.render(pendingScene, camera);
+                }
+            };
+            this.boxManager.update(scene, this._boxDebounce, RedrawBox);
             // 资源引用变化后才回收，空间筛选不会从资源归属列表删除物体。
             if (this.pipeline.sceneResources.get(scene.id)?.version !== scene.version) {
                 this.trim(scene);
@@ -438,6 +461,7 @@ class Render implements RenderLike {
         if (!this._destroyed) {
             this._destroyed = true;
             this.precisionManager.destroy();
+            this.boxManager.destroy();
             // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
             if (this._resizeTimer !== null) {
                 window.clearTimeout(this._resizeTimer);

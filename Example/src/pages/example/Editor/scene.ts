@@ -38,6 +38,7 @@ export const mountEditorScene = (options: SceneMountOptions): (() => void) => {
                 if (options.advanced) {
                     const collection = new Editor(runtime.scene, runtime.render, runtime.camera, { nest: true });
                     editor = collection;
+                    runtime.helper = collection.helperGrid;
                     createEditorModels(collection);
                     const cameraControl = new CameraControl(runtime.camera, runtime.render);
                     control = cameraControl;
@@ -238,6 +239,7 @@ export const mountEditorScene = (options: SceneMountOptions): (() => void) => {
                 } else {
                     const collection = createSimpleEditor(runtime.scene, runtime.render, runtime.camera);
                     editor = collection;
+                    runtime.helper = collection.helperGrid;
                     /**
                      * Refresh the minimal editor before each render.
                      * @example runtime.update = update;

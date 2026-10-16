@@ -28,7 +28,6 @@ type Coverage = "cad" | "all" | "any";
  */
 export const mountSelectScene = (options: SceneMountOptions): (() => void) => {
     const render = new Render(options.container, "production");
-    render.backgroundColor = { r: 0.055, g: 0.075, b: 0.13, a: 1 };
     const scene = new Scene();
     createModels(scene, options.advanced);
     const camera = new Camera();

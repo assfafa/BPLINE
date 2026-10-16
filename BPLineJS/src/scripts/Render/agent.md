@@ -8,6 +8,7 @@
 
 | 文件 / 子目录 | 作用 |
 | --- | --- |
+| `BoxManager.ts` | 合并连续相机变化的 box 查询；等待期间保守绘制，避免新进入视口的实体被旧结果裁掉。 |
 | `BufferManager.ts` | 管理当前 Render 对应的 Camera、Material、Mesh 和 Geometry GPUBuffer。 |
 | `DepthManager.ts` | 深度纹理和每个 Mesh 的绘制参数均属于当前 Render，不写入共享 CPU 样式。 |
 | `DestroyManager.ts` | 统一负责当前 Render 的 GPU 资源销毁与无引用缓存回收。 |
@@ -45,6 +46,8 @@ WebGPU 2D 渲染器。
 | `_dpr`（内部） | `number`；`GetInner().dpr` | 获取当前 Canvas 使用的设备像素比。（dpr 的内部状态）。 |
 | `_renderMode`（内部） | `RenderMode`；`由构造参数或初始化过程赋值` | 设置 Render 运行模式。 production 会跳过 GPUBuffer 创建前的全部开发检查。（renderMode 的内部状态）。 |
 | `_precisionDebounce`（内部） | `number`；`100` | 自动精度重建防抖毫秒，默认 100。（precisionDebounce 的内部状态）。 |
+| `_boxDebounce`（内部） | `number`；`100` | 视口查询防抖毫秒，默认 100；等待期间保守绘制完整列表。（boxDebounce 的内部状态）。 |
+| `boxManager`（内部） | `BoxManager`；`new BoxManager()` | 状态由 `prepare`、`destroy` 读取或维护；完整处理见对应函数。 |
 | `precisionManager`（内部） | `PrecisionManager`；`new PrecisionManager()` | 状态由 `prepare`、`destroy` 读取或维护；完整处理见对应函数。 |
 | `_renderScene`（内部） | `Scene \| null`；`null` | 状态由 `prepare`、`render` 读取或维护；完整处理见对应函数。 |
 | `_renderCamera`（内部） | `Camera \| null`；`null` | 状态由 `prepare`、`render` 读取或维护；完整处理见对应函数。 |
@@ -71,6 +74,8 @@ const render = new Render(div, renderMode);
 
 | 签名 | 作用 |
 | --- | --- |
+| `get boxDebounce(): number`  | 视口查询防抖毫秒，默认 100；等待期间保守绘制完整列表。 |
+| `set boxDebounce(value: number)`  | 无返回值。 |
 | `get precisionDebounce(): number`  | 自动精度重建防抖毫秒，默认 100。 |
 | `set precisionDebounce(value: number)`  | 无返回值。 |
 | `async initWebGPU(): Promise<void>`  | 创建当前画布对应的 WebGPU 设备与呈现上下文。 |
@@ -132,6 +137,40 @@ export {
 ```
 
 ## 3. 其他源码文件
+
+### 文件：BoxManager.ts
+
+### BoxManager
+
+合并连续相机变化的 box 查询；等待期间保守绘制，避免新进入视口的实体被旧结果裁掉。
+
+#### 变量与默认值
+
+| 字段 | 类型 / 默认值 | 用途 |
+| --- | --- | --- |
+| `_states`（内部） | `按初始化值推断`；`new Map<Scene, BoxState>()` | 状态由 `update`、`destroy` 读取或维护；完整处理见对应函数。 |
+
+#### 构造与案例
+
+无显式构造函数，按字段默认值创建；父类如有构造逻辑会依语言规则执行。
+
+#### 函数与访问器
+
+| 签名 | 作用 |
+| --- | --- |
+| `update(scene: Scene, delay: number, redraw: BoxRedraw): void`  | 无返回值。 |
+| `cancel(state: BoxState \| undefined): void` （内部） | 无返回值，清除待执行回调。 |
+| `destroy(): void`  | 无返回值，释放全部计时器与场景引用。 |
+
+### 类型索引
+
+`BoxState`、`BoxRedraw`
+
+### 导出关系
+
+```ts
+export default BoxManager;
+```
 
 ### 文件：BufferManager.ts
 

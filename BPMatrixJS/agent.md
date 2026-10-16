@@ -41,7 +41,7 @@ npm run pack:check
 ```ts
 export default tseslint.config(
     {
-        ignores: ["dist/**", "lib/**", "node_modules/**", "eslint.config.js"],
+        ignores: ["dist/**", "lib/**", "node_modules/**", "eslint.config.js", "src/scripts/Geometry/Wasm/build/**/TextWasm.js"],
     },
     js.configs.recommended,
     ...typedConfigs,
@@ -145,7 +145,7 @@ export default defineConfig({
 - 库构建把 src/scripts 的目录说明复制到 lib 同名目录；TS 对应 JS/声明，WGSL 作为导入资源编译。Examples 说明只保留在源码，不进入 npm。
 
 <!-- agent-notes:start -->
-暂无额外目录约定。
+- `prepack` 在 npm pack / npm publish 打包前执行 `build:lib`：先同步构建 WASM 并复制匹配的 JS/wasm/声明，再生成 TypeScript 的 JS/声明和目录说明。通过 `&&` 和原生构建的退出码阻断失败步骤，避免打包旧产物；不要使用 `--ignore-scripts` 绕过此流程。
 <!-- agent-notes:end -->
 
 ## 5. 中英文搜索关键词

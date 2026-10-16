@@ -32,6 +32,6 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
         { label: "Material", to: "/docs/bpline/material" },
         { label: "CompositeMaterial", to: "/docs/bpline/material/composite-material" },
         { label: "Base2D", to: "/docs/bpline/geometry/base2d" },
-        { label: "Custom shader example", to: "/example/material/custom" },
+        { label: "Custom shader example", to: "/example/material/wgsl" },
     ],
 };

@@ -23,6 +23,7 @@ class Text extends Geo implements Text2DLike {
     private _anchorX: number = 0;
     private _anchorY: number = 0;
     private _perimeter: number = 0;
+    private _contours: Float32Array[] = [];
 
     /**
      * 创建文字几何。字体须先通过 Font.register 加载。
@@ -316,6 +317,14 @@ class Text extends Geo implements Text2DLike {
         return this._perimeter;
     }
 
+    /** @example text.contours; @returns 全部可见字形边界的独立副本，用于降级编辑，不改变文字的包围盒选取方式。 */
+    public get contours(): Float32Array[] {
+        this.ensureGeometry();
+        /** @param contour 原始轮廓 @example Copy(contour); @returns 当前调用独占的坐标数组。 */
+        const Copy = (contour: Float32Array): Float32Array => contour.slice();
+        return this._contours.map(Copy);
+    }
+
     /**
      * 按当前排版与样式重建填充、实体边框、关键点及线框。
      * @example
@@ -373,6 +382,7 @@ class Text extends Geo implements Text2DLike {
         this._anchorX = shape.data.anchorX;
         this._anchorY = shape.data.anchorY;
         this._perimeter = shape.getPerimeter();
+        this._contours = shape.contours;
         // 多边形着色器使用第四个 f32 外扩边框，其余值提供文字包围盒。
         this.uniformData.set([this._width, this._height, 0, edge.width]);
         super.updateGeometry();
@@ -389,6 +399,7 @@ interface Text2DOptions extends MatrixTextOptions {
 }
 
 interface Text2DLike extends GeoData {
+    readonly contours: Float32Array[];
     text: string;
     fontSize: number;
     fontFamily: string;

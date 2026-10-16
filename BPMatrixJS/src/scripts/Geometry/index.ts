@@ -31,9 +31,10 @@ export type {
 export {
     CreateTextBorderGeometry, CreateTextGeometry, CreateTextLineGeometry,
     CreateTextPointGeometry,
-    GetTextPerimeter, HasTextFont, RegisterTextFont, Text, UnregisterTextFont,
+    GetTextFont, GetTextPerimeter, HasTextFont, RegisterTextFont, Text, TextFont, UnregisterTextFont,
 } from "./Text/index.js";
 export type {
+    TextCacheStats, TextGlyph, TextGlyphPosition, TextRun,
     TextAlign,
     TextBaseline, TextBorderAlign, TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 } from "./Text/index.js";

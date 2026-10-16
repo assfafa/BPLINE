@@ -206,6 +206,8 @@ interface RenderLike {
     readonly dpr: number;
     renderMode: RenderMode;
     precisionDebounce: number;
+    /** 视口 box 查询防抖毫秒，默认 100，0 立即查询。 */
+    boxDebounce: number;
     container: HTMLElement;
     canvas: HTMLCanvasElement;
     backgroundColor: GPUColorDict;
