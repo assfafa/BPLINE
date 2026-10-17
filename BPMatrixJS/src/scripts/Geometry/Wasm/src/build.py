@@ -57,7 +57,13 @@ if "--clean-lib" in sys.argv:
         shutil.rmtree(library)
 target = package / "lib/Geometry/Wasm/build/text"
 target.mkdir(parents=True, exist_ok=True)
-for name in ["TextWasm.js", "TextWasm.wasm", "TextWasm.d.ts"]:
+binary_hash = hashlib.sha256((output_directory / "TextWasm.wasm").read_bytes()).hexdigest()
+# The loader's request identity follows native content, including during local same-version rebuilds.
+(output_directory / "TextWasmVersion.js").write_text(
+    'export const TextWasmVersion = "' + binary_hash + '";\n', encoding="utf-8")
+(output_directory / "TextWasmVersion.d.ts").write_text(
+    "export declare const TextWasmVersion: string;\n", encoding="utf-8")
+for name in ["TextWasm.js", "TextWasm.wasm", "TextWasm.d.ts", "TextWasmVersion.js", "TextWasmVersion.d.ts"]:
     if name == "TextWasm.d.ts":
         shutil.copyfile(text_directory / "Module.d.ts", output_directory / name)
     shutil.copyfile(output_directory / name, target / name)

@@ -1,5 +1,6 @@
 import CreateTextWasm from "./build/text/TextWasm.js";
 import type { TextWasmModule } from "./build/text/TextWasm.js";
+import { TextWasmVersion } from "./build/text/TextWasmVersion.js";
 
 /** Shared lazy runtime; importing Geometry alone does not initialize WebAssembly. */
 class TextWasm {
@@ -21,6 +22,8 @@ class TextWasm {
             const fs = await import("node:fs/promises");
             bytes = await fs.readFile(url);
         } else {
+            // Development servers can keep the same asset path across native ABI changes.
+            url.searchParams.set("v", TextWasmVersion);
             const response = await fetch(url);
             // Missing assets should report the actual deployment URL.
             if (response.ok) {

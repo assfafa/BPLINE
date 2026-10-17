@@ -7,6 +7,7 @@ import type { TextOutline } from "./Outline.js";
 import { CreateTextOutline } from "./Outline.js";
 import type {
     TextAlign,
+    TextWritingMode,
     TextBaseline,
     TextBorderAlign,
     TextBorderGeometryData,
@@ -53,6 +54,7 @@ class Text implements TextLike {
             normalized.letterSpacing,
             normalized.textAlign,
             4 / normalized.precision,
+            normalized.writingMode,
         );
         this._data = CreateFillBuffers(this._outline, this._metadata);
     }
@@ -74,6 +76,7 @@ class Text implements TextLike {
             letterSpacing: options.letterSpacing ?? this.letterSpacing,
             textAlign: options.textAlign ?? this.textAlign,
             baseline: options.baseline ?? this.baseline,
+            writingMode: options.writingMode ?? this.writingMode,
         });
         const metadata: TextMetadata = { text, fontSize, fontFamily, ...normalized };
         const outline = CreateTextOutline(
@@ -84,6 +87,7 @@ class Text implements TextLike {
             normalized.letterSpacing,
             normalized.textAlign,
             4 / normalized.precision,
+            normalized.writingMode,
         );
         const data = CreateFillBuffers(outline, metadata);
         this._metadata = metadata;
@@ -247,6 +251,10 @@ class Text implements TextLike {
     /** @example textGeometry.textAlign; @returns 当前水平对齐方式 */
     public get textAlign(): TextAlign {
         return this._metadata.textAlign;
+    }
+    /** @example textGeometry.writingMode; @returns 当前横排或从右向左竖排方向。 */
+    public get writingMode(): TextWritingMode {
+        return this._metadata.writingMode;
     }
     /** @example textGeometry.baseline; @returns 当前垂直基线锚点 */
     public get baseline(): TextBaseline {
@@ -430,6 +438,11 @@ const NormalizeOptions = (options: TextOptions): Omit<TextMetadata, "text" | "fo
     const letterSpacing = options.letterSpacing ?? 0;
     const textAlign = options.textAlign ?? "center";
     const baseline = options.baseline ?? "middle";
+    const writingMode = options.writingMode ?? "horizontal-tb";
+    // 方向属于排版缓存与原生形状生成参数，未知值不能静默回落。
+    if (!["horizontal-tb", "vertical-rl"].includes(writingMode)) {
+        throw new RangeError("writingMode must be horizontal-tb or vertical-rl.");
+    }
     // 负字距可以用于紧排，但必须保持有限。
     if (!Number.isFinite(letterSpacing)) {
         throw new RangeError("letterSpacing must be finite.");
@@ -442,7 +455,7 @@ const NormalizeOptions = (options: TextOptions): Omit<TextMetadata, "text" | "fo
     if (!["top", "middle", "bottom"].includes(baseline)) {
         throw new RangeError("baseline must be top, middle or bottom.");
     }
-    return { lineSpacing, letterSpacing, textAlign, baseline, precision: CheckPrecision(options.precision ?? 8) };
+    return { lineSpacing, letterSpacing, textAlign, baseline, writingMode, precision: CheckPrecision(options.precision ?? 8) };
 };
 
 /**
@@ -565,6 +578,7 @@ export {
 export type {
     TextCacheStats, TextGlyph, TextGlyphPosition, TextRun,
     TextAlign,
+    TextWritingMode,
     TextBaseline, TextBorderAlign, TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 };
 export default Text;

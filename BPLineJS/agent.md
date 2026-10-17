@@ -10,6 +10,7 @@
 | --- | --- |
 | `AGENTS.md` | 工作约定；agent.md 是目录/API 索引，两者职责不同。 |
 | `bplinejs-0.1.104-beta.17.tgz` | 本目录维护的配置、资源或验证文件。 |
+| `bplinejs-0.1.104-beta.18.tgz` | 本目录维护的配置、资源或验证文件。 |
 | `eslint.config.js` | 严格类型、可读性、类布局与格式检查配置。 |
 | `index.html` | 本目录维护的配置、资源或验证文件。 |
 | `package-lock.json` | 本目录维护的配置、资源或验证文件。 |

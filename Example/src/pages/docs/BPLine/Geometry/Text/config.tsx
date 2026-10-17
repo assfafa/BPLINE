@@ -8,8 +8,8 @@ export const config: ReferenceConfig = {
         en: "Editable text geometry derived from Geo. Register a font first, pass Text to Mesh, then control fill, edge, points, and wireframe with mesh.style.",
     },
     detail: {
-        cn: "横排从左到右、从上到下；vertical-rl 将原文每行作为一列，字从上到下、列从右到左。text 保留原文，layoutText 是转换后的排版文本。可见包围盒中心固定在局部 (0, 0)，anchorX 和 anchorY 返回选定的对齐锚点。",
-        en: "Horizontal text flows left to right and top to bottom. vertical-rl treats each source line as a column, with glyphs top to bottom and columns right to left. text preserves the source; layoutText is converted. Visible bounds stay centered at local (0, 0), while anchorX and anchorY expose alignment anchors.",
+        cn: "横排从左到右、从上到下；vertical-rl 将原文每行作为一列，字从上到下、列从右到左。text 保留原文，layoutText 仅是转置行文本预览；实际竖排由 WASM 按列定位。可见包围盒中心固定在局部 (0, 0)，anchorX 和 anchorY 返回选定的对齐锚点。",
+        en: "Horizontal text flows left to right and top to bottom. vertical-rl treats each source line as a column, with glyphs top to bottom and columns right to left. text preserves the source; layoutText is only a transposed preview, while WASM positions vertical columns directly. Visible bounds stay centered at local (0, 0), while anchorX and anchorY expose alignment anchors.",
     },
     code: `import { BaseMaterial, Font, Mesh, Style, Text } from "bplinejs";
 import fontUrl from "./MiSans-Normal.woff2?url";
@@ -30,12 +30,12 @@ style.edge.width = 3;
 mesh.style = style;`,
     properties: [
         entry("precision: number = 8", "创建 options.precision 或 setter 控制字形曲线展开精度，保留 originPrecision。", "Constructor options.precision or setter controls glyph curve flattening, retaining originPrecision."),
-        entry("text: string; layoutText: string", "原文可读写；layoutText 为转换后的只读排版文本。", "Read/write source text; layoutText is the converted read-only layout text."),
+        entry("text: string; layoutText: string", "原文可读写；layoutText 为只读转置预览，不能用于推断竖排对齐坐标。", "Read/write source text; layoutText is a read-only transposed preview, not vertical alignment coordinates."),
         entry("contours: Float32Array[]", "真实内外轮廓的独立副本；降级 Base 使用这些边界保留孔洞。", "Independent copies of outer and hole contours, used when converting to Base to preserve holes."),
         entry("fontSize: number; fontFamily: string", "字号默认 16；字体默认 Font.map 的首项。", "Font size defaults to 16; family defaults to the first Font.map entry."),
-        entry("lineSpacing: number; letterSpacing: number", "额外行距与字距；修改后重新生成几何。", "Extra line and letter spacing; edits rebuild geometry."),
-        entry("textAlign: \"left\" | \"center\" | \"right\"", "多行水平对齐，并决定 anchorX。", "Align lines horizontally and select anchorX."),
-        entry("baseline: \"top\" | \"middle\" | \"bottom\"", "选择 anchorY，不移动居中的几何。", "Select anchorY without moving centered geometry."),
+        entry("lineSpacing: number; letterSpacing: number", "额外行距与字距；竖排时分别作用于列间与列内，修改后重建。", "Extra spacing between rows/columns and along the inline direction; edits rebuild geometry."),
+        entry("textAlign: \"left\" | \"center\" | \"right\"", "横排按行左/中/右对齐；竖排按列顶/中/底对齐，不改变列的横向位置。", "Align horizontal rows left/center/right, or vertical columns top/center/bottom, without shifting columns sideways."),
+        entry("baseline: \"top\" | \"middle\" | \"bottom\"", "只选择 anchorY，不移动居中的几何；完整文字案例用粉色点和数值显示该锚点。", "Select anchorY without moving centered geometry; the full text example shows this anchor as a pink marker and numeric readout."),
         entry("writingMode: \"horizontal-tb\" | \"vertical-rl\"", "控制原文转成横排或竖排布局。", "Convert source text into horizontal or vertical layout."),
         entry("width; height; advanceWidth; anchorX; anchorY; perimeter", "包围盒、排版宽度、锚点与轮廓总周长。", "Bounds, advance width, anchors, and total contour perimeter."),
     ],

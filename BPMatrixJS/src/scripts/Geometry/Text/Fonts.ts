@@ -1,6 +1,7 @@
 import { TextCache } from "../Wasm/Cache.js";
 import { ReadResult, TextWasm, WithText } from "../Wasm/index.js";
 import type { TextWasmModule } from "../Wasm/index.js";
+import type { TextWritingMode } from "./types.js";
 import type { TextOutline } from "./Outline.js";
 
 /** 已注册的 WASM 字体；字体字节、曲线和三角化均由 C++ 管理。 */
@@ -25,17 +26,19 @@ class TextFont {
         this.lineGap = metrics[4];
     }
 
-    /** @param text 单行原文 @example font.shape("你好"); @returns 只读字形定位和 UTF-16 簇信息，不生成三角面。 */
-    public shape(text: string): TextRun {
+    /** @param text 单行原文 @param writingMode 排版方向，默认横排 @example font.shape("你好"); @returns 只读字形定位和 UTF-16 簇信息，不生成三角面。 */
+    public shape(text: string, writingMode: TextWritingMode = "horizontal-tb"): TextRun {
         this.requireActive();
-        const cached = this._shapes.get(text);
+        const key = JSON.stringify([text, writingMode]);
+        const vertical = Number(writingMode === "vertical-rl");
+        const cached = this._shapes.get(key);
         // Repeated editor measurements reuse HarfBuzz output.
         if (cached) {
             return cached;
         } else {
             /** @param pointer UTF-16 地址 @param length 码元数 @example Shape(pointer, 2); @returns 排版数组。 */
             const Shape = (pointer: number, length: number): Float64Array =>
-                ReadResult(this._module, this._module._text_shape(this.version, pointer, length));
+                ReadResult(this._module, this._module._text_shape(this.version, pointer, length, vertical));
             const data = WithText(this._module, text, Shape);
             const glyphs: TextGlyph[] = [];
             const positions: TextGlyphPosition[] = [];
@@ -49,7 +52,7 @@ class TextFont {
                     xOffset: data[offset + 4], yOffset: data[offset + 5] }));
             }
             const run = Object.freeze({ advanceWidth: data[0], glyphs: Object.freeze(glyphs), positions: Object.freeze(positions) });
-            this._shapes.set(text, run, text.length * 2 + glyphs.length * 256);
+            this._shapes.set(key, run, text.length * 2 + glyphs.length * 256);
             return run;
         }
     }
@@ -76,16 +79,17 @@ class TextFont {
     /**
      * 调用 C++ 的完整文字几何管线。
      * @param text 原文 @param fontSize 字号 @param lineSpacing 附加行距
-     * @param letterSpacing 附加字距 @param align 左/中/右的 0/1/2 编码 @param tolerance 曲线误差
+     * @param letterSpacing 附加字距 @param align 左/中/右的 0/1/2 编码 @param tolerance 曲线误差 @param writingMode 排版方向
      * @example font.mesh("你好", 16, 0, 0, 0, 0.5);
      * @returns 原生双精度结果副本。
      */
     public mesh(text: string, fontSize: number, lineSpacing: number, letterSpacing: number,
-        align: number, tolerance: number): Float64Array {
+        align: number, tolerance: number, writingMode: TextWritingMode = "horizontal-tb"): Float64Array {
         this.requireActive();
+        const vertical = Number(writingMode === "vertical-rl");
         /** @param pointer UTF-16 地址 @param length 码元数 @example Build(pointer, 2); @returns 几何数组。 */
         const Build = (pointer: number, length: number): Float64Array => ReadResult(this._module,
-            this._module._text_mesh(this.version, pointer, length, fontSize, lineSpacing, letterSpacing, align, tolerance));
+            this._module._text_mesh(this.version, pointer, length, fontSize, lineSpacing, letterSpacing, align, tolerance, vertical));
         return WithText(this._module, text, Build);
     }
 

@@ -66,6 +66,7 @@ const textGeometry = new Text("你好\n世界", 32, "MiSans", { lineSpacing: 4 }
 | `get lineSpacing(): number`  | 当前额外行距 |
 | `get letterSpacing(): number`  | 当前额外字距 |
 | `get textAlign(): TextAlign`  | 当前水平对齐方式 |
+| `get writingMode(): TextWritingMode`  | 当前横排或从右向左竖排方向。 |
 | `get baseline(): TextBaseline`  | 当前垂直基线锚点 |
 | `get data(): TextGeometryData`  | 填充三角面数据 |
 | `get contours(): Float32Array[]`  | 全部可见外圈与孔圈的独立 Float32 副本，不含剖分添加的直边节点。 |
@@ -105,6 +106,7 @@ export {
 export type {
     TextCacheStats, TextGlyph, TextGlyphPosition, TextRun,
     TextAlign,
+    TextWritingMode,
     TextBaseline, TextBorderAlign, TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 };
 export default Text;
@@ -182,9 +184,9 @@ new TextFont(module, metrics);
 
 | 签名 | 作用 |
 | --- | --- |
-| `shape(text: string): TextRun`  | 只读字形定位和 UTF-16 簇信息，不生成三角面。 |
+| `shape(text: string, writingMode: TextWritingMode = "horizontal-tb"): TextRun`  | 只读字形定位和 UTF-16 簇信息，不生成三角面。 |
 | `outline(key: string, create: () => TextOutline): TextOutline`  | 内部共享的只读轮廓。 |
-| `mesh(text: string, fontSize: number, lineSpacing: number, letterSpacing: number, align: number, tolerance: number): Float64Array`  | 调用 C++ 的完整文字几何管线。 |
+| `mesh(text: string, fontSize: number, lineSpacing: number, letterSpacing: number, align: number, tolerance: number, writingMode: TextWritingMode = "horizontal-tb"): Float64Array`  | 调用 C++ 的完整文字几何管线。 |
 | `get cacheStats(): TextCacheStats`  | 缓存命中、构建次数及内存估算快照。 |
 | `clearCache(): void`  | 清空缓存及统计，保留字体注册。 |
 | `dispose(): void`  | 释放字体及缓存，重复调用安全。 |
@@ -243,13 +245,14 @@ export type { TextOutline, TextPoint };
 
 ### 类型索引
 
-`TextAlign`、`TextBaseline`、`TextOptions`、`TextGeometryData`、`TextBorderAlign`、`TextBorderGeometryData`、`TextLineGeometryData`、`TextPointGeometryData`、`TextLike`
+`TextAlign`、`TextWritingMode`、`TextBaseline`、`TextOptions`、`TextGeometryData`、`TextBorderAlign`、`TextBorderGeometryData`、`TextLineGeometryData`、`TextPointGeometryData`、`TextLike`
 
 ### 导出关系
 
 ```ts
 export type {
     TextAlign,
+    TextWritingMode,
     TextBaseline, TextBorderAlign,
     TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 };
@@ -262,7 +265,8 @@ export type {
 - 库构建把 src/scripts 的目录说明复制到 lib 同名目录；TS 对应 JS/声明，WGSL 作为导入资源编译。Examples 说明只保留在源码，不进入 npm。
 
 <!-- agent-notes:start -->
-暂无额外目录约定。
+- writingMode 属于字形排版与整段轮廓缓存的参数；竖排使用 TTB advance，textAlign 沿列方向计算偏移。修改原生接口后须同步生成 WASM 与声明，不能混用旧运行产物。
+- baseline 只选择 anchorY，任何方向都保持几何包围盒中心为局部零点。
 <!-- agent-notes:end -->
 
 ## 5. 中英文搜索关键词

@@ -61,6 +61,7 @@ export {
 export type {
     TextCacheStats, TextGlyph, TextGlyphPosition, TextRun,
     TextAlign,
+    TextWritingMode,
     TextBaseline, TextBorderAlign, TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 } from "./Text/index.js";
 ```

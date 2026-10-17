@@ -11,6 +11,7 @@
 | `font.ts` | 按名称共享已加载字体，供后续文字几何直接使用。 |
 | `index.ts` | 可编辑文字几何；填充、实体边框、关键点和线框共享同一次字体排版。 |
 | `layout.ts` | 测量文字的可交互矩形及字符区域，空文字至少保留一个 em 方框。 |
+| `VerticalLayout.ts` | 用与 WASM 相同的竖排字形定位度量计算包围盒和原文字符区域。 |
 
 ## 2. index 入口、案例与类接口
 
@@ -24,7 +25,7 @@
 | --- | --- | --- |
 | `type`（公开） | `string`；`"Text"` | 用于材质和管线选择的几何类型。 |
 | `_text`（内部） | `string`；`""` | 未经排列转换的输入文字。（text 的内部状态）。 |
-| `_layoutText`（内部） | `string`；`""` | 实际交给字体几何生成器的文字。（layoutText 的内部状态）。 |
+| `_layoutText`（内部） | `string`；`""` | 竖排转置后的行文本预览；实际几何按原文和 writingMode 布局。（layoutText 的内部状态）。 |
 | `_fontSize`（内部） | `number`；`16` | 当前几何字号。（fontSize 的内部状态）。 |
 | `_fontFamily`（内部） | `string`；`""` | 已注册的字体名称。（fontFamily 的内部状态）。 |
 | `_lineSpacing`（内部） | `number`；`0` | 当前额外行距。（lineSpacing 的内部状态）。 |
@@ -66,7 +67,7 @@ const vertical = new Text("你好\n世界", 48, "MiSans", { writingMode: "vertic
 | `override clone(): Text`  | 独立的文字几何体。 |
 | `get text(): string`  | 未经排列转换的输入文字。 |
 | `set text(value: string)`  | 设置原文，并根据 writingMode 转成几何生成器使用的行文本。 |
-| `get layoutText(): string`  | 实际交给字体几何生成器的文字。 |
+| `get layoutText(): string`  | 竖排转置后的行文本预览；实际几何按原文和 writingMode 布局。 |
 | `get fontSize(): number`  | 当前几何字号。 |
 | `set fontSize(value: number)`  | 修改字号，在下次生成时重新计算排版与轮廓。 |
 | `get fontFamily(): string`  | 已注册的字体名称。 |
@@ -181,6 +182,25 @@ export { MeasureText };
 export type { TextCell, TextLayout };
 ```
 
+### 文件：VerticalLayout.ts
+
+
+### 顶层函数
+
+| 名称 | 用途 |
+| --- | --- |
+| `MeasureVerticalText` | 用与 WASM 相同的竖排字形定位度量计算包围盒和原文字符区域。 |
+
+```ts
+MeasureVerticalText(text);
+```
+
+### 导出关系
+
+```ts
+export { MeasureVerticalText };
+```
+
 ## 4. 注意事项
 
 - 通过 Font.register 注册名称后创建 Text；字符索引用 UTF-16，字素簇和换行由排版流程处理。包围盒中心为局部零点。
@@ -188,7 +208,8 @@ export type { TextCell, TextLayout };
 - 库构建把 src/scripts 的目录说明复制到 lib 同名目录；TS 对应 JS/声明，WGSL 作为导入资源编译。Examples 说明只保留在源码，不进入 npm。
 
 <!-- agent-notes:start -->
-暂无额外目录约定。
+- 几何生成把原文与 writingMode 直接传给数学库；layoutText 只是转置行文本预览，不可再用横排行对齐来代替竖排列对齐。VerticalLayout 的字形定位必须与原生 TTB 排版保持一致。
+- baseline 只改变返回的 anchorY，不移动以包围盒居中的顶点；案例通过独立标记显示锚点变化。
 <!-- agent-notes:end -->
 
 ## 5. 中英文搜索关键词

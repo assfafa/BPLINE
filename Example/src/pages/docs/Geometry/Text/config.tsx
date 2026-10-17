@@ -26,6 +26,7 @@ const border = text.createBorderGeometry(3);
 const lines = text.createLineGeometry();
 const points = text.createPointGeometry(2, 4, true, false);`,
     properties: [
+        entry("writingMode: \"horizontal-tb\" | \"vertical-rl\"", "方向默认横排；竖排每个原始行是一列，列从右向左排列；left/center/right 沿列顶/中/底对齐。", "Defaults to horizontal rows. Vertical mode maps each source line to a right-to-left column; left/center/right align at top/center/bottom."),
         entry("originPrecision: number", "用户最后设置的字形细分基准。", "Last user-set glyph subdivision baseline."),
         entry("precision: number", "Text options 的字形曲线细分精度，BPLineJS Text 会传递。", "Glyph curve flattening precision in Text options, forwarded by BPLineJS Text."),
         entry("data: TextGeometryData", "填充顶点、法线、UV、索引和排版度量；相同请求复用内部缓存，返回缓冲区互相独立。", "Fill vertices, normals, UVs, indices, and layout metrics; identical requests reuse internal caches while returned buffers remain independent."),
@@ -37,7 +38,7 @@ const points = text.createPointGeometry(2, 4, true, false);`,
     ],
     methods: [
         entry("RegisterTextFont(fontFamily, data): Promise<string>", "等待 WASM 初始化与字体注册，返回注册名称；不预先生成全部字形。注册后生成几何为同步操作。", "Await WASM initialization and registration, returning the font name without eagerly generating every glyph. Subsequent geometry generation is synchronous."),
-        entry("GetTextFont(fontFamily): TextFont", "取得 WASM 字体；shape(text) 返回排版度量，cacheStats 查看缓存，clearCache() 释放缓存。", "Get the WASM font: shape(text) returns layout metrics, cacheStats reports cache usage, and clearCache() releases caches."),
+        entry("GetTextFont(fontFamily): TextFont", "取得 WASM 字体；shape(text, writingMode?) 返回对应方向的排版度量，cacheStats 查看缓存，clearCache() 释放缓存。", "Get the WASM font: shape(text, writingMode?) returns directional layout metrics, cacheStats reports cache usage, and clearCache() releases caches."),
         entry("HasTextFont(fontFamily): boolean; UnregisterTextFont(fontFamily): boolean", "查询或移除已注册字体。", "Check or remove a registered font."),
         entry("new Text(text, fontSize, fontFamily, options?)", "创建支持换行、额外行距和字距的文字几何。", "Create multiline geometry with extra line and letter spacing."),
         entry("set(text, fontSize?, fontFamily?, options?): this", "更新文字与排版，并清除附加几何缓存。", "Update text and layout, clearing auxiliary geometry caches."),

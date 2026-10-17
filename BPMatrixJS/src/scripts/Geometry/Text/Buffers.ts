@@ -9,7 +9,7 @@ import type {
 
 type TextMetadata = Pick<
     TextGeometryData,
-    "precision" | "text" | "fontSize" | "fontFamily" | "lineSpacing" | "letterSpacing" | "textAlign" | "baseline"
+    "precision" | "text" | "fontSize" | "fontFamily" | "lineSpacing" | "letterSpacing" | "textAlign" | "baseline" | "writingMode"
 >;
 
 const fillTemplates = new WeakMap<TextOutline, TextGeometryData>();

@@ -1,11 +1,14 @@
-import fullCode from "./scene.ts?raw";
+import fullCode from "./fullCode.ts?raw";
 
 export const shortCode = `import { BaseMaterial, Camera, Font, Mesh, Render, Scene, Style, Text } from "bplinejs";
 import fontUrl from "./MiSans-Normal.woff2?url";
 
+const container = document.createElement("div");
+container.style.cssText = "position:fixed;inset:0";
+document.body.append(container);
 // Await font loading and WASM initialization; Text geometry is then generated synchronously.
 await Font.register("MiSans", fontUrl);
-const geometry = new Text("Hello World", 52, "MiSans", {
+const geometry = new Text("Hello World\\nHello World", 52, "MiSans", {
     precision: 8,
     lineSpacing: 12,
     letterSpacing: 2,

@@ -128,3 +128,64 @@ test("registration owns bytes before awaiting and rejects truncated compressed d
     assert.equal(HasTextFont("Broken"), false);
     UnregisterTextFont("Owned");
 });
+
+test("vertical columns align at top, middle and bottom without horizontal drift", async () => {
+    await RegisterTextFont("Vertical", Fixture("ttf"));
+    const columns = [];
+    // Two equal glyph designs isolate layout from glyph-specific visual side bearings.
+    for (const textAlign of ["left", "center", "right"]) {
+        const text = new Text("AAA\nAA", 100, "Vertical", { writingMode: "vertical-rl", textAlign });
+        const groups = new Map();
+        // Every A has one outer contour and one hole; group both by their X center.
+        for (const ring of text.contours) {
+            const xs = [];
+            const ys = [];
+            for (let i = 0; i < ring.length; i += 2) {
+                xs.push(ring[i]);
+                ys.push(ring[i + 1]);
+            }
+            const x = Math.round((Math.min(...xs) + Math.max(...xs)) / 2);
+            const group = groups.get(x) ?? { top: -Infinity, bottom: Infinity };
+            group.top = Math.max(group.top, ...ys);
+            group.bottom = Math.min(group.bottom, ...ys);
+            groups.set(x, group);
+        }
+        const entries = [...groups].sort((a, b) => b[0] - a[0]);
+        assert.equal(entries.length, 2);
+        const [long, short] = entries.map((entry) => entry[1]);
+        // All variants retain two distinct columns and a centered geometry.
+        assert.equal(text.data.minX, -text.width / 2);
+        assert.equal(text.data.minY, -text.height / 2);
+        if (textAlign === "left") {
+            assert.ok(Math.abs(long.top - short.top) < 0.001);
+        } else if (textAlign === "right") {
+            assert.ok(Math.abs(long.bottom - short.bottom) < 0.001);
+        } else {
+            assert.ok(Math.abs(long.top + long.bottom - short.top - short.bottom) < 0.001);
+        }
+        columns.push(entries.map((entry) => entry[0]));
+    }
+    assert.deepEqual(columns[0], columns[1]);
+    assert.deepEqual(columns[1], columns[2]);
+    const font = GetTextFont("Vertical");
+    const run = font.shape("AA", "vertical-rl");
+    assert.ok(run.positions.every((position) => position.xAdvance === 0 && position.yAdvance < 0));
+    assert.ok(run.advanceWidth > 0);
+    const text = new Text("AAA\nAA", 100, "Vertical", { writingMode: "vertical-rl" });
+    text.set("AAA\nAA", 100, "Vertical", { textAlign: "right" });
+    assert.equal(text.writingMode, "vertical-rl");
+    UnregisterTextFont("Vertical");
+});
+
+test("baseline selects an anchor while preserving centered text vertices", async () => {
+    await RegisterTextFont("Anchors", Fixture("ttf"));
+    // Direction does not change the established physical anchorY contract.
+    for (const writingMode of ["horizontal-tb", "vertical-rl"]) {
+        const top = new Text("AAA\nA", 100, "Anchors", { writingMode, baseline: "top" });
+        const bottom = new Text("AAA\nA", 100, "Anchors", { writingMode, baseline: "bottom" });
+        assert.deepEqual(top.data.geometry, bottom.data.geometry);
+        assert.equal(top.data.anchorY, top.height / 2);
+        assert.equal(bottom.data.anchorY, -bottom.height / 2);
+    }
+    UnregisterTextFont("Anchors");
+});

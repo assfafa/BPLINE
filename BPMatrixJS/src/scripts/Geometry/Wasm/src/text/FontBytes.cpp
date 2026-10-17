@@ -136,9 +136,13 @@ Font::~Font() {
     hb_font_destroy(font);
 }
 
-std::vector<double> Font::shape(const uint16_t* text, size_t length) const {
+std::vector<double> Font::shape(const uint16_t* text, size_t length, bool vertical) const {
     hb_buffer_t* buffer = hb_buffer_create();
     hb_buffer_add_utf16(buffer, text, length, 0, length);
+    // Vertical shaping keeps glyphs upright and obtains native vertical origins/advances.
+    if (vertical) {
+        hb_buffer_set_direction(buffer, HB_DIRECTION_TTB);
+    }
     hb_buffer_guess_segment_properties(buffer);
     hb_shape(font, buffer, nullptr, 0);
     unsigned count = 0;
@@ -150,7 +154,12 @@ std::vector<double> Font::shape(const uint16_t* text, size_t length) const {
         hb_glyph_extents_t bounds{};
         hb_font_get_glyph_extents(font, infos[i].codepoint, &bounds);
         const auto& p = positions[i];
-        result[0] += p.x_advance;
+        // The first scalar measures advance along the writing direction.
+        if (vertical) {
+            result[0] -= p.y_advance;
+        } else {
+            result[0] += p.x_advance;
+        }
         result.insert(result.end(), {static_cast<double>(infos[i].codepoint), static_cast<double>(infos[i].cluster),
             static_cast<double>(p.x_advance), static_cast<double>(p.y_advance),
             static_cast<double>(p.x_offset), static_cast<double>(p.y_offset),

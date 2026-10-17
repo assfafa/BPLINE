@@ -27,7 +27,7 @@ public:
     /** Reuse geometry in font units; tolerance includes the requested size/precision. */
     const Mesh& glyph(unsigned id, double tolerance);
     /** Return UTF-16 cluster indices and positioned glyph metrics without building meshes. */
-    std::vector<double> shape(const uint16_t* text, size_t length) const;
+    std::vector<double> shape(const uint16_t* text, size_t length, bool vertical = false) const;
     /** Drop cached meshes while retaining the registered face. */
     void clear();
 

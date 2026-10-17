@@ -44,12 +44,12 @@ npm install bplinejs@0.1.103
 The current beta adds the editor and helper workflows described above:
 
 ~~~bash
-npm install bplinejs@0.1.104-beta.18 bpmatrixjs@0.1.104-beta.14
+npm install bplinejs@0.1.104-beta.19 bpmatrixjs@0.1.104-beta.15
 # For the complete examples with GUI controls:
 npm install lil-gui
 ~~~
 
-Release notes: [BPLineJS 0.1.104-beta.18](BPLineJS/releases/0.1.104-beta.18.md) and [BPMatrixJS 0.1.104-beta.14](BPMatrixJS/releases/0.1.104-beta.14.md). Text parsing, shaping, and triangulation use WebAssembly with reusable caches; await font registration before creating text synchronously. Render adds configurable box culling debounce. Examples include CompositeMaterial, WGSLMaterial, video textures, and editors and grids that follow light/dark themes. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
+Release notes: [BPLineJS 0.1.104-beta.19](BPLineJS/releases/0.1.104-beta.19.md) and [BPMatrixJS 0.1.104-beta.15](BPMatrixJS/releases/0.1.104-beta.15.md). Text parsing, shaping, and triangulation use WebAssembly with reusable caches. Vertical text now aligns within independent columns; baseline selects an anchor while geometry stays centered. Await font registration before creating text synchronously. Examples include custom shaders, video textures, editors, and adaptive grids. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
 
 ## Docker
 

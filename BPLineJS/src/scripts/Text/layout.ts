@@ -1,5 +1,6 @@
 import { GetTextFont } from "bpmatrixjs/Geometry/Text/Fonts";
 import type Text from "./index";
+import { MeasureVerticalText } from "./VerticalLayout";
 
 /** 光标位置使用原文 UTF-16 下标；行、列从零开始，列以完整字素计数。 */
 interface TextCell {
@@ -51,13 +52,17 @@ const MeasureText = (text: Text): TextLayout => {
     // 相机和选中样式变化不会改变字体排版。
     if (cached?.key === key) {
         return cached.layout;
+    } else if (text.writingMode === "vertical-rl") {
+        // 竖排按原文列独立定位，不能按转置后的横向行进行测量。
+        const layout = MeasureVerticalText(text);
+        layouts.set(text, { key, layout });
+        return layout;
     } else {
         const scale = text.fontSize / font.unitsPerEm;
         const ascent = font.ascent * scale;
         const descent = font.descent * scale;
         const lineHeight = (font.ascent - font.descent + font.lineGap) * scale + text.lineSpacing;
         const lines = text.layoutText.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
-        const sourceLines = text.text.split(/\r\n|\r|\n/);
         const sourceStarts = [0];
         // 原文保留 CRLF 的两个 UTF-16 单元，不能用规范化后的换行长度计算光标。
         for (const newline of text.text.matchAll(/\r\n|\r|\n/g)) {
@@ -75,7 +80,7 @@ const MeasureText = (text: Text): TextLayout => {
         let minY = Infinity;
         let maxX = -Infinity;
         let maxY = -Infinity;
-        let cells: TextCell[] = [];
+        const cells: TextCell[] = [];
         const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
         // 字体边界度量确定与居中几何一致的原点；不展开任何路径。
         for (let row = 0; row < lines.length; row++) {
@@ -157,32 +162,6 @@ const MeasureText = (text: Text): TextLayout => {
             cell.right -= centerX;
             cell.bottom -= centerY;
             cell.top -= centerY;
-        }
-        // 竖排的原文下标属于输入列，转换布局的填充空格不应变成可编辑文字。
-        if (text.writingMode === "vertical-rl") {
-            const mapped: TextCell[] = [];
-            // 将转置排版的行列映射回原文列，保持 UTF-16 下标。
-            for (const cell of cells) {
-                const sourceColumn = sourceLines.length - 1 - cell.column;
-                // 转置后的行尾不是原文里的换行位置。
-                if (sourceColumn >= 0 && sourceColumn < sourceLines.length) {
-                    const column = sourceLines[sourceColumn];
-                    const segments = [...segmenter.segment(column)];
-                    const segment = segments.at(cell.row);
-                    cell.index = sourceStarts[sourceColumn] + column.length;
-                    cell.end = cell.index;
-                    // 缺字位置使用该输入列的末尾插入点。
-                    if (segment !== undefined) {
-                        cell.index = sourceStarts[sourceColumn] + segment.index;
-                        cell.end = cell.index + segment.segment.length;
-                    }
-                    const originalRow = cell.row;
-                    cell.row = sourceColumn;
-                    cell.column = originalRow;
-                    mapped.push(cell);
-                }
-            }
-            cells = mapped;
         }
         // 极小字号仍保持可逆的交互范围。
         left = Math.min(left, right - 0.001);

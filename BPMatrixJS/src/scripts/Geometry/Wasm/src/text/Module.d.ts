@@ -11,16 +11,16 @@ interface TextWasmModule {
     _text_register(pointer: number, length: number): number;
     /** @param id 注册句柄 @example module._text_unregister(id); @returns 释放字体和缓存。 */
     _text_unregister(id: number): void;
-    /** @param id 字体句柄 @param pointer UTF-16 地址 @param length 码元数 @example module._text_shape(id, pointer, length); @returns 排版状态。 */
-    _text_shape(id: number, pointer: number, length: number): number;
+    /** @param id 字体句柄 @param pointer UTF-16 地址 @param length 码元数 @param vertical 0 横排、1 竖排 @example module._text_shape(id, pointer, length, 0); @returns 排版状态。 */
+    _text_shape(id: number, pointer: number, length: number, vertical: number): number;
     /**
      * @param id 字体句柄 @param pointer UTF-16 地址 @param length 码元数 @param size 字号
-     * @param lineSpacing 行距 @param letterSpacing 字距 @param align 对齐编码 @param tolerance 曲线误差
-     * @example module._text_mesh(id, pointer, length, 16, 0, 0, 0, 0.5);
+     * @param lineSpacing 行距 @param letterSpacing 字距 @param align 对齐编码 @param tolerance 曲线误差 @param vertical 0 横排、1 竖排
+     * @example module._text_mesh(id, pointer, length, 16, 0, 0, 0, 0.5, 0);
      * @returns 生成状态。
      */
     _text_mesh(id: number, pointer: number, length: number, size: number,
-        lineSpacing: number, letterSpacing: number, align: number, tolerance: number): number;
+        lineSpacing: number, letterSpacing: number, align: number, tolerance: number, vertical: number): number;
     /** @param id 字体句柄 @example module._text_stats(id); @returns 读取缓存统计的状态。 */
     _text_stats(id: number): number;
     /** @param id 字体句柄 @example module._text_clear(id); @returns 清空缓存的状态。 */

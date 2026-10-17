@@ -1,11 +1,16 @@
 /** 文字几何以可见包围盒中心为局部原点，坐标单位由 fontSize 决定。 */
 type TextAlign = "left" | "center" | "right";
 
+/** Horizontal rows or upright columns flowing from right to left. */
+type TextWritingMode = "horizontal-tb" | "vertical-rl";
+
 type TextBaseline = "top" | "middle" | "bottom";
 
 interface TextOptions {
     /** 曲线精度，默认 8；越大轮廓误差越小，范围 1–4095。 */
     readonly precision?: number;
+    /** 竖排按列对齐，left=top、center=center、right=bottom。 */
+    readonly writingMode?: TextWritingMode;
     readonly lineSpacing?: number;
     readonly letterSpacing?: number;
     readonly textAlign?: TextAlign;
@@ -29,6 +34,7 @@ interface TextGeometryData {
     lineSpacing: number;
     letterSpacing: number;
     textAlign: TextAlign;
+    writingMode: TextWritingMode;
     baseline: TextBaseline;
     /** 按 textAlign 从居中包围盒选取的水平锚点。 */
     anchorX: number;
@@ -68,6 +74,7 @@ interface TextLike {
     readonly lineSpacing: number;
     readonly letterSpacing: number;
     readonly textAlign: TextAlign;
+    readonly writingMode: TextWritingMode;
     readonly baseline: TextBaseline;
     readonly data: TextGeometryData;
     /** 原始可见轮廓的独立坐标副本，包含全部外圈及孔圈。 */
@@ -135,6 +142,7 @@ interface TextLike {
 
 export type {
     TextAlign,
+    TextWritingMode,
     TextBaseline, TextBorderAlign,
     TextBorderGeometryData, TextGeometryData, TextLike, TextLineGeometryData, TextOptions, TextPointGeometryData,
 };

@@ -105,7 +105,20 @@ class TextInput {
             this.element.style.fontSize = `${String(Math.max(text.fontSize, 0.001))}px`;
             this.element.style.lineHeight = `${String(Math.max(layout.lineHeight, 0.001))}px`;
             this.element.style.letterSpacing = `${String(text.letterSpacing)}px`;
-            this.element.style.textAlign = text.textAlign;
+            this.element.style.writingMode = text.writingMode;
+            this.element.style.textOrientation = "upright";
+            let alignment: string = text.textAlign;
+            // 竖排使用逻辑起止端，将 left/right 映射为列顶/列底。
+            if (text.writingMode === "vertical-rl") {
+                // CSS start/end 沿文字流方向对齐，不再把列向左右挤压。
+                if (text.textAlign === "left") {
+                    alignment = "start";
+                } else if (text.textAlign === "right") {
+                    // 右端在竖排中对应列底部。
+                    alignment = "end";
+                }
+            }
+            this.element.style.textAlign = alignment;
             this.element.style.width = `${String(layout.inputWidth)}px`;
             this.element.style.height = `${String(layout.inputHeight)}px`;
         }

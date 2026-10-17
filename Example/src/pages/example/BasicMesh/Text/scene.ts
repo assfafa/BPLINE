@@ -1,4 +1,4 @@
-import { BaseMaterial, Camera, Font, Mesh, Render, Scene, Style, Text } from "bplinejs";
+import { BaseMaterial, Camera, Font, Mesh, Rect2D, Render, Scene, Style, Text } from "bplinejs";
 import type { Text2DOptions, TextWritingMode } from "bplinejs";
 import GUI from "lil-gui";
 import fontUrl from "@/assets/ttf/MiSans-Normal.woff2?url";
@@ -31,7 +31,7 @@ interface TextControls {
  */
 export const mountTextScene = (options: SceneMountOptions): (() => void) => {
     const parameters: TextControls = {
-        content: "Hello World",
+        content: "Hello World\nHello World",
         fontSize: 52,
         precision: 8,
         lineSpacing: 12,
@@ -102,6 +102,32 @@ export const mountTextScene = (options: SceneMountOptions): (() => void) => {
                 mesh.style = style;
                 const scene = new Scene();
                 scene.add(mesh);
+                const anchorStyle = new Style();
+                anchorStyle.solid.enabled = true;
+                anchorStyle.solid.color.setHex("#e55287");
+                const anchor = new Mesh(new Rect2D({ width: 7, height: 7, radius: 1 }), new BaseMaterial(), false);
+                anchor.style = anchorStyle;
+                anchor.noSelect = true;
+                anchor.ignoreZoom = true;
+                anchor.order = 1;
+                const anchors = { anchorX: 0, anchorY: 0 };
+                // 基线只选择局部锚点，标记与读数让这个效果可见，几何仍保持居中。
+                if (options.advanced) {
+                    scene.add(anchor);
+                }
+                /** @example updateAnchor(); @returns No value; show the selected local anchor. */
+                const updateAnchor = (): void => {
+                    anchors.anchorX = geometry.anchorX;
+                    anchors.anchorY = geometry.anchorY;
+                    anchor.position.set(anchors.anchorX, anchors.anchorY);
+                };
+                updateAnchor();
+                /** @example compareAlignment(); @returns No value; compare unequal row or column lengths. */
+                const compareAlignment = (): void => {
+                    parameters.content = "Hello World\\nHello";
+                    updateText();
+                };
+                const actions = { compareAlignment };
                 const camera = new Camera();
                 const renderer = new Render(options.container, "production");
                 render = renderer;
@@ -128,19 +154,24 @@ export const mountTextScene = (options: SceneMountOptions): (() => void) => {
                     style.points.enabled = parameters.pointsEnabled;
                     style.points.radius = parameters.pointsRadius;
                     style.points.color.setHex(parameters.pointsColor);
+                    updateAnchor();
+                    updateViewport();
                 };
 
                 // Only the advanced preview owns editing controls.
                 if (options.advanced && options.guiContainer) {
                     gui = new GUI({ autoPlace: false, container: options.guiContainer, title: "Text", width: 200 });
-                    gui.add(parameters, "content").name("text (\\n = line)").onFinishChange(updateText);
+                    gui.add(parameters, "content").name("text (\\n = line)").onFinishChange(updateText).listen();
+                    gui.add(actions, "compareAlignment").name("Compare alignment");
                     gui.add(parameters, "fontSize", 16, 96, 1).onChange(updateText);
                     gui.add(parameters, "precision", 3, 100, 1).onChange(updateText);
                     gui.add(parameters, "lineSpacing", 0, 40, 1).onChange(updateText);
                     gui.add(parameters, "letterSpacing", -10, 20, 1).onChange(updateText);
                     gui.add(parameters, "textAlign", ["left", "center", "right"]).onChange(updateText);
-                    gui.add(parameters, "baseline", ["top", "middle", "bottom"]).onChange(updateText);
+                    gui.add(parameters, "baseline", ["top", "middle", "bottom"]).name("baseline (anchorY)").onChange(updateText);
                     gui.add(parameters, "writingMode", ["horizontal-tb", "vertical-rl"]).onChange(updateText);
+                    gui.add(anchors, "anchorX").disable().listen();
+                    gui.add(anchors, "anchorY").disable().listen();
                     gui.addColor(parameters, "fill").onChange(updateText);
                     gui.add(parameters, "edgeEnabled").onChange(updateText);
                     gui.add(parameters, "edgeWidth", 0, 10, 1).onChange(updateText);
@@ -160,6 +191,10 @@ export const mountTextScene = (options: SceneMountOptions): (() => void) => {
                     const bounds = options.container.getBoundingClientRect();
                     renderer.resize();
                     camera.setViewport(Math.max(1, bounds.width * renderer.dpr), Math.max(1, bounds.height * renderer.dpr));
+                    // 长竖列也完整显示，留出边框和基线锚点的屏幕空间。
+                    camera.zoom = Math.max(0.001, Math.min(renderer.dpr,
+                        renderer.canvas.width / (geometry.width + 36),
+                        renderer.canvas.height / (geometry.height + 36)));
                 };
 
                 /**

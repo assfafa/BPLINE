@@ -110,7 +110,7 @@ class Text extends Geo implements Text2DLike {
         }
     }
 
-    /** @example text.layoutText; @returns 实际交给字体几何生成器的文字。 */
+    /** @example text.layoutText; @returns 竖排转置后的行文本预览；实际几何按原文和 writingMode 布局。 */
     public get layoutText(): string {
         return this._layoutText;
     }
@@ -334,12 +334,13 @@ class Text extends Geo implements Text2DLike {
     public updateGeometry(): this {
         // 字体必须由 Font 静态类加载，避免几何对象隐式下载资源。
         Font.get(this._fontFamily);
-        const shape = new MatrixText(this._layoutText, this._fontSize, this._fontFamily, {
+        const shape = new MatrixText(this._text, this._fontSize, this._fontFamily, {
             precision: this.precision,
             lineSpacing: this._lineSpacing,
             letterSpacing: this._letterSpacing,
             textAlign: this._textAlign,
             baseline: this._baseline,
+            writingMode: this._writingMode,
         });
         const parts: { data: GeoPartDataLike; vertexType: number }[] = [];
         // 只生成启用的样式分区，使空白文字不会留下旧顶点。

@@ -93,13 +93,13 @@ Mesh Merge(std::vector<Placed>& glyphs) {
 
 /** Build a multiline text in WASM; output header, CW triangles, then all closed contours. */
 std::vector<double> BuildText(Font& font, const uint16_t* text, size_t length,
-    double size, double lineSpacing, double letterSpacing, int align, double tolerance) {
+    double size, double lineSpacing, double letterSpacing, int align, double tolerance, bool vertical) {
     std::vector<std::vector<double>> runs;
     size_t start = 0;
     // CRLF is one line break; original UTF-16 indices are only needed in shape().
     for (size_t i = 0; i <= length; ++i) {
         if (i == length || text[i] == '\n' || text[i] == '\r') {
-            runs.push_back(font.shape(text + start, i - start));
+            runs.push_back(font.shape(text + start, i - start, vertical));
             if (i < length && text[i] == '\r' && i + 1 < length && text[i + 1] == '\n') {
                 ++i;
             }
@@ -124,7 +124,17 @@ std::vector<double> BuildText(Font& font, const uint16_t* text, size_t length,
         const auto& run = runs[row];
         double x = 0;
         double y = -static_cast<double>(row) * lineHeight;
-        if (align == 1) {
+        // Each source line becomes a right-to-left column in vertical mode.
+        if (vertical) {
+            x = -static_cast<double>(row) * lineHeight;
+            y = 0;
+            // Align along the column, allowing exact half-cell center offsets.
+            if (align == 1) {
+                y = -(advance - widths[row]) / 2;
+            } else if (align == 2) {
+                y = -(advance - widths[row]);
+            }
+        } else if (align == 1) {
             x = (advance - widths[row]) / 2;
         } else if (align == 2) {
             x = advance - widths[row];
@@ -153,8 +163,14 @@ std::vector<double> BuildText(Font& font, const uint16_t* text, size_t length,
                     glyphs.push_back(std::move(placed));
                 }
             }
-            x += run[offset + 2] * scale + letterSpacing;
+            // Extra letter spacing follows the inline axis, never shifts columns sideways.
+            x += run[offset + 2] * scale;
             y += run[offset + 3] * scale;
+            if (vertical) {
+                y -= letterSpacing;
+            } else {
+                x += letterSpacing;
+            }
         }
     }
     Mesh mesh = Merge(glyphs);

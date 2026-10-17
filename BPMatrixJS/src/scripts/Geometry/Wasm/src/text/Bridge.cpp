@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 namespace bptext {
-std::vector<double> BuildText(Font&, const uint16_t*, size_t, double, double, double, int, double);
+std::vector<double> BuildText(Font&, const uint16_t*, size_t, double, double, double, int, double, bool);
 }
 
 namespace {
@@ -58,14 +58,14 @@ EMSCRIPTEN_KEEPALIVE void text_unregister(unsigned id) {
 }
 
 /** Shape UTF-16 input for renderer/editor metrics without constructing geometry. */
-EMSCRIPTEN_KEEPALIVE int text_shape(unsigned id, const uint16_t* text, size_t length) {
-    return Run([&] { result = Get(id).shape(text, length); });
+EMSCRIPTEN_KEEPALIVE int text_shape(unsigned id, const uint16_t* text, size_t length, int vertical) {
+    return Run([&] { result = Get(id).shape(text, length, vertical != 0); });
 }
 
 /** Run font shaping, curve flattening, winding resolution and text placement. */
 EMSCRIPTEN_KEEPALIVE int text_mesh(unsigned id, const uint16_t* text, size_t length,
-    double size, double lineSpacing, double letterSpacing, int align, double tolerance) {
-    return Run([&] { result = bptext::BuildText(Get(id), text, length, size, lineSpacing, letterSpacing, align, tolerance); });
+    double size, double lineSpacing, double letterSpacing, int align, double tolerance, int vertical) {
+    return Run([&] { result = bptext::BuildText(Get(id), text, length, size, lineSpacing, letterSpacing, align, tolerance, vertical != 0); });
 }
 
 /** Return observable cache counters for performance checks and applications. */
