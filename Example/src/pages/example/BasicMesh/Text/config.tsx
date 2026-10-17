@@ -5,7 +5,7 @@ import fontUrl from "./MiSans-Normal.woff2?url";
 
 // Await font loading and WASM initialization; Text geometry is then generated synchronously.
 await Font.register("MiSans", fontUrl);
-const geometry = new Text("再次单击\\n文字几何", 52, "MiSans", {
+const geometry = new Text("Hello World", 52, "MiSans", {
     precision: 8,
     lineSpacing: 12,
     letterSpacing: 2,

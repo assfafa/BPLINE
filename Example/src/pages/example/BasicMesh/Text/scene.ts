@@ -31,7 +31,7 @@ interface TextControls {
  */
 export const mountTextScene = (options: SceneMountOptions): (() => void) => {
     const parameters: TextControls = {
-        content: "再次单击\\n文字几何",
+        content: "Hello World",
         fontSize: 52,
         precision: 8,
         lineSpacing: 12,
