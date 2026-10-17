@@ -56,13 +56,8 @@ const syncTheme = (): void => {
 syncTheme();
 const themeObserver = new MutationObserver(syncTheme);
 themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-/** @example stopTheme(); @returns No value; remove the standalone theme observer. */
-const stopTheme = (): void => {
-    themeObserver.disconnect();
-};
-window.addEventListener("beforeunload", stopTheme, { once: true });
 const cameraControl = new CameraControl(camera, render);
-const keys = new EditorKey(editor, cameraControl);
+new EditorKey(editor, cameraControl);
 editor.textEditTool.fontFamily = "MiSans";
 editor.textEditTool.fontSize = 18;
 let saved: EditorDocument | null = null;
@@ -247,7 +242,6 @@ historyGui.add(actions, "load");
 historyGui.add(actions, "undo");
 historyGui.add(actions, "redo");
 historyGui.add(actions, "toBase");
-let frame = 0;
 /**
  * Update interaction and submit the next frame.
  * @example requestAnimationFrame(draw);
@@ -279,23 +273,6 @@ const draw = (): void => {
     transforms.translationStepEnabled = settings.translationStepEnabled;
     transforms.rotationStepEnabled = settings.rotationStepEnabled;
     render.render(scene, camera);
-    frame = requestAnimationFrame(draw);
+    requestAnimationFrame(draw);
 };
-frame = requestAnimationFrame(draw);
-
-/**
- * Release the standalone example when leaving the page.
- * @example destroy();
- * @returns No value.
- */
-const destroy = (): void => {
-    cancelAnimationFrame(frame);
-    observer.disconnect();
-    keys.destroy();
-    editor.destroy();
-    cameraControl.dispose();
-    gui.destroy();
-    render.destroy();
-    container.remove();
-};
-window.addEventListener("beforeunload", destroy, { once: true });
+requestAnimationFrame(draw);

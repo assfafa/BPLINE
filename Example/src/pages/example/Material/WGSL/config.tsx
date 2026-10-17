@@ -13,7 +13,6 @@ const draw = `const mesh = new Mesh(new Rect2D({ width: 220, height: 150 }), mat
 mesh.style = style;
 mesh.culling = false;
 scene.add(mesh);
-let frame = 0;
 let time = 0;
 let previous = performance.now();
 /** @example draw(); @returns No value. */
@@ -27,12 +26,11 @@ const draw = (): void => {
     material.raw.value.time = time;
     material.raw.value.strength = settings.strength;
     render.render(scene, camera);
-    frame = requestAnimationFrame(draw);
+    requestAnimationFrame(draw);
 };
 draw();
 `;
 const imports = "import { Camera, Mesh, Rect2D, Render, Scene, Style, WGSLMaterial } from \"bplinejs\";\nimport { Vec2 } from \"bpmatrixjs/Math\";\n";
-const cleanup = "window.addEventListener(\"beforeunload\", () => {\n    cancelAnimationFrame(frame);\n    observer.disconnect();\n    render.destroy();\n    container.remove();\n}, { once: true });";
 export const shortCode = `import { Camera, Mesh, Rect2D, Render, Scene, Style, WGSLMaterial } from "bplinejs";
 
 const container = document.createElement("div");
@@ -65,5 +63,4 @@ const gui = new GUI();
 gui.add(settings, "strength", 0, 2, 0.05);
 gui.add(settings, "speed", 0, 3, 0.1);
 gui.add(settings, "animate");
-window.addEventListener("beforeunload", () => gui.destroy(), { once: true });
-` + draw + cleanup;
+` + draw;

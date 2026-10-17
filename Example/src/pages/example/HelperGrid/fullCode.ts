@@ -50,11 +50,6 @@ const syncTheme = (): void => {
 syncTheme();
 const themeObserver = new MutationObserver(syncTheme);
 themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-/** @example stopTheme(); @returns No value; remove the standalone theme observer. */
-const stopTheme = (): void => {
-    themeObserver.disconnect();
-};
-window.addEventListener("beforeunload", stopTheme, { once: true });
 const cameraControl = new CameraControl(camera, render);
 
 const gui = new GUI({ title: "HelperGrid", width: 220 });
@@ -90,7 +85,6 @@ palette.addColor(colors, "gridMajorColor").onChange(applyColors);
 palette.addColor(colors, "rulerMinorColor").onChange(applyColors);
 palette.addColor(colors, "rulerMajorColor").onChange(applyColors);
 palette.addColor(colors, "rulerTextColor").onChange(applyColors);
-let frame = 0;
 /**
  * Update interaction and submit the next frame.
  * @example requestAnimationFrame(draw);
@@ -100,22 +94,6 @@ const draw = (): void => {
     cameraControl.update();
     helper.update();
     render.render(scene, camera);
-    frame = requestAnimationFrame(draw);
+    requestAnimationFrame(draw);
 };
-frame = requestAnimationFrame(draw);
-
-/**
- * Release the standalone example when leaving the page.
- * @example destroy();
- * @returns No value.
- */
-const destroy = (): void => {
-    cancelAnimationFrame(frame);
-    observer.disconnect();
-    helper.destroy();
-    cameraControl.dispose();
-    gui.destroy();
-    render.destroy();
-    container.remove();
-};
-window.addEventListener("beforeunload", destroy, { once: true });
+requestAnimationFrame(draw);
