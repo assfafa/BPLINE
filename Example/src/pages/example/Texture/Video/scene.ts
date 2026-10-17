@@ -11,7 +11,8 @@ export const mountVideoScene = (options: SceneMountOptions): (() => void) => {
     const style = new Style();
     style.solid.enabled = true;
     style.solid.texture = texture;
-    const mesh = new Mesh(new Rect2D({ width: 300, height: 169, radius: 10 }), new BaseMaterial(), style);
+    const mesh = new Mesh(new Rect2D({ width: 300, height: 169, radius: 10 }), new BaseMaterial(), false);
+    mesh.style = style;
     runtime.scene.add(mesh);
     let video: HTMLVideoElement | null = null;
     let gui: GUI | null = null;
@@ -22,7 +23,10 @@ export const mountVideoScene = (options: SceneMountOptions): (() => void) => {
     button.type = "button";
     button.textContent = "Play / Pause";
     button.className = "absolute bottom-3 left-3 z-10 rounded border border-border bg-background px-3 py-1 text-foreground";
-    options.container.append(button);
+    // 简易版自动静音播放；完整案例才显示用户控制按钮。
+    if (options.advanced) {
+        options.container.append(button);
+    }
     /** @example play(); @returns Playback promise; blocked autoplay remains user-controllable. */
     const play = async (): Promise<void> => {
         try {

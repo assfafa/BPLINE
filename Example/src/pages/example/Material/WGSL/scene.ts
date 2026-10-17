@@ -19,7 +19,8 @@ export const mountWgslScene = (options: SceneMountOptions): (() => void) => {
     if (options.advanced) {
         material.raw.vertexShader = vertexShader;
     }
-    const mesh = new Mesh(new Rect2D({ width: 220, height: 150 }), material, style);
+    const mesh = new Mesh(new Rect2D({ width: 220, height: 150 }), material, false);
+    mesh.style = style;
     // A shader that moves vertices outside CPU bounds must opt out of spatial culling.
     mesh.culling = false;
     runtime.scene.add(mesh);

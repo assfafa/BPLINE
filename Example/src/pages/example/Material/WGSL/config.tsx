@@ -9,7 +9,8 @@ const settings = { strength: 1, speed: 1, animate: true };
 material.raw.value = { time: 0, viewport, strength: 1 };
 material.raw.fragmentShader = \`${fragmentShader}\`;
 `;
-const draw = `const mesh = new Mesh(new Rect2D({ width: 220, height: 150 }), material, style);
+const draw = `const mesh = new Mesh(new Rect2D({ width: 220, height: 150 }), material, false);
+mesh.style = style;
 mesh.culling = false;
 scene.add(mesh);
 let frame = 0;
@@ -32,7 +33,32 @@ draw();
 `;
 const imports = "import { Camera, Mesh, Rect2D, Render, Scene, Style, WGSLMaterial } from \"bplinejs\";\nimport { Vec2 } from \"bpmatrixjs/Math\";\n";
 const cleanup = "window.addEventListener(\"beforeunload\", () => {\n    cancelAnimationFrame(frame);\n    observer.disconnect();\n    render.destroy();\n    container.remove();\n}, { once: true });";
-export const shortCode = imports + setup + body + draw + cleanup;
+export const shortCode = `import { Camera, Mesh, Rect2D, Render, Scene, Style, WGSLMaterial } from "bplinejs";
+
+const container = document.createElement("div");
+container.style.cssText = "position:fixed;inset:0";
+document.body.append(container);
+const render = new Render(container);
+await render.ready;
+const camera = new Camera();
+camera.setViewport(render.canvas.width, render.canvas.height);
+camera.zoom = render.dpr;
+const scene = new Scene();
+const style = new Style();
+style.solid.enabled = true;
+const material = new WGSLMaterial();
+material.raw.value = { time: 0 };
+material.raw.fragmentShader = \`${fragmentShader}\`;
+const mesh = new Mesh(new Rect2D({ width: 220, height: 150 }), material, false);
+mesh.style = style;
+scene.add(mesh);
+
+const draw = (): void => {
+    material.raw.value.time = performance.now() / 1000;
+    render.render(scene, camera);
+    requestAnimationFrame(draw);
+};
+draw();`;
 export const fullCode = imports + "import GUI from \"lil-gui\";\n" + setup + body +
     `material.raw.vertexShader = \`${vertexShader}\`;
 const gui = new GUI();
