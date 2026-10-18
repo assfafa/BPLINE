@@ -44,7 +44,7 @@ export type {
     CameraControlChange, CameraControlOptions, CameraControlState, CameraPositionChange,
     CameraRotationChange, CameraZoomChange,
 } from "./Control";
-export type { EditorDocument, EditorGeometryData, EditorLoadOptions, EditorMaterialData, EditorMode, EditorNodeData, EditorOptions, EditorShape, EditorStyleData, EditorTextureData, EditSwitches } from "./Editor";
+export type { BooleanEvent, BooleanOperation, EditorDocument, EditorGeometryData, EditorLoadOptions, EditorMaterialData, EditorMode, EditorNodeData, EditorOptions, EditorShape, EditorStyleData, EditorTextureData, EditSwitches } from "./Editor";
 export type { NGonEditDocument, NGonEditMode, NGonEditOrigin, NGonEditRecord, NGonHandle } from "./Editor/NGonEditTool";
 export type { PolyEditDocument, PolyEditMode, PolyEditOrigin, PolyEditRecord, PolyHandle } from "./Editor/PolyEditTool";
 export type { RectEditDocument, RectEditMode, RectEditOrigin, RectEditRecord, RectEditStyleData, RectHandle, SelectionOperation } from "./Editor/RectEditTool";

@@ -1,6 +1,6 @@
 {
     "name": "bpmatrixjs",
-    "version": "0.1.104-beta.15",
+    "version": "0.1.104-beta.16",
     "type": "module",
     "main": "./lib/index.js",
     "module": "./lib/index.js",
@@ -42,6 +42,10 @@
         "./Utils": {
             "types": "./lib/Utils/index.d.ts",
             "import": "./lib/Utils/index.js"
+        },
+        "./Utils/Bool": {
+            "types": "./lib/Utils/Bool/index.d.ts",
+            "import": "./lib/Utils/Bool/index.js"
         }
     },
     "scripts": {
@@ -49,8 +53,10 @@
         "dev": "vite --host",
         "build": "npm run build:lib && npm run build:app",
         "build:app": "npm run build:wasm && tsc && vite build",
-        "build:wasm": "python3 src/scripts/Geometry/Wasm/src/build.py",
-        "build:lib": "npm run build:wasm -- --clean-lib && npm run guides && tsc -p tsconfig.lib.json && node ../scripts/PackageGuides.mjs .",
+        "build:wasm": "npm run build:wasm:text && npm run build:wasm:bool",
+        "build:wasm:text": "python3 src/scripts/Geometry/Wasm/src/build.py",
+        "build:wasm:bool": "python3 src/scripts/Utils/Bool/src/build.py",
+        "build:lib": "npm run build:wasm:text -- --clean-lib && npm run build:wasm:bool && npm run guides && tsc -p tsconfig.lib.json && node ../scripts/PackageGuides.mjs .",
         "precheck": "npm run build:wasm",
         "check": "tsc --noEmit && npm run lint && npm run guides:check",
         "guides": "node ../scripts/DirectoryGuides.mjs BPMatrixJS",

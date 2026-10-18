@@ -4,12 +4,13 @@
 
 ## 1. 文件结构与作用
 
-跨类型历史、层级、组变换、被动 Base 编辑和资源文档。
+跨类型历史、层级、组变换、布尔运算、被动 Base 编辑和资源文档。
 
 | 文件 / 子目录 | 作用 |
 | --- | --- |
 | `BaseChange.ts` | 主动降级的一批几何快照；只替换 data，保留 Mesh、层级、材质和局部变换。 |
 | `BaseEditTool.ts` | 合并编辑器专用的 Base2D 轮廓节点编辑器；不提供画图创建入口。 |
+| `Boolean.ts` | 在修改场景前准备完整布尔结果，连续轮廓和三角网分别传入数学库。 |
 | `document.ts` | 集合场景的文档转换；构建完成后才替换用户节点。 |
 | `EditorGroup.ts` | 拥有独立矩形范围的空层级节点；子对象由普通 Group.children 管理。 |
 | `GroupTransform.ts` | 对不同几何类型执行同一组仿射操作，并在参数化形状变形时移交 Base2D。 |
@@ -142,6 +143,67 @@ const local = WorldToLocal(matrix, point);
 
 ```ts
 export default BaseEditTool;
+```
+
+### 文件：Boolean.ts
+
+### BooleanChange
+
+在修改场景前准备完整布尔结果，连续轮廓和三角网分别传入数学库。
+
+#### 变量与默认值
+
+| 字段 | 类型 / 默认值 | 用途 |
+| --- | --- | --- |
+| `result`（公开） | `BoolResult`；`由构造参数或初始化过程赋值` | 数学库返回的来源、分片及删除记录。 |
+| `meshes`（公开） | `Mesh[]`；`[]` | 运算后应选中的对象，包括减法中完全未变化的原对象。 |
+| `removed`（公开） | `Mesh[]`；`[]` | 即将摘除的实体；减法永远不包含工具 B。 |
+| `_parents`（内部） | `按初始化值推断`；`new Map<Mesh, Group>()` | 状态由 `constructor`、`apply` 读取或维护；完整处理见对应函数。 |
+| `_added`（内部） | `Mesh[]`；`[]` | 状态由 `constructor`、`apply` 读取或维护；完整处理见对应函数。 |
+| `_owner`（内部） | `Editor`；`由构造参数或初始化过程赋值` | 提供原始样式、层级和相机的集合编辑器（构造参数引用）。 |
+
+#### 构造与案例
+
+```ts
+constructor(owner: Editor, subjects: readonly Mesh[], target: Mesh, operation: BooleanOperation)
+```
+
+同步计算并准备资源，失败时原场景和选择保持不变；调用前 await Bool.ready()。
+
+```ts
+const change = new BooleanChange(editor, selected, target, "difference");
+```
+
+#### 函数与访问器
+
+| 签名 | 作用 |
+| --- | --- |
+| `apply(): void`  | 无返回值；调用方在历史批次中先清除选择装饰。 |
+| `static accepts(node: Group): node is Mesh`  | 是否是可参与面积运算的普通实体。 |
+
+### 顶层函数
+
+| 名称 | 用途 |
+| --- | --- |
+| `CreateBooleanInput` | 包含显示矩阵且不修改原对象的数学库输入。 |
+| `CreateResultMesh` | 具有世界姿态的独立实体。 |
+| `SurvivingParent` | 最近的保留父级。 |
+| `ValidateParent` | 无返回值；不可逆的父变换无法保持世界位置。 |
+| `ContourLines` | 所有内外环的独立线段，保留 wireframe 切换能力。 |
+
+```ts
+CreateBooleanInput(mesh, camera);
+```
+
+### 类型索引
+
+`BooleanOperation`、`BooleanEvent`
+
+### 导出关系
+
+```ts
+export default BooleanChange;
+export type { BooleanEvent, BooleanOperation };
 ```
 
 ### 文件：document.ts
@@ -687,17 +749,17 @@ export type { EditorMaterialData, EditorStyleData, EditorTextureData, EditorValu
 
 ## 4. 注意事项
 
-- 普通实体可按 nest 决定互相嵌套，空 Group 始终可接收；变换和父级变更合并为一笔历史。异形降级后撤销恢复原类型。
+- 普通实体可按 nest 决定互相嵌套，空 Group 始终可接收；变换、布尔和父级变更合并为一笔历史。异形降级后撤销恢复原类型。
 - agent.md 的符号与默认值由源码生成；修改后执行 `npm run guides`，检查时执行 `npm run guides:check`。人工补充请写在 agent-notes 标记之间，重新生成会保留。
 - 库构建把 src/scripts 的目录说明复制到 lib 同名目录；TS 对应 JS/声明，WGSL 作为导入资源编译。Examples 说明只保留在源码，不进入 npm。
 
 <!-- agent-notes:start -->
-暂无额外目录约定。
+- Boolean.ts 负责集合编辑器的 Mesh/数学库布尔适配：Group 不展开；减法保留 B，只替换发生变化的 A。保留未参与运算的后代与世界姿态，整个变更纳入集合历史。轮廓输入不得先三角化；Text/Base 只传实体三角面，不能包含选择描边和关键点。新结果继承来源原始样式及材质，忽略临时选中 order。
 <!-- agent-notes:end -->
 
 ## 5. 中英文搜索关键词
 
 ```xml
-<keywords language="zh">集合 层级 分组 降级 文档 资源 序列化</keywords>
-<keywords language="en">collection hierarchy group downgrade document resource serialization</keywords>
+<keywords language="zh">集合 层级 分组 布尔 并集 裁剪 降级 文档 资源 序列化</keywords>
+<keywords language="en">collection hierarchy group boolean union difference downgrade document resource serialization</keywords>
 ```

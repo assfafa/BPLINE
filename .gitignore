@@ -39,3 +39,5 @@ BPLineJS/src/scripts/Examples/
 
 # Native text outputs; C++ and build recipes remain tracked.
 BPMatrixJS/src/scripts/Geometry/Wasm/build/
+# Native Boolean outputs; Rust source and locked dependencies remain tracked.
+BPMatrixJS/src/scripts/Utils/Bool/build/

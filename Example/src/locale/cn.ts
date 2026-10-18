@@ -123,7 +123,7 @@ export const cn = {
         selectTitle: "统一选择器",
         editorTitle: "集合编辑器",
         helperGridTitle: "辅助网格与标尺",
-        editorHint: "单击选择 · 再次单击文字输入 · 拖动编辑 · E+R/N/P/T/G 创建 · G 组变换 · 右键平移",
+        editorHint: "单击选择 · 拖动编辑 · 按住 − / = 点击目标裁剪 / 合并 · 左上角查看全部快捷键",
         editorSimpleHint: "单击选择 · 拖动移动/调整边角 · 空白处拖动新增",
         helperHint: "完整案例：拖动平移 · 滚轮缩放 · GUI 调整网格与标尺",
         helperSimpleHint: "默认网格与标尺 · 无需字体 · 每帧 helper.update()",

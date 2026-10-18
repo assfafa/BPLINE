@@ -140,6 +140,7 @@ export const mountEditorScene = (options: SceneMountOptions): (() => void) => {
                         gui.add(collection, "mult").listen();
                         gui.add(collection, "nest");
                         gui.add(collection, "raiseSelected");
+                        gui.add(collection, "booleanEnabled");
                         gui.add(collection, "snap").listen();
                         const snapping = gui.addFolder("Snap options");
                         snapping.add(collection.snapOptions, "vertex").listen();

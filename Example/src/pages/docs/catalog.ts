@@ -55,6 +55,7 @@ export const matrixDocumentation: readonly DocumentationItem[] = [
         page("Text", "/docs/geometry/text", "Geometry/Text"),
     ]),
     page("Utils", "/docs/utils", "Utils", [
+        page("Bool", "/docs/utils/bool", "Utils/Bool"),
         page("Inner", "/docs/utils/inner", "Utils/Inner"),
         page("Time", "/docs/utils/time", "Utils/Time"),
         page("UUID", "/docs/utils/uuid", "Utils/UUID"),

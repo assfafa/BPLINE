@@ -8,7 +8,7 @@
 
 | 文件 / 子目录 | 作用 |
 | --- | --- |
-| `Collection/` | 跨类型历史、层级、组变换、被动 Base 编辑和资源文档。 详见该目录的 agent.md。 |
+| `Collection/` | 跨类型历史、层级、组变换、布尔运算、被动 Base 编辑和资源文档。 详见该目录的 agent.md。 |
 | `cursors/` | Phosphor SVG 光标、方向投影和旋转缓存。 详见该目录的 agent.md。 |
 | `EditSwitches.ts` | 为独立工具创建一份默认全开的交互配置。 |
 | `History/` | 选择身份、剪贴板克隆和快照条目读取。 详见该目录的 agent.md。 |
@@ -47,6 +47,8 @@
 | `snapOptions`（公开） | `SnapOptions`；`CreateSnapOptions()` | 三类图形共用的吸附候选开关。 |
 | `hierarchy`（公开） | `Hierarchy`；`由构造参数或初始化过程赋值` | 真实 Group 节点的创建、变换与拖动层级入口。 |
 | `switches`（公开） | `EditSwitches`；`CreateEditSwitches()` | 所有编辑工具共用的指针交互开关，默认全部开启。 |
+| `booleanEnabled`（公开） | `boolean`；`true` | 是否允许按住布尔快捷键点击目标，默认开启；程序 boolean() 不受此开关限制。 |
+| `booleanOperation`（公开） | `BooleanOperation \| null`；`null` | 下一次点击执行的布尔操作，由 EditorKey 按住 - / = 临时设置，null 为普通编辑。 |
 | `_raiseSelected`（内部） | `boolean`；`true` | 是否把选中实体临时提升到 orderMax + 1，默认开启。 |
 | `_orders`（内部） | `EditorOrder`；`new EditorOrder()` | 状态由 `orderMax`、`sourceOrder`、`refreshOrders`、`destroy` 读取或维护；完整处理见对应函数。 |
 | `_activeType`（内部） | `EditorMode`；`"edit"` | 当前模式。（activeType 的内部状态）。 |
@@ -55,7 +57,7 @@
 | `_ngon`（内部） | `boolean`；`true` | 正多边形是否参与合并编辑。（ngon 的内部状态）。 |
 | `_poly`（内部） | `boolean`；`true` | 多边形是否参与合并编辑。（poly 的内部状态）。 |
 | `_text`（内部） | `boolean`；`true` | 文字是否参与合并编辑。（text 的内部状态）。 |
-| `_history`（内部） | `EditHistory`；`new EditHistory(this)` | 状态由 `constructor`、`load`、`push`、`cancel` 读取或维护；完整处理见对应函数。 |
+| `_history`（内部） | `EditHistory`；`new EditHistory(this)` | 状态由 `constructor`、`load`、`push`、`boolean` 读取或维护；完整处理见对应函数。 |
 | `_document`（内部） | `EditorDocumentStore`；`new EditorDocumentStore(this)` | 状态由 `save`、`load`、`loadedNodes`、`documentNodes` 读取或维护；完整处理见对应函数。 |
 | `_clipboard`（内部） | `Mesh[]`；`[]` | 状态由 `copySelected`、`paste` 读取或维护；完整处理见对应函数。 |
 | `_lastClient`（内部） | `Vec2 \| null`；`null` | 状态由 `copySelected`、`paste`、`beginCanvasPointerDown`、`handlePointerMove` 读取或维护；完整处理见对应函数。 |
@@ -63,14 +65,16 @@
 | `_group`（内部） | `boolean`；`true` | 是否允许创建与操作真实层级组。（group 的内部状态）。 |
 | `_mult`（内部） | `boolean`；`true` | 是否保留多个对象。（mult 的内部状态）。 |
 | `_syncing`（内部） | `boolean`；`false` | 状态由 `syncToolSelection`、`syncFromTools`、`convertToBase` 读取或维护；完整处理见对应函数。 |
-| `_pointerOwner`（内部） | `PointerOwner \| null`；`null` | 状态由 `cancel`、`handlePointerDown`、`beginCanvasPointerDown`、`beginHierarchyPointerDown` 读取或维护；完整处理见对应函数。 |
+| `_pointerOwner`（内部） | `PointerOwner \| null`；`null` | 状态由 `boolean`、`cancel`、`startPointerDown`、`beginCanvasPointerDown` 读取或维护；完整处理见对应函数。 |
 | `_selectionGesture`（内部） | `SelectionGesture \| null`；`null` | 状态由 `cancel`、`beginCanvasPointerDown`、`beginGroupCreate`、`handlePointerMove` 读取或维护；完整处理见对应函数。 |
 | `_selectionFrame`（内部） | `Mesh \| null`；`null` | 状态由 `cancel`、`handlePointerMove`、`handlePointerUp`、`updateGroupCreatePreview` 读取或维护；完整处理见对应函数。 |
 | `_creationParent`（内部） | `Group \| null`；`null` | 状态由 `cancel`、`beginCanvasPointerDown`、`attachCreatedMesh`、`handlePointerUp` 读取或维护；完整处理见对应函数。 |
 | `_editMoveStart`（内部） | `Vec2 \| null`；`null` | 状态由 `cancel`、`beginCanvasPointerDown`、`handlePointerMove`、`handlePointerUp` 读取或维护；完整处理见对应函数。 |
 | `_editMovePointerId`（内部） | `number \| null`；`null` | 状态由 `cancel`、`beginCanvasPointerDown`、`handlePointerMove`、`handlePointerUp` 读取或维护；完整处理见对应函数。 |
-| `_touchPointers`（内部） | `按初始化值推断`；`new Set<number>()` | 状态由 `cancel`、`destroy`、`handleWindowBlur`、`handlePointerDown` 读取或维护；完整处理见对应函数。 |
-| `_destroyed`（内部） | `boolean`；`false` | 状态由 `destroy`、`handlePointerDown` 读取或维护；完整处理见对应函数。 |
+| `_touchPointers`（内部） | `按初始化值推断`；`new Set<number>()` | 状态由 `cancel`、`destroy`、`handleWindowBlur`、`startPointerDown` 读取或维护；完整处理见对应函数。 |
+| `_destroyed`（内部） | `boolean`；`false` | 状态由 `boolean`、`destroy`、`startPointerDown` 读取或维护；完整处理见对应函数。 |
+| `_booleanBusy`（内部） | `boolean`；`false` | 是否正在初始化并提交一次布尔运算。（booleanBusy 的内部状态）。 |
+| `_booleanRevision`（内部） | `number`；`0` | 状态由 `boolean`、`cancel`、`undo`、`redo` 读取或维护；完整处理见对应函数。 |
 | `_groupTransform`（内部） | `GroupTransform`；`由构造参数或初始化过程赋值` | 状态由 `constructor`、`activeType`、`update`、`cancel` 读取或维护；完整处理见对应函数。 |
 | `_collectionMove`（内部） | `CollectionMove`；`由构造参数或初始化过程赋值` | 状态由 `constructor`、`cancel`、`beginCanvasPointerDown`、`handlePointerMove` 读取或维护；完整处理见对应函数。 |
 | `_events`（内部） | `AbortController`；`new AbortController()` | 状态由 `constructor`、`destroy` 读取或维护；完整处理见对应函数。 |
@@ -78,6 +82,7 @@
 | `_onModeChange`（内部） | `按初始化值推断`；`new Map<string, (mode: EditorMode) => void>()` | 状态由 `activeType`、`onModeChange`、`onModeChangeDelete` 读取或维护；完整处理见对应函数。 |
 | `_onSave`（内部） | `按初始化值推断`；`new Map<string, (document: EditorDocument) => void>()` | 状态由 `onSave`、`onSaveDelete`、`save` 读取或维护；完整处理见对应函数。 |
 | `_onBase`（内部） | `按初始化值推断`；`new Map<string, (mesh: Mesh) => void>()` | 状态由 `onBase`、`onBaseDelete`、`notifyBase` 读取或维护；完整处理见对应函数。 |
+| `_onBoolean`（内部） | `按初始化值推断`；`new Map<string, (event: BooleanEvent) => void>()` | 状态由 `boolean`、`onBoolean`、`onBooleanDelete` 读取或维护；完整处理见对应函数。 |
 
 #### 构造与案例
 
@@ -151,6 +156,10 @@ const editor = new Editor(scene, render, camera);
 | `selectAll(): void`  | 无返回值，选择全部启用的可编辑实体并遵循 mult 开关。 |
 | `select(meshes: Mesh \| number \| readonly (Mesh \| number)[], operation: SelectionOperation = "replace"): void`  | 根据 Mesh 或运行期 ID 统一更新混合类型选择集。 |
 | `push(meshes: Mesh \| readonly Mesh[]): Mesh[]`  | 由形状类型分发导入对象；Base2D 只允许通过此入口或场景导入。 |
+| `get booleanBusy(): boolean`  | 是否正在初始化并提交一次布尔运算。 |
+| `async boolean(target: Mesh, operation: BooleanOperation): Promise<Mesh[]>`  | 对当前选择 A 与目标 B 做并集或减法；减法保留 B，并集替换双方。 |
+| `onBoolean(key: string, callback: (event: BooleanEvent) => void): void`  | 无返回值。 |
+| `onBooleanDelete(key: string): void`  | 无返回值。 |
 | `update(): void`  | 无返回值。 |
 | `cancel(): void`  | 无返回值。 |
 | `sourceStyle(mesh: Mesh): Style`  | 未叠加选中效果的原始样式。 |
@@ -166,6 +175,7 @@ const editor = new Editor(scene, render, camera);
 | `destroy(): void`  | 无返回值。 |
 | `handleWindowBlur(): void` （内部） | 无返回值。 |
 | `handlePointerDown(event: PointerEvent): void`  | 无返回值。 |
+| `startPointerDown(event: PointerEvent): void` （内部） | 无返回值，建立一次普通或布尔编辑输入。 |
 | `beginPointerDown(event: PointerEvent): void` （内部） | 无返回值。 |
 | `beginCanvasPointerDown(event: PointerEvent, client: Vec2): void` （内部） | 无返回值。 |
 | `attachCreatedMesh(mesh: Mesh): void` （内部） | 无返回值。 |
@@ -182,9 +192,11 @@ const editor = new Editor(scene, render, camera);
 | `moveOptions(owner: PointerOwner \| null): MoveOptions` （内部） | 沿用命中对象所属工具的实时步进、吸附和活动范围。 |
 | `notifyCollectionMove(meshes: Mesh[]): void` （内部） | 整批位置更新后，按类型触发原工具的移动、位置和编辑回调。 |
 | `pick(client: Vec2): Mesh \| null` （内部） | 最上面的可编辑 Mesh。 |
+| `pickBooleanTarget(client: Vec2): Mesh \| null` （内部） | 排除 A 后的最上层实体，Group 不展开。 |
 | `pickEditable(client: Vec2): Mesh \| null` （内部） | 手柄或实体命中的顶层对象。 |
 | `topmost(candidates: readonly (Mesh \| null)[]): Mesh \| null` （内部） | 实际绘制顺序最上面的对象。 |
 | `updateHover(event: PointerEvent): void` （内部） | 无返回值。 |
+| `updateModeHover(event: PointerEvent, client: Vec2): void` （内部） | 无返回值，按当前模式分派普通悬停。 |
 | `updateHierarchyCursor(client: Vec2): void` （内部） | 无返回值。 |
 | `updateGroupCreatePreview(client: Vec2): void` （内部） | 无返回值。 |
 | `updateEditHover(event: PointerEvent, client: Vec2): void` （内部） | 无返回值。 |
@@ -202,9 +214,19 @@ const editor = new Editor(scene, render, camera);
 | `reassignConverted(mesh: Mesh, previous: Geometry2d): void` （内部） | 无返回值。 |
 | `notifyEdit(meshes: Mesh[]): void` （内部） | 无返回值。 |
 
+### 顶层函数
+
+| 名称 | 用途 |
+| --- | --- |
+| `IsBooleanPoly` | 是否需要多边形编辑工具。 |
+
+```ts
+IsBooleanPoly(mesh);
+```
+
 ### 类型索引
 
-`EditorMode`、`EditorShape`、`SelectionOperation`、`PointerOwner`、`SelectionGesture`、`EditorOptions`
+`EditorMode`、`EditorShape`、`SelectionOperation`、`PointerOwner`、`BooleanSnapshot`、`SelectionGesture`、`EditorOptions`
 
 ### 导出关系
 
@@ -217,6 +239,7 @@ export type { EditSwitches } from "./EditSwitches";
 export { default as EditorKey } from "./key";
 export { Editor };
 export type { EditorMode, EditorOptions, EditorShape };
+export type { BooleanEvent, BooleanOperation } from "./Collection/Boolean";
 ```
 
 ## 3. 其他源码文件
@@ -279,6 +302,8 @@ export type { EditSwitches };
 | `groupCode`（公开） | `string`；`"KeyG"` | 单独松开 G 切换组模式。 |
 | `addCode`（公开） | `string`；`"Control"` | 按住时增选。 |
 | `subCode`（公开） | `string`；`"Alt"` | 按住时减选。 |
+| `subtractCode`（公开） | `string`；`"Minus"` | 按住 - 后点击 B，以当前选择 A 减去 B，保留 B。可改为 NumpadSubtract 等键位。 |
+| `unionCode`（公开） | `string`；`"Equal"` | 按住 = 后点击 B，合并当前选择 A 与 B。 |
 | `constrainCode`（公开） | `string`；`"Shift"` | 按住时启用轴向约束。 |
 | `snapCode`（公开） | `string`；`"KeyP"` | 点击后切换吸附。 |
 | `snapVertexCode`（公开） | `string`；`"KeyP+Digit1"` | 切换顶点吸附分项。 |
@@ -299,6 +324,8 @@ export type { EditSwitches };
 | `_originalLeftDrag`（内部） | `boolean`；`由构造参数或初始化过程赋值` | 状态由 `constructor`、`destroy`、`syncCameraControl` 读取或维护；完整处理见对应函数。 |
 | `_originalOFDrag`（内部） | `boolean`；`由构造参数或初始化过程赋值` | 状态由 `constructor`、`destroy`、`syncCameraControl` 读取或维护；完整处理见对应函数。 |
 | `_modifierMode`（内部） | `EditorMode \| null`；`null` | 状态由 `handleKeyDown`、`handleKeyUp`、`handleBlur` 读取或维护；完整处理见对应函数。 |
+| `_booleanOverride`（内部） | `boolean`；`false` | 状态由 `handleKeyDown`、`syncBooleanOperation` 读取或维护；完整处理见对应函数。 |
+| `_previousBooleanOperation`（内部） | `BooleanOperation \| null`；`null` | 状态由 `syncBooleanOperation` 读取或维护；完整处理见对应函数。 |
 | `_nextListenerId`（内部） | `number`；`0` | 类字段；默认值及类型见本行，使用者由外部接口或继承实现提供。 |
 | `_modeListenerKey`（内部） | `string`；``EditorKey:${String(EditorKey._nextListenerId)}`` | 状态由 `constructor`、`destroy` 读取或维护；完整处理见对应函数。 |
 
@@ -322,12 +349,14 @@ const keys = new EditorKey(editor, cameraControl);
 | `handleKeyDown(event: KeyboardEvent): void`  | 记录键位并优先处理编辑器类型组合键。 |
 | `handleKeyUp(event: KeyboardEvent): void`  | 仅在完整按下并松开后执行单键切换，组合键中的 E/P 不单独触发。 |
 | `handleBlur(): void`  | 无返回值。 |
+| `handleFocus(event: FocusEvent): void` （内部） | 无返回值，文字控件接管按键时撤销临时模式。 |
 | `destroy(): void`  | 无返回值。 |
 | `activateBase(code: string): boolean` （内部） | 是否执行了主动降级。 |
 | `queueAction(code: string): boolean` （内部） | 是否命中了对象操作组合。 |
 | `hasExtraModifier(parts: readonly string[]): boolean` （内部） | 是否还有未配置的修饰键。 |
 | `isChordPressed(chord: string): boolean` （内部） | 组合是否完整按住。 |
 | `syncTemporaryOptions(): void` （内部） | 无返回值，更新按住的约束和中心起点并恢复原配置。 |
+| `syncBooleanOperation(): void` （内部） | 无返回值，同步按住的布尔操作，松开和失焦恢复原值。 |
 | `toggleSnap(option: keyof Editor["snapOptions"]): void` （内部） | 无返回值。 |
 | `setSides(sides: number): void` （内部） | 无返回值。 |
 | `resetCamera(): void` （内部） | 无返回值，只复位位置并停止旧惯性。 |

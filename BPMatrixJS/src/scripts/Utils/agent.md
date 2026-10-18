@@ -8,7 +8,7 @@
 
 | 文件 / 子目录 | 作用 |
 | --- | --- |
-| `Bool/` | 纯数值、平面几何、事件坐标和计时工具。 详见该目录的 agent.md。 |
+| `Bool/` | Rust iOverlay 区域运算与 iTriangle 三角化；连续轮廓、三角网和混合输入，来源追踪与空间谓词。 详见该目录的 agent.md。 |
 | `index.ts` | 数值钳制 |
 | `Inner.ts` | 获取当前设备像素比 服务端或无窗口环境下默认返回 1；获取当前窗口实际像素尺寸 宽高会乘以设备像素比；将屏幕坐标转换为画布像素坐标 默认会按当前设备像素比进行换算 |
 | `PlanarGeometry.ts` | 计算有向多边形的两倍面积，符号表示顶点绕向。；检查第一条凸轮廓的边法线是否能分开两条凸轮廓。 完整 SAT 相交检测还需要交换参数再调用一次。；判断二维点是否位于三角形内部或边界上。 |
@@ -49,6 +49,8 @@ export { CheckPrecision } from "./Precision.js";
 export { Time } from "./Time.js";
 export type { TimeLike, TimeUpdateFn } from "./Time.js";
 export { UUID } from "./UUID.js";
+export { Bool, Covers, Difference, FastCollision, GetBounds, Intersection, Intersects, Overlaps, Union, Xor } from "./Bool/index.js";
+export type { BoolBounds, BoolChange, BoolContour, BoolFillRule, BoolGeometry, BoolGeometryData, BoolId, BoolInput, BoolKeep, BoolResult, BoolSide, BoolSource, BoolTriangles } from "./Bool/index.js";
 export { Clamp };
 ```
 

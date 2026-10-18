@@ -1,6 +1,6 @@
 import type CameraControl from "../Control/CameraControl";
 import type Editor from "./index";
-import type { EditorMode, EditorShape } from "./index";
+import type { BooleanOperation, EditorMode, EditorShape } from "./index";
 
 /** 合并编辑器唯一的窗口快捷键监听器，避免三个独立工具重复响应组合键。 */
 class EditorKey {
@@ -52,6 +52,10 @@ class EditorKey {
     public addCode: string = "Control";
     /** 按住时减选。 */
     public subCode: string = "Alt";
+    /** 按住 - 后点击 B，以当前选择 A 减去 B，保留 B。可改为 NumpadSubtract 等键位。 */
+    public subtractCode: string = "Minus";
+    /** 按住 = 后点击 B，合并当前选择 A 与 B。 */
+    public unionCode: string = "Equal";
     /** 按住时启用轴向约束。 */
     public constrainCode: string = "Shift";
     /** 点击后切换吸附。 */
@@ -83,6 +87,8 @@ class EditorKey {
     private readonly _originalLeftDrag: boolean;
     private readonly _originalOFDrag: boolean;
     private _modifierMode: EditorMode | null = null;
+    private _booleanOverride: boolean = false;
+    private _previousBooleanOperation: BooleanOperation | null = null;
     private static _nextListenerId: number = 0;
     private readonly _modeListenerKey: string = `EditorKey:${String(EditorKey._nextListenerId)}`;
 
@@ -112,6 +118,7 @@ class EditorKey {
         window.addEventListener("keydown", this.handleKeyDown.bind(this), { signal });
         window.addEventListener("keyup", this.handleKeyUp.bind(this), { signal });
         window.addEventListener("blur", this.handleBlur.bind(this), { signal });
+        window.addEventListener("focusin", this.handleFocus.bind(this), { signal });
         editor.render.canvas.addEventListener("pointerdown", this.handleEditorPointerDown.bind(this),
             { signal, capture: true });
         this.syncCameraControl();
@@ -159,6 +166,11 @@ class EditorKey {
             { code: this.createGroupCode, shape: "group" },
         ];
         let used = this.queueAction(code);
+        // 布尔是按住状态，不排入 keyup 点击队列，长按自动重复不会重复运算。
+        if (this._booleanOverride) {
+            used = true;
+            this._usedInChord.add(code);
+        }
         // 主动降级在首次完整按下时执行，不等待松开，也不接受自动重复。
         if (wasPressed === false && event.repeat === false && this.activateBase(code)) {
             used = true;
@@ -300,6 +312,14 @@ class EditorKey {
         this.syncCameraControl();
     }
 
+    /** @param event 焦点进入事件 @example this.handleFocus(event); @returns 无返回值，文字控件接管按键时撤销临时模式。 */
+    private handleFocus(event: FocusEvent): void {
+        // 按住符号键后进入文字输入也不能留下几何布尔状态。
+        if (IsTypingTarget(event.target)) {
+            this.handleBlur();
+        }
+    }
+
     /** @example keys.destroy(); @returns 无返回值。 */
     public destroy(): void {
         this._events.abort();
@@ -433,6 +453,7 @@ class EditorKey {
 
     /** @example this.syncTemporaryOptions(); @returns 无返回值，更新按住的约束和中心起点并恢复原配置。 */
     private syncTemporaryOptions(): void {
+        this.syncBooleanOperation();
         const tools = [this.editor.rectEditTool, this.editor.ngonEditTool,
             this.editor.polyEditTool, this.editor.textEditTool];
         const constrained = this.isChordPressed(this.constrainCode);
@@ -469,6 +490,36 @@ class EditorKey {
                     this._previousOrigin.delete(tool);
                 }
             }
+        }
+    }
+
+    /** @example this.syncBooleanOperation(); @returns 无返回值，同步按住的布尔操作，松开和失焦恢复原值。 */
+    private syncBooleanOperation(): void {
+        let operation: BooleanOperation | null = null;
+        const bindings: { code: string; operation: BooleanOperation }[] = [
+            { code: this.unionCode, operation: "union" },
+            { code: this.subtractCode, operation: "difference" },
+        ];
+        // 显式组合可自定义；未配置的 Ctrl/Meta 等修饰键保留浏览器缩放语义。
+        for (const binding of bindings) {
+            const parts = binding.code.split("+").map(NormalizeCode);
+            // 两个操作同时按住时减法优先，松开后回到仍然按住的另一项。
+            if (this.isChordPressed(binding.code) && this.hasExtraModifier(parts) === false) {
+                operation = binding.operation;
+            }
+        }
+        // 首次覆盖保存程序配置，重复 keydown 不改写恢复值。
+        if (operation !== null) {
+            // 没有按住覆盖时才读取原值。
+            if (this._booleanOverride === false) {
+                this._previousBooleanOperation = this.editor.booleanOperation;
+                this._booleanOverride = true;
+            }
+            this.editor.booleanOperation = operation;
+        } else if (this._booleanOverride) {
+            // 松开、失焦或额外修饰键进入时立即退出按住操作。
+            this.editor.booleanOperation = this._previousBooleanOperation;
+            this._booleanOverride = false;
         }
     }
 

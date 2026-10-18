@@ -22,7 +22,7 @@ BPLineJS is a TypeScript WebGPU 2D renderer and vector editor for interactive gr
 
 Start with the [combined selector](https://assfafa.github.io/BPLINE/#/example/select), [collection editor](https://assfafa.github.io/BPLINE/#/example/editor), or [helper grid](https://assfafa.github.io/BPLINE/#/example/helper/grid). Each editor and helper example includes a complete standalone TypeScript entry, including the renderer, camera, animation loop, resize handling, and cleanup. Full examples include camera controls and GUI configuration.
 
-Text fonts must be registered before creating text geometry. Poly uses a single nonzero-winding contour and does not expose separate holes or Boolean operations; Base2D can retain inner and outer contours from an existing triangulated mesh. Editor JSON preserves hierarchy, original order, appearance, transforms, and geometry parameters; fonts and URL-less external textures need to be supplied again across sessions.
+Text fonts must be registered before creating text geometry. Poly uses a single nonzero-winding contour without separate holes; Base2D can retain inner and outer contours from an existing triangulated mesh. BPMatrixJS provides Boolean operations separately through `Utils/Bool`, with source tracking and support for mixed contours and triangle meshes. Editor JSON preserves hierarchy, original order, appearance, transforms, and geometry parameters; fonts and URL-less external textures need to be supplied again across sessions.
 
 ## Search keywords
 
@@ -44,12 +44,12 @@ npm install bplinejs@0.1.103
 The current beta adds the editor and helper workflows described above:
 
 ~~~bash
-npm install bplinejs@0.1.104-beta.19 bpmatrixjs@0.1.104-beta.15
+npm install bplinejs@0.1.104-beta.20 bpmatrixjs@0.1.104-beta.16
 # For the complete examples with GUI controls:
 npm install lil-gui
 ~~~
 
-Release notes: [BPLineJS 0.1.104-beta.19](BPLineJS/releases/0.1.104-beta.19.md) and [BPMatrixJS 0.1.104-beta.15](BPMatrixJS/releases/0.1.104-beta.15.md). Text parsing, shaping, and triangulation use WebAssembly with reusable caches. Vertical text now aligns within independent columns; baseline selects an anchor while geometry stays centered. Await font registration before creating text synchronously. Examples include custom shaders, video textures, editors, and adaptive grids. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
+Release notes: [BPLineJS 0.1.104-beta.20](BPLineJS/releases/0.1.104-beta.20.md) and [BPMatrixJS 0.1.104-beta.16](BPMatrixJS/releases/0.1.104-beta.16.md). Text parsing, shaping, and triangulation use WebAssembly with reusable caches. Await font registration before creating text synchronously. BPMatrixJS provides WASM Boolean operations for contours and triangle meshes through `bpmatrixjs/Utils/Bool`; await `Bool.ready()` before use. The collection editor supports subtraction and union with shared undo history; select A, hold `-` and click B to cut A while retaining B, or hold `=` and click B to merge both. Its complete example includes all keyboard tips. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
 
 ## Docker
 
@@ -101,7 +101,9 @@ Source files place the main class directly after imports, with field defaults an
 
 Text registration, shaping, curve sampling, and triangulation run in WebAssembly. Await `RegisterTextFont(name, bytes)` in BPMatrixJS or `Font.register(name, url)` in BPLineJS before creating text. Repeated glyphs and identical text layouts reuse bounded caches. TTF, OTF, WOFF, and WOFF2 are supported.
 
-Run `npm run build:wasm` in BPMatrixJS to compile the C++ sources with Emscripten; `npm run build:lib` includes this step. The Dockerfile provides the compiler. Verified dependency sources and object files stay in the project's `.local/wasm-text` directory. npm consumers receive the prebuilt WASM module and need no C++ toolchain. Third-party notices are retained in [Geometry/Wasm/LICENSE](BPMatrixJS/src/scripts/Geometry/Wasm/LICENSE) and included in the package.
+Run `npm run build:wasm:text` in BPMatrixJS to compile the C++ sources with Emscripten. The Dockerfile provides the compiler. Verified dependency sources and object files stay in the project's `.local/wasm-text` directory. Third-party notices are retained in [Geometry/Wasm/LICENSE](BPMatrixJS/src/scripts/Geometry/Wasm/LICENSE) and included in the package.
+
+Boolean operations use Rust iOverlay and iTriangle under MIT. Run `npm run build:wasm:bool` to compile the locked dependencies; the verified Rust toolchain and caches stay in `.local/wasm-bool`. Complete dependency notices are retained in [Utils/Bool/LICENSE](BPMatrixJS/src/scripts/Utils/Bool/LICENSE). `npm run build:wasm` builds both native modules, and `npm run build:lib` builds both before compiling TypeScript. npm consumers receive the prebuilt WASM modules and need no native toolchain.
 
 In BPMatrixJS, `npm pack` and `npm publish` run `prepack` automatically: build WASM, compile TypeScript, then package the matching outputs. A failed build stops packaging. Do not use `--ignore-scripts` when preparing a release.
 

@@ -8,6 +8,7 @@
 
 | 文件 / 子目录 | 作用 |
 | --- | --- |
+| `Bool.test.mjs` | 本目录维护的配置、资源或验证文件。 |
 | `fixtures/` | 数学、几何、字体与边界行为的 Node 检查。 详见该目录的 agent.md。 |
 | `generate-text-fixtures.py` | 本目录维护的配置、资源或验证文件。 |
 | `math-versions.test.mjs` | 本目录维护的配置、资源或验证文件。 |
@@ -25,6 +26,22 @@
 本目录没有 index.ts；由上级入口或对应调用模块引入，不为目录说明额外创建空桶文件。
 
 ## 3. 其他源码文件
+
+### 文件：Bool.test.mjs
+
+
+### 顶层函数
+
+| 名称 | 用途 |
+| --- | --- |
+| `Translation` | 仿射矩阵。 |
+| `Box` | 连续矩形输入。 |
+| `Area` | 实体三角面积并验证所有面为 CW。 |
+| `Near` | 无返回值。 |
+
+```ts
+Translation(1, 2);
+```
 
 ### 文件：math-versions.test.mjs
 

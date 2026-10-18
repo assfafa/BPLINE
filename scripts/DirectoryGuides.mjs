@@ -25,9 +25,13 @@ const nativePurposes = new Map([
     ["Text.cpp", "多行排版、字距/行距/对齐、重叠字形合并、居中与批量几何输出。"],
     ["CMakeLists.txt", "固定原生源文件与编译选项，生成 Emscripten 模块和独立 WASM。"],
     ["build.py", "按 SHA-256 校验下载依赖，在项目缓存编译，将运行产物复制到 lib。"],
+    ["Cargo.toml", "Rust WASM 原生入口、锁定依赖版本与 release 编译配置。"],
+    ["Cargo.lock", "Cargo 解析出的全部原生依赖版本和校验和。"],
+    ["lib.rs", "原生数值缓冲协议、i64 布尔与碰撞谓词、孔洞三角化及错误返回。"],
 ]);
 
 const sections = new Map([
+    ["Utils/Bool", ["布尔几何 Boolean WASM", "Rust iOverlay 区域运算与 iTriangle 三角化；连续轮廓、三角网和混合输入，来源追踪与空间谓词。", "布尔 并集 减法 交集 差集 打孔 分裂 来源 碰撞 覆盖", "boolean union difference intersection xor holes split provenance collision covers wasm rust", "await Bool.ready() 只初始化一次，后续运算同步。src 保存 Rust 与锁定依赖；build 是忽略的产物目录。所有依赖按 MIT 使用，LICENSE 随包复制。缓存和工具链位于 WSL .local/wasm-bool。"]],
     ["Geometry/Wasm", ["文字原生计算 Text WASM", "C++ 字体解码、HarfBuzz 排版、曲线采样、nonzero 三角化与有界缓存。", "文字 字体 原生 编译 缓存 孔洞", "text font wasm native build cache winding holes", "build:wasm 在 build 生成加载器和 WASM；src 保存 C++。依赖与对象缓存位于根目录 .local/wasm-text。只使用 MIT 依赖，LICENSE 随包复制。注册必须 await，几何创建同步。"]],
     ["Camera", ["相机 Camera", "正交视口、坐标投影、缩放和相机版本。", "相机 视口 投影 缩放 旋转", "camera viewport projection zoom rotation", "zoomVersion 只记录实际缩放变化；变换与投影按版本同步，Y 正方向向上。"]],
     ["Color", ["颜色 Color", "归一化 RGBA、十六进制转换和颜色订阅。", "颜色 色值 透明度 订阅", "color rgba hex opacity subscription", "修改颜色必须通过 setter 或方法提交；订阅按消费者和字段区分。"]],
@@ -37,7 +41,7 @@ const sections = new Map([
     ["Editor/NGonEditTool", ["正多边形编辑器 NGonEditTool", "内外圈编辑、正多边形边数和创建方向。", "正多边形 等边形 圆环 半径 内圈 外圈", "ngon regular polygon annulus radius inner outer", "默认中心起笔；Shift 临时采用角点起笔。10 边及以上不参与顶点吸附；自动曲线精度不改变正多边形边数。"]],
     ["Editor/PolyEditTool", ["多边形编辑器 PolyEditTool", "逐点绘制、沿边插点、顶点拖动及自由组缩放。", "多边形 折线 顶点 插点 自交 开放 闭合", "polygon polyline vertex insert self-intersection open closed", "只编辑单轮廓 Poly2D，不定义独立孔轮廓；新建逐点单击，右键提交。开放路径关闭填充，保留原始节点顺序。"]],
     ["Editor/TextEditTool", ["文字编辑器 TextEditTool", "排版矩形编辑、文字光标输入、选区与独立输入历史。", "文字 字体 光标 选区 输入 字距 行距", "text font caret selection input letter-spacing line-spacing", "命中、吸附和编辑手柄使用排版包围盒，不扫描字形三角面；空文字退出输入后删除。文字输入保留原生剪贴板与撤销快捷键。"]],
-    ["Editor/Collection", ["集合编辑内部模块 Collection", "跨类型历史、层级、组变换、被动 Base 编辑和资源文档。", "集合 层级 分组 降级 文档 资源 序列化", "collection hierarchy group downgrade document resource serialization", "普通实体可按 nest 决定互相嵌套，空 Group 始终可接收；变换和父级变更合并为一笔历史。异形降级后撤销恢复原类型。"]],
+    ["Editor/Collection", ["集合编辑内部模块 Collection", "跨类型历史、层级、组变换、布尔运算、被动 Base 编辑和资源文档。", "集合 层级 分组 布尔 并集 裁剪 降级 文档 资源 序列化", "collection hierarchy group boolean union difference downgrade document resource serialization", "普通实体可按 nest 决定互相嵌套，空 Group 始终可接收；变换、布尔和父级变更合并为一笔历史。异形降级后撤销恢复原类型。"]],
     ["Editor/Snap", ["吸附 Snap", "顶点、边线、交点、细格及旋转候选的屏幕距离比较。", "吸附 顶点 边线 交点 网格 旋转 步进", "snap vertex edge intersection grid rotation step", "总开关默认关闭，四个分项默认开启；距离以 CSS 屏幕像素比较，步进与吸附按更近的候选决定。"]],
     ["Editor/History", ["编辑记录 History", "选择身份、剪贴板克隆和快照条目读取。", "历史 快照 选择 编号 克隆", "history snapshot selection id clone", "历史比较用户输入和基准精度，不能把临时选择样式或自动精度当作用户编辑。"]],
     ["Editor/Styles", ["编辑默认样式 Editor Styles", "独立绘制模板与黄色边框/关键点模板。", "编辑器 默认 样式 模板 黄色 边框", "editor default style template yellow border", "工厂每次返回独立 Style；Rect 显示边中点，NGon/Poly 只显示原始顶点。模板在字段初始化，构造只做场景接入。"]],
@@ -83,7 +87,7 @@ const Directories = (root, directory) => {
     // 只扫描维护目录，生成产物和依赖目录由打包流程处理。
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
         if (entry.isDirectory() && !entry.name.startsWith(".") && !excluded.has(entry.name) &&
-            !(entry.name === "build" && directory.replaceAll("\\", "/").endsWith("/Geometry/Wasm"))) {
+            !(entry.name === "build" && (directory.replaceAll("\\", "/").endsWith("/Geometry/Wasm") || directory.replaceAll("\\", "/").endsWith("/Utils/Bool")))) {
             result.push(...Directories(root, join(directory, entry.name)));
         }
     }
@@ -337,7 +341,7 @@ const BuildGuide = (root, directory, notes) => {
     const path = relative(root, directory).replaceAll("\\", "/");
     const metadata = Description(path);
     const entries = readdirSync(directory, { withFileTypes: true }).filter((entry) => entry.name !== "agent.md" && !entry.name.startsWith(".") && !excluded.has(entry.name) &&
-        !(entry.name === "build" && path === "src/scripts/Geometry/Wasm"));
+        !(entry.name === "build" && (path === "src/scripts/Geometry/Wasm" || path === "src/scripts/Utils/Bool")));
     entries.sort((left, right) => left.name.localeCompare(right.name, "en"));
     const name = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).name;
     const lines = ["# " + metadata[0], "", "目录：`" + name + "/" + (path || ".") + "`", "", "## 1. 文件结构与作用", "", metadata[1], "", "| 文件 / 子目录 | 作用 |", "| --- | --- |"];

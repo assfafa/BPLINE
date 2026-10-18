@@ -650,14 +650,14 @@ interface HierarchyGesture {
 }
 
 /** @param node 移动对象 @param target 新父节点 @example Reparent(mesh, group); @returns 无返回值。 */
-const Reparent = (node: HierarchyNode, target: Group): void => {
+const Reparent = (node: Group, target: Group): void => {
     const world = [...node.ensureWorldMatrix().data];
     target.add(node);
     SetWorldMatrix(node, world);
 };
 
 /** @param node 目标节点 @param world 期望世界矩阵 @example SetWorldMatrix(mesh, world); @returns 无返回值。 */
-const SetWorldMatrix = (node: HierarchyNode, world: ArrayLike<number>): void => {
+const SetWorldMatrix = (node: Group, world: ArrayLike<number>): void => {
     let local = Array.from(world);
     // 先消去新父级矩阵，再写回本地矩阵，保持释放前后的世界外观。
     if (node.parent !== null) {

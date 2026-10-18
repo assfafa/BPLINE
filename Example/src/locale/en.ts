@@ -125,7 +125,7 @@ export const en = {
         selectTitle: "Unified selection",
         editorTitle: "Collection editor",
         helperGridTitle: "Grid and rulers",
-        editorHint: "Click to select · Click text again to type · Drag to edit · E+R/N/P/T/G create · G transforms · Right drag pans",
+        editorHint: "Click to select · Drag to edit · Hold − / = and click to subtract / union · All keys at top left",
         editorSimpleHint: "Click to select · Drag to move/resize · Drag empty space to create",
         helperHint: "Full example: drag to pan · Wheel to zoom · GUI adjusts grid and rulers",
         helperSimpleHint: "Default grid and rulers · No font needed · Call helper.update() each frame",

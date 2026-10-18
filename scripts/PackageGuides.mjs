@@ -12,7 +12,7 @@ const CopyGuides = (directory) => {
     // 本地案例和字体资源不属于库输出，也不携带其目录说明。
     if (path === "Examples" || path.startsWith("Examples/")) {
         return 0;
-    } else if (path === "Geometry/Wasm/build" || path === "Geometry/Wasm/src") {
+    } else if (path === "Geometry/Wasm/build" || path === "Geometry/Wasm/src" || path === "Utils/Bool/build" || path === "Utils/Bool/src") {
         // Native source/build guides stay in the repository; runtime outputs contain only deployable files.
         return 0;
     } else {

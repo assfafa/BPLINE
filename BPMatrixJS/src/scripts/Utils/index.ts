@@ -27,4 +27,6 @@ export { CheckPrecision } from "./Precision.js";
 export { Time } from "./Time.js";
 export type { TimeLike, TimeUpdateFn } from "./Time.js";
 export { UUID } from "./UUID.js";
+export { Bool, Covers, Difference, FastCollision, GetBounds, Intersection, Intersects, Overlaps, Union, Xor } from "./Bool/index.js";
+export type { BoolBounds, BoolChange, BoolContour, BoolFillRule, BoolGeometry, BoolGeometryData, BoolId, BoolInput, BoolKeep, BoolResult, BoolSide, BoolSource, BoolTriangles } from "./Bool/index.js";
 export { Clamp };

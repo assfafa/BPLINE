@@ -21,6 +21,7 @@ const firstTriangle = [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 0, y: 4 }] as const;
 const secondTriangle = [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 0, y: 2 }] as const;
 const overlap = TriangleOverlapArea(firstTriangle, secondTriangle);`,
     methods: [
+        entry("Bool: WASM Boolean operations", "await Bool.ready() 后使用 Union/Difference/Intersection/Xor，支持连续轮廓与三角网混合输入、孔和来源追踪；详见 Bool。", "Await Bool.ready() before Union/Difference/Intersection/Xor, supporting mixed contours and triangle meshes, holes and source tracking; see Bool."),
         entry("CheckPrecision(value: number): number", "曲线细分整数校验，范围 1…4095。", "Validate an integer curve subdivision value in 1…4095."),
         entry("TransformPoint2D / InverseTransformPoint2D / ProjectSegmentPoint / ContainsPolygonPoint", "公共双精度变换、线段投影和单轮廓包含判断，详见 PointGeometry。", "Shared double-precision transforms, segment projection and contour containment; see PointGeometry."),
         entry("Clamp(value: number, min: number, max: number): number", "把数值限制在最小值与最大值之间。", "Constrain a number between minimum and maximum values."),
@@ -31,6 +32,7 @@ const overlap = TriangleOverlapArea(firstTriangle, secondTriangle);`,
         entry("TriangleOverlapArea(candidate: Triangle2D, selection: Triangle2D): number", "计算两个三角形的交叠面积，支持两种绕向。", "Compute overlap area for two triangles regardless of winding."),
     ],
     links: [
+        { label: "Bool", to: "/docs/utils/bool" },
         { label: "PointGeometry", to: "/docs/utils/point-geometry" },
         { label: "PlanarGeometry", to: "/docs/utils/planar-geometry" },
         { label: "CheckPrecision", to: "/docs/utils/precision" },

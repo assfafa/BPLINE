@@ -58,6 +58,17 @@ const themeObserver = new MutationObserver(syncTheme);
 themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 const cameraControl = new CameraControl(camera, render);
 new EditorKey(editor, cameraControl);
+// Keyboard tips (tap unless marked hold):
+// V view; E edit; E+R/N/P/T/G create Rect/NGon/Poly/Text/Group; G transform selection.
+// Hold Ctrl / Alt: add / subtract selection. Hold - and click B: A-B, retain B.
+// Hold = and click B: union A+B. Group is excluded from Boolean operations.
+// Hold Shift: axis/uniform constraints, Rect center origin, default NGon corner origin.
+// Hold C: temporary center origin. M multiple selection; F Poly closure.
+// S stepping; P master snap; P+1/2/3/4 vertex/edge/intersection/grid snap.
+// NGon: 3..9 sides; hold 1..9 with 0 for 10..90 sides.
+// B convert to Base; Delete remove; Esc cancel; Space reset camera position.
+// Ctrl+A/C/X/V select all/copy/cut/paste; Ctrl+Z undo; Ctrl+Y or Ctrl+Shift+Z redo.
+// Ctrl+S returns JSON through onSave. During text input, these actions edit the text.
 editor.textEditTool.fontFamily = "MiSans";
 editor.textEditTool.fontSize = 18;
 let saved: EditorDocument | null = null;
@@ -178,6 +189,7 @@ gui.add(editor, "activeType", ["view", "edit", "add", "sub", "group"]).listen();
 gui.add(editor, "mult").listen();
 gui.add(editor, "nest");
 gui.add(editor, "raiseSelected");
+gui.add(editor, "booleanEnabled");
 gui.add(editor, "snap").listen();
 const snapping = gui.addFolder("Snap options");
 snapping.add(editor.snapOptions, "vertex").listen();

@@ -1,5 +1,6 @@
 import type { NGonUVMode } from "bpmatrixjs/Geometry/NGon";
 import { Vec2 } from "bpmatrixjs/Math/Vec2";
+import { Bool } from "bpmatrixjs/Utils/Bool";
 import type Camera from "../Camera";
 import type Color from "../Color";
 import Base2D from "../Geometry/Base2D";
@@ -18,6 +19,8 @@ import Text from "../Text";
 import type { Geometry2d, Material2d } from "../global-types";
 import BaseChange from "./Collection/BaseChange";
 import BaseEditTool from "./Collection/BaseEditTool";
+import BooleanChange from "./Collection/Boolean";
+import type { BooleanEvent, BooleanOperation } from "./Collection/Boolean";
 import EditorGroup from "./Collection/EditorGroup";
 import GroupTransform from "./Collection/GroupTransform";
 import Hierarchy, { Reparent } from "./Collection/Hierarchy";
@@ -79,6 +82,10 @@ class Editor {
     public readonly hierarchy: Hierarchy;
     /** 所有编辑工具共用的指针交互开关，默认全部开启。 */
     public readonly switches: EditSwitches = CreateEditSwitches();
+    /** 是否允许按住布尔快捷键点击目标，默认开启；程序 boolean() 不受此开关限制。 */
+    public booleanEnabled: boolean = true;
+    /** 下一次点击执行的布尔操作，由 EditorKey 按住 - / = 临时设置，null 为普通编辑。 */
+    public booleanOperation: BooleanOperation | null = null;
     /** 是否把选中实体临时提升到 orderMax + 1，默认开启。 */
     private _raiseSelected: boolean = true;
     private readonly _orders: EditorOrder = new EditorOrder();
@@ -105,6 +112,8 @@ class Editor {
     private _editMovePointerId: number | null = null;
     private readonly _touchPointers = new Set<number>();
     private _destroyed: boolean = false;
+    private _booleanBusy: boolean = false;
+    private _booleanRevision: number = 0;
     private readonly _groupTransform: GroupTransform;
     private readonly _collectionMove: CollectionMove;
     private readonly _events: AbortController = new AbortController();
@@ -112,6 +121,7 @@ class Editor {
     private readonly _onModeChange = new Map<string, (mode: EditorMode) => void>();
     private readonly _onSave = new Map<string, (document: EditorDocument) => void>();
     private readonly _onBase = new Map<string, (mesh: Mesh) => void>();
+    private readonly _onBoolean = new Map<string, (event: BooleanEvent) => void>();
 
     /**
      * 创建共用选择器和一个网格，分别构建无自动事件的形状编辑器。
@@ -696,6 +706,96 @@ class Editor {
         return this._history.batch(Apply);
     }
 
+    /** @example const pending = editor.booleanBusy; @returns 是否正在初始化并提交一次布尔运算。 */
+    public get booleanBusy(): boolean {
+        return this._booleanBusy;
+    }
+
+    /**
+     * 对当前选择 A 与目标 B 做并集或减法；减法保留 B，并集替换双方。
+     * @param target 后点击的普通实体，不能已在 A 中；Group 不参与运算
+     * @param operation union 或 difference
+     * @example const pieces = await editor.boolean(cutter, "difference");
+     * @returns 新选择的结果实体；无选择、取消或加载期间输入变化时返回空数组。
+     */
+    public async boolean(target: Mesh, operation: BooleanOperation): Promise<Mesh[]> {
+        /** @param mesh 当前选择 @example Accepts(mesh); @returns 是否可作为面积运算输入。 */
+        const Accepts = (mesh: Mesh): boolean => BooleanChange.accepts(mesh);
+        const subjects = this.actives.filter(Accepts);
+        const present = this.scene.ensureLists();
+        // 不把进行中的绘制或另一次尚未完成的加载合入同一笔历史。
+        if (this._destroyed === false && this._booleanBusy === false && this._pointerOwner === null &&
+            this.polyEditTool.isDrawing === false && subjects.length > 0 &&
+            BooleanChange.accepts(target) && subjects.includes(target) === false && present.includes(target)) {
+            this.textEditTool.finishEditing();
+            this._history.commit();
+            this._booleanBusy = true;
+            const revision = this._booleanRevision;
+            const selection = [...this.actives];
+            const zoom = this.camera.zoom;
+            /** @param mesh 运算输入 @example Snapshot(mesh); @returns 加载期间用于检测失效的输入快照。 */
+            const Snapshot = (mesh: Mesh): BooleanSnapshot => ({
+                mesh, geometry: mesh.data, version: mesh.data?.version, parent: mesh.parent,
+                matrix: Array.from(mesh.getRenderMatrix(this.camera).data),
+            });
+            const snapshots = [...subjects, target].map(Snapshot);
+            try {
+                await Bool.ready();
+                const current = this.scene.ensureLists();
+                /** @param saved 加载前的快照 @example Unchanged(saved); @returns 是否仍可安全提交此次点击。 */
+                const Unchanged = (saved: BooleanSnapshot): boolean => {
+                    const mesh = saved.mesh;
+                    const matrix = mesh.getRenderMatrix(this.camera).data;
+                    /** @param value 原矩阵分量 @param index 分量下标 @example SameEntry(value, 0); @returns 是否未改变。 */
+                    const SameEntry = (value: number, index: number): boolean => value === matrix[index];
+                    return current.includes(mesh) && mesh.parent === saved.parent && mesh.data === saved.geometry &&
+                        mesh.data?.version === saved.version && saved.matrix.every(SameEntry);
+                };
+                /** @param mesh 原选择成员 @param index 选择顺序 @example SameSelection(mesh, 0); @returns 是否保留原选择。 */
+                const SameSelection = (mesh: Mesh, index: number): boolean => mesh === this.actives[index];
+                // 首次 WASM 下载可能跨过取消、销毁、相机操作或外部改图，不提交过期点击。
+                if (revision === this._booleanRevision && zoom === this.camera.zoom &&
+                    selection.length === this.actives.length && selection.every(SameSelection) && snapshots.every(Unchanged)) {
+                    const change = new BooleanChange(this, subjects, target, operation);
+                    // 关闭 Poly 工具时不产生无工具负责的结果，也不删除任何输入。
+                    if (this._poly === false && change.meshes.some(IsBooleanPoly)) {
+                        throw new Error("Enable editor.poly before creating polygon Boolean results.");
+                    }
+                    /** @example Apply(); @returns 无返回值，选择、层级和几何替换同属一笔历史。 */
+                    const Apply = (): void => {
+                        this.select([]);
+                        change.apply();
+                        this.setSelection(change.meshes);
+                        this.refreshOrders();
+                    };
+                    this._history.batch(Apply);
+                    const event: BooleanEvent = { operation, subjects, target, meshes: change.meshes, result: change.result };
+                    // 完成后通知所有订阅者，可通过 result 关联新 Mesh 与来源 ID。
+                    for (const callback of this._onBoolean.values()) {
+                        callback(event);
+                    }
+                    return [...change.meshes];
+                } else {
+                    return [];
+                }
+            } finally {
+                this._booleanBusy = false;
+            }
+        } else {
+            return [];
+        }
+    }
+
+    /** @param key 订阅标识 @param callback 完成通知 @example editor.onBoolean("panel", Refresh); @returns 无返回值。 */
+    public onBoolean(key: string, callback: (event: BooleanEvent) => void): void {
+        this._onBoolean.set(key, callback);
+    }
+
+    /** @param key 订阅标识 @example editor.onBooleanDelete("panel"); @returns 无返回值。 */
+    public onBooleanDelete(key: string): void {
+        this._onBoolean.delete(key);
+    }
+
     /** @example editor.update(); @returns 无返回值。 */
     public update(): void {
         this.refreshOrders();
@@ -711,6 +811,7 @@ class Editor {
 
     /** @example editor.cancel(); @returns 无返回值。 */
     public cancel(): void {
+        this._booleanRevision += 1;
         // 子工具不自动监听集合输入；中断单指时必须主动清除它登记的触点。
         if (this._editMovePointerId !== null && this._touchPointers.has(this._editMovePointerId)) {
             const event = new PointerEvent("pointercancel", {
@@ -783,12 +884,14 @@ class Editor {
 
     /** @example editor.undo(); @returns 是否恢复了原来的几何类型和数据。 */
     public undo(): boolean {
+        this._booleanRevision += 1;
         this.textEditTool.finishEditing();
         return this._history.undo();
     }
 
     /** @example editor.redo(); @returns 是否重做了下一批编辑。 */
     public redo(): boolean {
+        this._booleanRevision += 1;
         this.textEditTool.finishEditing();
         return this._history.redo();
     }
@@ -900,6 +1003,16 @@ class Editor {
 
     /** @param event 指针按下事件 @example editor.handlePointerDown(event); @returns 无返回值。 */
     public handlePointerDown(event: PointerEvent): void {
+        // 原生模块初始化期间不启动第二次编辑；松开键和 Escape 仍由快捷键正常处理。
+        if (this._booleanBusy) {
+            event.preventDefault();
+        } else {
+            this.startPointerDown(event);
+        }
+    }
+
+    /** @param event 指针按下事件 @example this.startPointerDown(event); @returns 无返回值，建立一次普通或布尔编辑输入。 */
+    private startPointerDown(event: PointerEvent): void {
         this._history.begin();
         // 第二根手指接管镜头时终止单指编辑，直到全部触点松开。
         if (event.pointerType === "touch") {
@@ -949,7 +1062,20 @@ class Editor {
             this.textEditTool.finishEditing();
         }
         // 当前模式独占此类输入，避免多个编辑器同时响应。
-        if (this._activeType === "group") {
+        if (this.booleanEnabled && this.booleanOperation !== null && hadSelection &&
+            this.switches.pick && this.polyEditTool.isDrawing === false) {
+            const target = this.pickBooleanTarget(client);
+            // 空白、组框或选中对象自身只消耗点击，避免误启动新增或平移。
+            if (target !== null) {
+                /** @param error 加载或输入错误 @example Report(error); @returns 无返回值，场景保留原输入。 */
+                const Report = (error: unknown): void => {
+                    console.error("Editor Boolean operation failed:", error);
+                };
+                void this.boolean(target, this.booleanOperation).catch(Report);
+            }
+            this._pointerOwner = "boolean";
+            event.preventDefault();
+        } else if (this._activeType === "group") {
             // 禁用的组动作不应抢占选择或其他手势。
             const action = this._groupTransform.hover(client);
             // 命中且允许的动作才建立组手势。
@@ -1462,6 +1588,19 @@ class Editor {
         return null;
     }
 
+    /** @param client 窗口点 @example this.pickBooleanTarget(client); @returns 排除 A 后的最上层实体，Group 不展开。 */
+    private pickBooleanTarget(client: Vec2): Mesh | null {
+        const hits = this.selector.SelectPicker(new MouseEvent("mousemove", { clientX: client.x, clientY: client.y }));
+        // 选中 A 会临时提升 order，仍需穿过它命中被覆盖的剪裁对象 B。
+        for (const mesh of Select.Sort(hits, "desc")) {
+            // 跳过辅助对象、开放路径、关闭类型及本次操作主体。
+            if (this.actives.includes(mesh) === false && this.isMeshEnabled(mesh) && BooleanChange.accepts(mesh)) {
+                return mesh;
+            }
+        }
+        return null;
+    }
+
     /** @param client 窗口坐标 @example const mesh = this.pickEditable(client); @returns 手柄或实体命中的顶层对象。 */
     private pickEditable(client: Vec2): Mesh | null {
         const rotationCandidates = [
@@ -1519,6 +1658,24 @@ class Editor {
     /** @param event 鼠标移动或松开事件 @example this.updateHover(event); @returns 无返回值。 */
     private updateHover(event: PointerEvent): void {
         const client = new Vec2(event.clientX, event.clientY);
+        // 符号按住时提示目标拾取，不能继续显示角点缩放或新建文字的光标。
+        if (this._booleanBusy) {
+            this.render.canvas.style.cursor = "progress";
+        } else if (this.booleanEnabled && this.booleanOperation !== null && this.actives.length > 0 &&
+            this.switches.pick && this._activeType !== "view") {
+            // 只提示可计算的下一个对象，空白点击不会取消 A 或新增几何。
+            if (this.pickBooleanTarget(client) !== null) {
+                this.render.canvas.style.cursor = "pointer";
+            } else {
+                this.render.canvas.style.cursor = "not-allowed";
+            }
+        } else {
+            this.updateModeHover(event, client);
+        }
+    }
+
+    /** @param event 当前指针 @param client 窗口坐标 @example this.updateModeHover(event, client); @returns 无返回值，按当前模式分派普通悬停。 */
+    private updateModeHover(event: PointerEvent, client: Vec2): void {
         // 模式先决定是否由独立工具、组框或相机占有悬停状态。
         switch (this._activeType) {
             case "group":
@@ -1965,7 +2122,18 @@ type EditorShape = "rect" | "ngon" | "poly" | "text" | "group";
 
 type SelectionOperation = "replace" | "add" | "sub";
 
-type PointerOwner = "rect" | "ngon" | "poly" | "text" | "base" | "move" | "group" | "selection" | "hierarchy" | "groupCreate";
+type PointerOwner = "rect" | "ngon" | "poly" | "text" | "base" | "move" | "group" | "selection" | "hierarchy" | "groupCreate" | "boolean";
+
+interface BooleanSnapshot {
+    mesh: Mesh;
+    geometry: Mesh["data"];
+    version: number | undefined;
+    parent: Mesh["parent"];
+    matrix: number[];
+}
+
+/** @param mesh 输出实体 @example IsBooleanPoly(mesh); @returns 是否需要多边形编辑工具。 */
+const IsBooleanPoly = (mesh: Mesh): boolean => mesh.data instanceof Poly2D;
 
 interface SelectionGesture {
     pointerId: number;
@@ -1990,3 +2158,4 @@ export type { EditSwitches } from "./EditSwitches";
 export { default as EditorKey } from "./key";
 export { Editor };
 export type { EditorMode, EditorOptions, EditorShape };
+export type { BooleanEvent, BooleanOperation } from "./Collection/Boolean";

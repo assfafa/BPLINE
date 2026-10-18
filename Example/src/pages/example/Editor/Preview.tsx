@@ -3,6 +3,7 @@ import ShapePreview from "@/pages/example/reference/ShapePreview.tsx";
 import { useLocale } from "@/locale/context.ts";
 import { translator } from "@/locale/index.ts";
 import { mountEditorScene } from "./scene.ts";
+import ShortcutTips from "./ShortcutTips.tsx";
 
 /**
  * Show the interactive Editor preview and usage hint.
@@ -13,13 +14,16 @@ import { mountEditorScene } from "./scene.ts";
 const Preview = ({ advanced }: { advanced: boolean }): JSX.Element => {
     const { language } = useLocale();
     let hint = translator.translate(language, "example.editorSimpleHint");
+    let shortcuts: JSX.Element | null = null;
     // The simple preview has no camera control or keyboard adapter.
     if (advanced) {
         hint = translator.translate(language, "example.editorHint");
+        shortcuts = <ShortcutTips />;
     }
     return (
         <div className="relative h-full">
             <ShapePreview advanced={advanced} controlsId="editor-controls" mountScene={mountEditorScene} />
+            {shortcuts}
             <p className="pointer-events-none absolute bottom-8 left-8 max-w-[70%] rounded bg-black/60 px-2 py-1 text-[10px] text-white lg:max-w-[calc(100%-270px)]">
                 {hint}
             </p>
