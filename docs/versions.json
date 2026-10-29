@@ -1,0 +1,14 @@
+{
+    "schemaVersion": 1,
+    "latest": "0.1.104",
+    "versions": [
+        {
+            "version": "0.1.104",
+            "matrixVersion": "0.1.104"
+        },
+        {
+            "version": "0.1.103",
+            "matrixVersion": "0.1.103"
+        }
+    ]
+}

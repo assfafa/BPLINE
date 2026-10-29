@@ -4,6 +4,9 @@ import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { ReadVersions } from "./scripts/site.ts";
+
+const versions = ReadVersions(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
 
 const certificatePath: URL = new URL("../.certs/server.pem", import.meta.url);
 const privateKeyPath: URL = new URL("../.certs/server-key.pem", import.meta.url);
@@ -19,8 +22,12 @@ if (existsSync(certificatePath) && existsSync(privateKeyPath)) {
 
 export default defineConfig({
     base: "./",
+    define: {
+        __SITE_VERSION__: JSON.stringify(versions.version),
+        __MATRIX_VERSION__: JSON.stringify(versions.matrixVersion),
+    },
     build: {
-        outDir: "../docs",
+        outDir: `../docs/${versions.version}`,
         emptyOutDir: true,
     },
     plugins: [react(), tailwindcss()],

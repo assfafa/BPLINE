@@ -36,21 +36,21 @@ WebGPU 2D renderer, TypeScript graphics library, vector graphics editor, CAD-sty
 Install the math and geometry library directly, or install the renderer for WebGPU scenes:
 
 ~~~bash
-npm install bpmatrixjs@0.1.103
-npm install bplinejs@0.1.103
+npm install bpmatrixjs@0.1.104
+npm install bplinejs@0.1.104
 ~~~
 
 `bplinejs` depends on `bpmatrixjs`; install both explicitly when importing from both packages.
 
-The current beta includes the editor, helper, offscreen rendering, and post-processing workflows described above:
+Version 0.1.104 includes the editor, helper, offscreen rendering, and post-processing workflows described above:
 
 ~~~bash
-npm install bplinejs@0.1.104-beta.21 bpmatrixjs@0.1.104-beta.16
+npm install bplinejs@0.1.104 bpmatrixjs@0.1.104
 # For the complete examples with GUI controls:
 npm install lil-gui
 ~~~
 
-Release notes: [BPLineJS 0.1.104-beta.21](BPLineJS/releases/0.1.104-beta.21.md) and [BPMatrixJS 0.1.104-beta.16](BPMatrixJS/releases/0.1.104-beta.16.md). Text parsing, shaping, and triangulation use WebAssembly with reusable caches. Await font registration before creating text synchronously. BPMatrixJS provides WASM Boolean operations for contours and triangle meshes through `bpmatrixjs/Utils/Bool`; await `Bool.ready()` before use. The collection editor supports subtraction and union with shared undo history; select A, hold `-` and click B to cut A while retaining B, or hold `=` and click B to merge both. Its complete example includes all keyboard tips. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
+Release notes: [BPLineJS 0.1.104](BPLineJS/releases/0.1.104.md) and [BPMatrixJS 0.1.104](BPMatrixJS/releases/0.1.104.md). Text parsing, shaping, and triangulation use WebAssembly with reusable caches. Await font registration before creating text synchronously. BPMatrixJS provides WASM Boolean operations for contours and triangle meshes through `bpmatrixjs/Utils/Bool`; await `Bool.ready()` before use. The collection editor supports subtraction and union with shared undo history; select A, hold `-` and click B to cut A while retaining B, or hold `=` and click B to merge both. Its complete example includes all keyboard tips. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
 
 Create offscreen inputs with `new RenderTarget(scene, camera)` and draw them with `render.renderPass(target)`. Materials accept the target directly. Add built-in or custom passes to `new PostProcess(render)`, then call `post.render(target)` to display the result. Bloom and Shadow settings belong to `style.bloom` and `style.shadow`. `render.hdr` defaults to `"auto"` and also accepts `true` or `false`; `hdrAvailable` reports browser detection, while `hdrEnabled` reports an accepted extended canvas configuration. Ordinary material colors stay unchanged; actual HDR brightness still depends on the browser and display path.
 
@@ -84,7 +84,11 @@ npm run check
 npm run build
 ~~~
 
-The static site is written to `docs/` at the repository root. GitHub Pages can serve `/docs` from the current branch. The site uses hash routing, so page URLs contain `/#/`.
+The build reads the exact `bplinejs` and `bpmatrixjs` versions from `Example/package.json` and verifies the installed packages. It writes the current site to `docs/<bplinejs-version>/`, preserving all other version directories. GitHub Pages serves `/docs` from the current branch. For example, version 0.1.104 lives at `/BPLINE/0.1.104/#/docs/bpline`; the version directory precedes the URL hash so each snapshot loads its own JavaScript and assets.
+
+The top navigation switches between completed versions listed in `docs/versions.json`. It retains a page when available in the destination version, otherwise opens that version's document or example home. The shared root redirects existing bookmarks to the latest snapshot. Version 0.1.103 was restored from its original Git tag, retaining its historical assets and case list.
+
+To restore another historical standalone website that was already committed in a release tag, run `npm run archive -- bplinejs-v0.1.103` from `Example`, then `npm run build`. Existing archived version directories are preserved. `npm run preview` serves the full versioned site locally.
 
 To build either npm library and inspect its package contents, run these commands in `BPMatrixJS` or `BPLineJS`:
 

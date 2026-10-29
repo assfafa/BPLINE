@@ -1,16 +1,17 @@
-name: Publish BPLineJS Release
+name: Publish Library Release
 
-# 只发布 line 库的 GitHub Release；矩阵库标签和普通提交不触发。
+# 两个库分别按标签发布；普通提交不触发 Release。
 on:
     push:
         tags:
             - "bplinejs-v*"
+            - "bpmatrixjs-v*"
 
 permissions:
     contents: read
 
 concurrency:
-    group: bplinejs-release-${{ github.ref }}
+    group: library-release-${{ github.ref }}
     cancel-in-progress: false
 
 jobs:
@@ -28,20 +29,27 @@ jobs:
                   persist-credentials: false
 
             - name: Validate version and release notes
+              id: metadata
               shell: bash
               run: |
                   set -euo pipefail
 
                   # 限制标签形态，避免把错误版本或路径当作发布说明读取。
-                  if [[ "$GITHUB_REF_NAME" =~ ^bplinejs-v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-                      version="${GITHUB_REF_NAME#bplinejs-v}"
+                  if [[ "$GITHUB_REF_NAME" =~ ^(bplinejs|bpmatrixjs)-v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)$ ]]; then
+                      package="${BASH_REMATCH[1]}"
+                      version="${BASH_REMATCH[2]}"
                   else
-                      echo "Invalid BPLineJS release tag: $GITHUB_REF_NAME"
+                      echo "Invalid library release tag: $GITHUB_REF_NAME"
                       exit 1
                   fi
 
-                  package_version="$(node -p "require('./BPLineJS/package.json').version")"
-                  notes="BPLineJS/releases/${version}.md"
+                  if [ "$package" = "bplinejs" ]; then
+                      directory="BPLineJS"
+                  else
+                      directory="BPMatrixJS"
+                  fi
+                  package_version="$(node -p "require('./${directory}/package.json').version")"
+                  notes="${directory}/releases/${version}.md"
 
                   # 标签必须指向这个版本的源码，不能给旧提交误打新版本标签。
                   if [ "$version" = "$package_version" ]; then
@@ -58,24 +66,31 @@ jobs:
                       echo "Missing or empty release notes: $notes"
                       exit 1
                   fi
+                  echo "directory=$directory" >> "$GITHUB_OUTPUT"
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+                  echo "notes=$notes" >> "$GITHUB_OUTPUT"
 
             - name: Publish GitHub release
               shell: bash
               env:
                   GH_TOKEN: ${{ github.token }}
                   GH_REPO: ${{ github.repository }}
+                  RELEASE_DIRECTORY: ${{ steps.metadata.outputs.directory }}
+                  RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+                  RELEASE_NOTES: ${{ steps.metadata.outputs.notes }}
               run: |
                   set -euo pipefail
 
-                  version="${GITHUB_REF_NAME#bplinejs-v}"
-                  notes="BPLineJS/releases/${version}.md"
                   options=()
 
                   # beta 等预发布版本不占用正式 latest 标记。
-                  if [[ "$version" == *-* ]]; then
+                  if [[ "$RELEASE_VERSION" == *-* ]]; then
                       options+=(--prerelease --latest=false)
-                  else
+                  elif [ "$RELEASE_DIRECTORY" = "BPLineJS" ]; then
                       options+=(--latest)
+                  else
+                      # 仓库默认 latest 保留给主渲染库，数学库仍是正式 Release。
+                      options+=(--latest=false)
                   fi
 
                   # 重跑工作流时不覆盖已发布的说明，也不重复创建同名 Release。
@@ -84,7 +99,7 @@ jobs:
                   else
                       gh release create "$GITHUB_REF_NAME" \
                           --verify-tag \
-                          --title "BPLineJS ${version}" \
-                          --notes-file "$notes" \
+                          --title "${RELEASE_DIRECTORY} ${RELEASE_VERSION}" \
+                          --notes-file "$RELEASE_NOTES" \
                           "${options[@]}"
                   fi

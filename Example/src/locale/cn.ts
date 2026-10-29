@@ -4,6 +4,8 @@ export const cn = {
         navigation: "主导航",
         docs: "文档",
         example: "案例",
+        version: "版本",
+        versionError: "无法加载此版本，请稍后重试。",
         language: "语言",
         lightMode: "切换到日间模式",
         darkMode: "切换到夜间模式",

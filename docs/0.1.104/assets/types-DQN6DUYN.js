@@ -1,0 +1,1 @@
+var e=(e,t,n)=>({signature:e,description:{cn:t,en:n}});export{e as t};

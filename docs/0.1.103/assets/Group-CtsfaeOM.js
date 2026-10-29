@@ -1,0 +1,5 @@
+import{n as e}from"./index-DY15zU6K.js";import t from"./reference-Gwz-cIfE.js";import{t as n}from"./types-DQN6DUYN.js";var r={title:`Group`,intro:{cn:`把多个网格体或子组组织在一个父节点下，父节点的位置、旋转和缩放会影响后代。`,en:`Organize meshes and child groups under one parent. Parent position, rotation, and scale affect descendants.`},code:`import { Group, Mesh, Rect2D, BaseMaterial } from "bplinejs";
+
+const group = new Group(20, 30);
+group.add(new Mesh(new Rect2D({ width: 80, height: 50 }), new BaseMaterial()));
+group.rotation = Math.PI / 4;`,properties:[n(`children: AddObject[]`,`当前直接子节点列表。`,`Current direct child nodes.`),n(`position: Vec2; rotation: number; scale: Vec2`,`继承自 ObjectNode 的局部变换。`,`Local transform inherited from ObjectNode.`)],methods:[n(`new Group(x: number, y: number)`,`创建位于指定位置的组。`,`Create a group at the selected position.`),n(`add(child: AddObject): void`,`加入网格体或子组。`,`Add a mesh or child group.`),n(`removeChild(child: AddObject): boolean`,`从当前组移除直接子节点。`,`Remove a direct child.`),n(`removeSelf(): boolean`,`从父组移除当前组。`,`Remove this group from its parent.`),n(`removeAll(): void`,`移除全部子节点。`,`Remove every child.`)]},i=e(),a=()=>(0,i.jsx)(t,{config:r});export{a as default};

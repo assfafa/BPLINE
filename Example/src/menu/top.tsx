@@ -6,6 +6,7 @@ import type { MenuSection } from "./section.ts";
 import { useLocale } from "@/locale/context.ts";
 import { languageNames, translator } from "@/locale/index.ts";
 import { useTheme } from "@/theme/context.ts";
+import VersionSwitcher from "@/version/VersionSwitcher.tsx";
 
 interface TopProps {
     sidebarOpen: boolean;
@@ -111,7 +112,7 @@ const Top = ({ sidebarOpen, onToggleSidebar, selectedSection, onShowDocs, onShow
                     aria-expanded={sidebarOpen}
                     aria-controls="mobile-sidebar"
                     onClick={onToggleSidebar}
-                    className="flex w-12 shrink-0 items-center justify-center hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring md:hidden"
+                    className="flex w-10 shrink-0 items-center justify-center hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring md:hidden"
                 >
                     <HugeiconsIcon icon={sidebarIcon} className="size-5" aria-hidden="true" />
                 </button>
@@ -119,7 +120,7 @@ const Top = ({ sidebarOpen, onToggleSidebar, selectedSection, onShowDocs, onShow
                     type="button"
                     aria-pressed={selectedSection === "docs"}
                     onClick={onShowDocs}
-                    className="inline-flex items-center px-4 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring aria-pressed:bg-muted aria-pressed:text-foreground"
+                    className="inline-flex shrink-0 items-center px-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring aria-pressed:bg-muted aria-pressed:text-foreground sm:px-4"
                 >
                     {translator.translate(language, "top.docs")}
                 </button>
@@ -127,15 +128,16 @@ const Top = ({ sidebarOpen, onToggleSidebar, selectedSection, onShowDocs, onShow
                     type="button"
                     aria-pressed={selectedSection === "example"}
                     onClick={onShowExample}
-                    className="inline-flex items-center px-4 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring aria-pressed:bg-muted aria-pressed:text-foreground"
+                    className="inline-flex shrink-0 items-center px-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring aria-pressed:bg-muted aria-pressed:text-foreground sm:px-4"
                 >
                     {translator.translate(language, "top.example")}
                 </button>
-                <div className="ml-auto flex items-stretch">
+                <VersionSwitcher />
+                <div className="ml-auto flex shrink-0 items-stretch">
                     <details ref={languageMenu} className="relative">
                         <summary
                             aria-label={translator.translate(language, "top.language")}
-                            className="flex h-full w-12 cursor-pointer list-none items-center justify-center hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"
+                            className="flex h-full w-10 cursor-pointer list-none items-center justify-center hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring sm:w-12 [&::-webkit-details-marker]:hidden"
                         >
                             <HugeiconsIcon icon={LanguagesIcon} className="size-5" aria-hidden="true" />
                         </summary>
@@ -148,7 +150,7 @@ const Top = ({ sidebarOpen, onToggleSidebar, selectedSection, onShowDocs, onShow
                         aria-label={themeLabel}
                         title={themeLabel}
                         onClick={toggleTheme}
-                        className="flex w-12 items-center justify-center hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+                        className="flex w-10 items-center justify-center hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring sm:w-12"
                     >
                         <HugeiconsIcon icon={themeIcon} className="size-5" aria-hidden="true" />
                     </button>

@@ -1,0 +1,7 @@
+import{n as e}from"./index-DY15zU6K.js";import t from"./reference-Gwz-cIfE.js";import{t as n}from"./types-DQN6DUYN.js";var r={title:`Texture`,intro:{cn:`Texture 保存图片源供材质样式使用。可从 URL 异步加载，也可直接指定浏览器图片对象。`,en:`Texture holds an image source for material styles. Load a URL asynchronously or provide a browser image object directly.`},code:`import { Texture } from "bplinejs";
+
+const texture = new Texture();
+await texture.load("./images/tiles.png");
+
+// Or use an existing image source:
+// texture.setSource(imageBitmap);`,properties:[n(`url: string | null`,`图片来源地址；仅赋值不会自动下载。`,`Image URL; assigning it does not start a download.`),n(`source: HTMLImageElement | ImageBitmap | ImageData | null`,`当前图片源；赋值会同步更新尺寸和加载状态。`,`Current image source; assignment updates dimensions and load state.`),n(`loaded: boolean`,`图片是否可供上传。通常由 setSource 和 clearSource 维护。`,`Whether the image can be uploaded. Usually maintained by setSource and clearSource.`),n(`width: number; height: number`,`图片的源像素尺寸。`,`Image dimensions in source pixels.`)],methods:[n(`new Texture()`,`创建尚未指定图片源的贴图。`,`Create a texture without an image source.`),n(`load(url: string): Promise<this>`,`加载 URL 指向的图片并设置为当前源；失败时拒绝 Promise。`,`Load the image at the URL and set it as the source; rejects on failure.`),n(`setSource(source: TextureSource, url?: string | null): this`,`直接指定图片对象并更新宽高。`,`Assign an image object directly and update its dimensions.`),n(`clearSource(): this`,`清除图片源、地址和尺寸。`,`Clear the image source, URL, and dimensions.`)]},i=e(),a=()=>(0,i.jsx)(t,{config:r});export{a as default};

@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && node scripts/build.ts",
+    "archive": "node scripts/archive.ts",
     "check": "tsc -b && npm run lint",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "preview": "vite preview"
+    "preview": "vite preview --outDir ../docs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -17,8 +18,8 @@
     "@hugeicons/react": "^1.1.10",
     "@shikijs/langs": "^4.4.3",
     "@shikijs/themes": "^4.4.3",
-    "bplinejs": "0.1.104-beta.21",
-    "bpmatrixjs": "0.1.104-beta.16",
+    "bplinejs": "0.1.104",
+    "bpmatrixjs": "0.1.104",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.2",
     "lil-gui": "^0.21.0",

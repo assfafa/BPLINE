@@ -1,1 +1,0 @@
-import{n as e}from"./index-DpiUqL2G.js";import t from"./reference-BkWidWEx.js";import{a as n}from"./toolConfigs-Czgg6QUh.js";var r=e(),i=()=>(0,r.jsx)(t,{config:n});export{i as default};

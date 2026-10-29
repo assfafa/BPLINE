@@ -6,6 +6,8 @@ export const en = {
         navigation: "Primary navigation",
         docs: "Docs",
         example: "Example",
+        version: "Version",
+        versionError: "Unable to load this version. Please try again.",
         language: "Language",
         lightMode: "Switch to light mode",
         darkMode: "Switch to dark mode",
