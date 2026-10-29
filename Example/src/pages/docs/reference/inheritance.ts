@@ -30,6 +30,8 @@ const publicClasses: readonly PublicClass[] = [
     { label: "BaseMaterial", path: "/docs/bpline/material/base-material", parent: "/docs/bpline/material" },
     { label: "CompositeMaterial", path: "/docs/bpline/material/composite-material", parent: "/docs/bpline/material" },
     { label: "WGSLMaterial", path: "/docs/bpline/material/wgsl-material", parent: "/docs/bpline/material" },
+    { label: "WgslPass", path: "/docs/bpline/post-process/wgsl" },
+    { label: "FXAA", path: "/docs/bpline/post-process/fxaa", parent: "/docs/bpline/post-process/wgsl" },
 ];
 
 /**

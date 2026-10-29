@@ -8,11 +8,14 @@
 
 | 文件 / 子目录 | 作用 |
 | --- | --- |
+| `BloomStyle.ts` | 对象专属bloom参数，由对应后处理通道按值合批；不改变几何。 |
 | `EdgeStyle.ts` | 有宽度的实体三角面边框样式。 |
+| `Effects.ts` | 捕获效果值，供冻结实例、保存回显及按值合批使用。 |
 | `index.ts` | 共享样式；四个显示分区与节点连接样式独立持有参数，通过订阅链通知使用者。 |
 | `JoinStyle.ts` | 多边形节点连接样式，只控制几何拓扑，不拥有颜色、宽度或 GPU 缓存。 |
 | `PartStyle.ts` | 四个样式分区的共同基础，仅管理显示、颜色、透明度和订阅。 |
 | `PointsStyle.ts` | 关键点样式；总开关与顶点/边中点选择分离。 |
+| `ShadowStyle.ts` | 对象专属shadow参数，由对应后处理通道按值合批；不改变几何。 |
 | `SolidStyle.ts` | 实体面样式，SDF 边框属于此分区，不与 EdgeStyle 共用参数。 |
 | `TexturedStyle.ts` | 面、实体边框和关键点使用的贴图参数，各分区独立持有。 |
 | `types.ts` | 类型、桶导出或模块入口；具体符号见下面的文件索引。 |
@@ -30,6 +33,8 @@
 | 字段 | 类型 / 默认值 | 用途 |
 | --- | --- | --- |
 | `type`（公开） | `string`；`"Style"` | 对象类型。 |
+| `_bloom`（内部） | `按初始化值推断`；`new BloomStyle()` | 对象发光配置；需要添加 Bloom 通道。（bloom 的内部状态）。 |
+| `_shadow`（内部） | `按初始化值推断`；`new ShadowStyle()` | 对象内外阴影配置；需要添加 Shadow 通道。（shadow 的内部状态）。 |
 | `_solid`（内部） | `SolidStyle`；`new SolidStyle()` | 实体面与 SDF 样式。（solid 的内部状态）。 |
 | `_wireframe`（内部） | `WireframeStyle`；`new WireframeStyle()` | 原生线框样式。（wireframe 的内部状态）。 |
 | `_edge`（内部） | `EdgeStyle`；`new EdgeStyle()` | 实体三角面边框样式。（edge 的内部状态）。 |
@@ -59,6 +64,8 @@ const style = new Style();
 | `clone(): Style`  | 创建拥有独立分区和颜色的新样式。 |
 | `static copy(source: Style): Style`  | 从来源直接创建新样式。 |
 | `get solid(): SolidStyle`  | 实体面与 SDF 样式。 |
+| `get bloom(): BloomStyle`  | 对象发光配置；需要添加 Bloom 通道。 |
+| `get shadow(): ShadowStyle`  | 对象内外阴影配置；需要添加 Shadow 通道。 |
 | `get wireframe(): WireframeStyle`  | 原生线框样式。 |
 | `get edge(): EdgeStyle`  | 实体三角面边框样式。 |
 | `get points(): PointsStyle`  | 关键点样式。 |
@@ -81,10 +88,55 @@ export type {
     StyleSubscriber,
 } from "./types";
 export { STYLE_STRIDE, WriteStyleData } from "./WriteStyleData";
-export { EdgeStyle, JoinStyle, PointsStyle, SolidStyle, WireframeStyle };
+export { BloomStyle, ShadowStyle, EdgeStyle, JoinStyle, PointsStyle, SolidStyle, WireframeStyle };
 ```
 
 ## 3. 其他源码文件
+
+### 文件：BloomStyle.ts
+
+### BloomStyle
+
+对象专属bloom参数，由对应后处理通道按值合批；不改变几何。
+
+#### 变量与默认值
+
+| 字段 | 类型 / 默认值 | 用途 |
+| --- | --- | --- |
+| `_radius`（内部） | `number`；`20` | 屏幕 CSS px 模糊半径，默认 20。 |
+| `_intensity`（内部） | `number`；`1` | 非负发光强度，默认 1。 |
+| `_threshold`（内部） | `number`；`0` | 亮度阈值，0 表示全部可见像素参与，默认 0。 |
+
+#### 构造与案例
+
+```ts
+constructor()
+```
+
+默认关闭的效果样式。
+
+```ts
+const part = new BloomStyle();
+```
+
+#### 函数与访问器
+
+| 签名 | 作用 |
+| --- | --- |
+| `get radius(): number`  | 屏幕 CSS px 模糊半径。 |
+| `set radius(value: number)`  | 无返回值，通知样式消费者。 |
+| `get intensity(): number`  | 非负发光强度。 |
+| `set intensity(value: number)`  | 无返回值，通知样式消费者。 |
+| `get threshold(): number`  | 亮度阈值，0 表示全部可见像素参与。 |
+| `set threshold(value: number)`  | 无返回值，通知样式消费者。 |
+| `override copy(source: BloomStyle): this`  | 当前效果样式，颜色独立。 |
+| `override clone(): BloomStyle`  | 独立的新效果样式。 |
+
+### 导出关系
+
+```ts
+export default BloomStyle;
+```
 
 ### 文件：EdgeStyle.ts
 
@@ -133,6 +185,48 @@ const edgeStyle = new EdgeStyle();
 
 ```ts
 export default EdgeStyle;
+```
+
+### 文件：Effects.ts
+
+### Effects
+
+捕获效果值，供冻结实例、保存回显及按值合批使用。
+
+#### 构造与案例
+
+无显式构造函数，按字段默认值创建；父类如有构造逻辑会依语言规则执行。
+
+#### 函数与访问器
+
+| 签名 | 作用 |
+| --- | --- |
+| `static capture(style: Style): EffectData`  | 不持有 Style 或 Color 引用的快照。 |
+| `static apply(style: Style, data: EffectData): void`  | 无返回值，保持订阅链。 |
+| `static validate(data: unknown): void`  | 无返回值，非法效果在修改现有对象前报错。 |
+
+### 顶层函数
+
+| 名称 | 用途 |
+| --- | --- |
+| `RequireRecord` | 属性记录，非法对象抛错。 |
+| `Finite` | 是否是有限数字。 |
+| `Unit` | 是否位于单位区间。 |
+| `Require` | 无返回值，拒绝不合法的效果记录。 |
+
+```ts
+RequireRecord(data);
+```
+
+### 类型索引
+
+`EffectPartData`、`BloomData`、`ShadowData`、`EffectData`
+
+### 导出关系
+
+```ts
+export default Effects;
+export type { EffectData, BloomData, ShadowData };
 ```
 
 ### 文件：JoinStyle.ts
@@ -193,7 +287,7 @@ export type { JoinType };
 | `_subscribers`（内部） | `按初始化值推断`；`new Set<PartSubscriber>()` | 状态由 `add`、`delete`、`dispose`、`notify` 读取或维护；完整处理见对应函数。 |
 | `_enabled`（内部） | `boolean`；`false` | 是否生成并显示该分区，默认关闭。（enabled 的内部状态）。 |
 | `_color`（内部） | `Color`；`new Color()` | 该分区独立颜色，默认不透明白色。（color 的内部状态）。 |
-| `_opacity`（内部） | `number`；`1` | 该分区独立透明度，作用于最终输出 alpha。（opacity 的内部状态）。 |
+| `_opacity`（公开） | `number`；`1` | 该分区独立透明度，作用于最终输出 alpha。（opacity 的内部状态）。 |
 
 #### 构造与案例
 
@@ -301,6 +395,61 @@ const pointsStyle = new PointsStyle();
 export default PointsStyle;
 ```
 
+### 文件：ShadowStyle.ts
+
+### ShadowStyle
+
+对象专属shadow参数，由对应后处理通道按值合批；不改变几何。
+
+#### 变量与默认值
+
+| 字段 | 类型 / 默认值 | 用途 |
+| --- | --- | --- |
+| `_opacity`（公开） | `number`；`0.5` | 阴影默认半透明，不影响其他样式区域的默认值。 |
+| `_blur`（内部） | `number`；`12` | 屏幕 CSS px 模糊半径，默认 12。 |
+| `_spread`（内部） | `number`；`0` | 屏幕 CSS px 扩散距离，非负，默认 0。 |
+| `_offsetX`（内部） | `number`；`4` | 屏幕 CSS px 水平偏移，正值向右，默认 4。 |
+| `_offsetY`（内部） | `number`；`-4` | 屏幕 CSS px 垂直偏移，正值向上，默认 -4。 |
+| `_inner`（内部） | `boolean`；`false` | 是否显示轮廓内阴影，默认 false。 |
+| `_outer`（内部） | `boolean`；`true` | 是否显示轮廓外阴影，默认 true。 |
+
+#### 构造与案例
+
+```ts
+constructor()
+```
+
+默认关闭的效果样式。
+
+```ts
+const part = new ShadowStyle();
+```
+
+#### 函数与访问器
+
+| 签名 | 作用 |
+| --- | --- |
+| `get blur(): number`  | 屏幕 CSS px 模糊半径。 |
+| `set blur(value: number)`  | 无返回值，通知样式消费者。 |
+| `get spread(): number`  | 屏幕 CSS px 扩散距离，非负。 |
+| `set spread(value: number)`  | 无返回值，通知样式消费者。 |
+| `get offsetX(): number`  | 屏幕 CSS px 水平偏移，正值向右。 |
+| `set offsetX(value: number)`  | 无返回值，通知样式消费者。 |
+| `get offsetY(): number`  | 屏幕 CSS px 垂直偏移，正值向上。 |
+| `set offsetY(value: number)`  | 无返回值，通知样式消费者。 |
+| `get inner(): boolean`  | 是否显示轮廓内阴影。 |
+| `set inner(value: boolean)`  | 无返回值，通知样式消费者。 |
+| `get outer(): boolean`  | 是否显示轮廓外阴影。 |
+| `set outer(value: boolean)`  | 无返回值，通知样式消费者。 |
+| `override copy(source: ShadowStyle): this`  | 当前效果样式，颜色独立。 |
+| `override clone(): ShadowStyle`  | 独立的新效果样式。 |
+
+### 导出关系
+
+```ts
+export default ShadowStyle;
+```
+
 ### 文件：SolidStyle.ts
 
 ### SolidStyle
@@ -361,7 +510,7 @@ export default SolidStyle;
 
 | 字段 | 类型 / 默认值 | 用途 |
 | --- | --- | --- |
-| `_texture`（内部） | `TextureLike \| undefined`；`由构造参数或初始化过程赋值` | 当前贴图，undefined 使用白色后备贴图。（texture 的内部状态）。 |
+| `_texture`（内部） | `TextureInput \| undefined`；`由构造参数或初始化过程赋值` | 当前贴图，undefined 使用白色后备贴图。（texture 的内部状态）。 |
 | `_addressModeU`（公开） | `GPUAddressMode`；`"repeat"` | U 轴默认重复；子样式可以在字段声明中指定自己的默认值。 |
 | `_addressModeV`（公开） | `GPUAddressMode`；`"repeat"` | V 轴默认重复；子样式可以在字段声明中指定自己的默认值。 |
 
@@ -373,11 +522,11 @@ export default SolidStyle;
 
 | 签名 | 作用 |
 | --- | --- |
-| `get texture(): TextureLike \| undefined`  | 当前贴图，undefined 使用白色后备贴图。 |
-| `set texture(value: TextureLike \| undefined)`  | 当前贴图，undefined 使用白色后备贴图。 |
+| `get texture(): TextureInput \| undefined`  | 当前贴图，undefined 使用白色后备贴图。 |
+| `set texture(value: TextureInput \| undefined)`  | 当前贴图，undefined 使用白色后备贴图。 |
 | `override copy(source: TexturedStyle): this`  | 复制通用外观及贴图设置；Texture 作为资源保留同一引用。 |
 | `override clone(): TexturedStyle`  | 创建同类贴图分区。 |
-| `onTextureChange(texture: TextureLike): void`  | 图片内容变化向上通知，但不把它当作替换贴图引用。 |
+| `onTextureChange(texture: TextureInput): void`  | 图片内容变化向上通知，但不把它当作替换贴图引用。 |
 | `override dispose(): void`  | 最终停用时解绑贴图和颜色，不销毁共享资源。 |
 | `get addressModeU(): GPUAddressMode`  | U 方向贴图寻址方式。 |
 | `set addressModeU(value: GPUAddressMode)`  | U 方向贴图寻址方式。 |
@@ -461,6 +610,8 @@ export { STYLE_STRIDE, WriteStyleData };
 - 库构建把 src/scripts 的目录说明复制到 lib 同名目录；TS 对应 JS/声明，WGSL 作为导入资源编译。Examples 说明只保留在源码，不进入 npm。
 
 <!-- agent-notes:start -->
+- `bloom` 和 `shadow` 是独立 PartStyle，默认 enabled=false；颜色、透明度及效果参数走现有订阅链，但启停效果不重建几何。copy/clone 与编辑器保存回显包含两种效果，Style 不持有 GPU 资源。
+- Bloom 默认白色、opacity=1、radius=20、intensity=1、threshold=0；Shadow 默认黑色、opacity=0.5、blur=12、spread=0、offsetX=4、offsetY=-4、inner=false、outer=true。尺寸使用 CSS 像素。
 暂无额外目录约定。
 <!-- agent-notes:end -->
 

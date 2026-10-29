@@ -7,6 +7,10 @@ export const config: ReferenceConfig = {
         cn: "Texture 保存图片或视频源供材质样式使用。可从 URL 异步加载，也可直接指定浏览器图片对象。",
         en: "Texture holds an image or video source for material styles. Load a URL asynchronously or provide a browser image object directly.",
     },
+    detail: {
+        cn: "离屏渲染与后处理结果使用 RenderTarget，直接赋给 style.solid.texture 或材质 raw.value；不需要用 Texture 包装，也不通过 Texture.load 加载。",
+        en: "Offscreen and post-processing images use RenderTarget directly in style.solid.texture or material raw.value. Do not wrap them in Texture or load them with Texture.load.",
+    },
     code: `import { Texture } from "bplinejs";
 
 const texture = new Texture();
@@ -27,5 +31,9 @@ await texture.load("./images/tiles.png");
         entry("load(url: string): Promise<this>", "加载图片或常见视频后缀的 URL，失败时拒绝 Promise。", "Load an image or a recognized video URL; reject on failure."),
         entry("setSource(source: TextureSource, url?: string | null): this", "直接指定图片对象并更新宽高。", "Assign an image object directly and update its dimensions."),
         entry("clearSource(): this", "清除图片源、地址和尺寸。", "Clear the image source, URL, and dimensions."),
+    ],
+    links: [
+        { label: "RenderTarget", to: "/docs/bpline/render-target" },
+        { label: "PostProcess", to: "/docs/bpline/post-process" },
     ],
 };

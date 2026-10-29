@@ -1,20 +1,25 @@
 import type Scene from "../Scene";
-import type { TextureLike, TextureSource } from "../Texture";
+import RenderTarget from "../RenderTarget";
+import RenderTargetManager from "./RenderTargetManager";
+import type { TextureInput, TextureLike, TextureSource } from "../Texture";
 import TextureLayers from "../Texture/Layers";
 import type { GPUTextureResourceLike, PipelineLike } from "./types";
 
 /** 按 textureList 上传图片；单张图片和多层图片统一使用 2d-array 视图。 */
 class TextureManager implements TextureManagerLike {
     private readonly pipeline: PipelineLike;
+    private readonly targetManager: RenderTargetManager;
     /**
      * 创建对象并建立初始状态及依赖关联。
      * @param pipeline Render 资源
+     * @param targetManager 当前 Render 共用的离屏资源管理器
      * @example
      * const textureManager = new TextureManager(pipeline);
      * @returns 创建的 TextureManager 对象。
      */
-    public constructor(pipeline: PipelineLike) {
+    public constructor(pipeline: PipelineLike, targetManager: RenderTargetManager = new RenderTargetManager(pipeline)) {
         this.pipeline = pipeline;
+        this.targetManager = targetManager;
     }
     /**
      * 创建或同步本次渲染所需的资源。
@@ -31,31 +36,45 @@ class TextureManager implements TextureManagerLike {
         } else {
             // 逐项处理贴图来源，保留图层顺序与样式层号的对应关系。
             for (const resource of scene.textureList) {
-                const cached = this.pipeline.textures.get(resource.id);
-                // 比较当前版本与处理快照，只同步尚未处理的变化。
-                if (cached?.version !== resource.version) {
-                    let layers;
-                    // 区分输入数据形态，使用与实际类型匹配的处理方式。
-                    if (resource instanceof TextureLayers) {
-                        layers = resource.layers;
-                    } else {
-                        layers = [resource];
-                    }
-                    // 按贴图加载状态决定能否上传，未就绪来源保留缺省资源。
-                    if (layers.length !== 0 && (resource instanceof TextureLayers || IsReady(resource))) {
-                        const created = this.createTexture(device, resource.id, resource.version, layers);
-                        // 新资源全部创建成功后才释放旧资源，失败不会留下一个“已上传”的假快照。
-                        this.releaseTexture(cached);
-                        this.pipeline.textures.set(resource.id, created);
-                    } else {
-                        // 无效单图只移除自己的视图，不能反复误删其他仍使用此源的层组。
-                        this.releaseTexture(cached);
-                        this.pipeline.textures.delete(resource.id);
-                        continue;
-                    }
+                // 目标直接绑定已有 GPU 采样附件，不能走图片上传分支。
+                if (resource instanceof RenderTarget) {
+                    this.targetManager.ensure(resource);
                 } else {
+                    // 相机 viewport 可独立变化，先同步离屏层再检查层表版本，确保本帧就更新尺寸。
+                    if (resource instanceof TextureLayers) {
+                        for (const layer of resource.layers) {
+                            // 普通图片沿用自己的上传版本；离屏目标还需检查相机尺寸和设备归属。
+                            if (layer instanceof RenderTarget) {
+                                this.targetManager.ensure(layer);
+                            }
+                        }
+                    }
+                    const cached = this.pipeline.textures.get(resource.id);
+                    // 比较当前版本与处理快照，只同步尚未处理的变化。
+                    if (cached?.version !== resource.version) {
+                        let layers;
+                        // 区分输入数据形态，使用与实际类型匹配的处理方式。
+                        if (resource instanceof TextureLayers) {
+                            layers = resource.layers;
+                        } else {
+                            layers = [resource];
+                        }
+                        // 按贴图加载状态决定能否上传，未就绪来源保留缺省资源。
+                        if (layers.length !== 0 && (resource instanceof TextureLayers || IsReady(resource))) {
+                            const created = this.createTexture(device, resource.id, resource.version, layers);
+                            // 新资源全部创建成功后才释放旧资源，失败不会留下一个“已上传”的假快照。
+                            this.releaseTexture(cached);
+                            this.pipeline.textures.set(resource.id, created);
+                        } else {
+                        // 无效单图只移除自己的视图，不能反复误删其他仍使用此源的层组。
+                            this.releaseTexture(cached);
+                            this.pipeline.textures.delete(resource.id);
+                            continue;
+                        }
+                    } else {
                     // 视频帧会变化而 Texture 版本不变；复用 GPUTexture 和 BindGroup。
-                    this.uploadVideoFrames(device, cached, resource);
+                        this.uploadVideoFrames(device, cached, resource);
+                    }
                 }
             }
         }
@@ -69,6 +88,36 @@ class TextureManager implements TextureManagerLike {
      */
     public createFallbackTexture(device: GPUDevice): GPUTextureResourceLike {
         return this.createTexture(device, -1, 0, [undefined]);
+    }
+
+    /** @param encoder 本次场景编码器 @param scene 含有 IMesh 层表的场景 @example textureManager.encodeTargets(encoder, scene); @returns 无返回值，GPU 缩放离屏画面到层数组，warmup 不调用。 */
+    public encodeTargets(encoder: GPUCommandEncoder, scene: Scene): void {
+        // 普通 Mesh 直接绑定 RenderTarget；只有 IMesh 的混合层表需要复制。
+        for (const input of scene.textureList) {
+            // 图片、视频和独立目标无需在这里进行额外绘制。
+            if (input instanceof TextureLayers) {
+                const cached = this.pipeline.textures.get(input.id);
+                // 空层表没有已创建的 GPU 纹理。
+                if (cached !== undefined) {
+                    cached.layerViews ??= new Map();
+                    // 保持 CPU 层号，支持不同大小及格式的目标与图片混用。
+                    for (let index = 0; index < input.layers.length; index++) {
+                        const layer = input.layers[index];
+                        // 静态图片和视频已由上传阶段处理。
+                        if (layer instanceof RenderTarget) {
+                            const resource = this.targetManager.ensure(layer);
+                            let view = cached.layerViews.get(index);
+                            // 缓存每层的附件视图，内容更新不重新建立绑定。
+                            if (view === undefined) {
+                                view = cached.texture.createView({ dimension: "2d", baseArrayLayer: index, arrayLayerCount: 1 });
+                                cached.layerViews.set(index, view);
+                            }
+                            this.targetManager.blitter.encode(encoder, resource.sampleView, view, "rgba8unorm");
+                        }
+                    }
+                }
+            }
+        }
     }
     /**
      * 释放旧纹理及引用其视图的绑定缓存，重建时不会误用旧视图。
@@ -118,7 +167,7 @@ class TextureManager implements TextureManagerLike {
         cached: GPUTextureResourceLike,
         resource: TextureLike | TextureLayers,
     ): void {
-        let layers: readonly (TextureLike | undefined)[];
+        let layers: readonly (TextureInput | undefined)[];
         // 单图和层组都按目标层号顺序更新，保持样式中的索引稳定。
         if (resource instanceof TextureLayers) {
             layers = resource.layers;
@@ -173,7 +222,7 @@ class TextureManager implements TextureManagerLike {
         device: GPUDevice,
         textureId: number,
         version: number,
-        layers: readonly (TextureLike | undefined)[],
+        layers: readonly (TextureInput | undefined)[],
     ): GPUTextureResourceLike {
         let width: number = 1;
         let height: number = 1;
@@ -185,7 +234,7 @@ class TextureManager implements TextureManagerLike {
                 sourceIds.add(image.id);
             }
             // 按贴图加载状态决定能否上传，未就绪来源保留缺省资源。
-            if (IsReady(image)) {
+            if (IsReady(image) || image instanceof RenderTarget) {
                 width = Math.max(width, image.width);
                 height = Math.max(height, image.height);
             }
@@ -217,6 +266,10 @@ class TextureManager implements TextureManagerLike {
             // 按顶点顺序写入坐标及配套属性，保持各数组长度一致。
             for (let layer = 0; layer < layers.length; layer++) {
                 const image = layers[layer];
+                // 离屏层由 encodeTargets 在同一次场景提交前写入。
+                if (image instanceof RenderTarget) {
+                    continue;
+                }
                 let source: TextureSource | null;
                 // 按贴图加载状态决定能否上传，未就绪来源保留缺省资源。
                 if (IsReady(image)) {
@@ -323,10 +376,11 @@ interface TextureManagerLike {
  * IsReady(image);
  * @returns 是否具有可上传的有效源
  */
-const IsReady = (image: TextureLike | undefined): image is TextureLike => {
+const IsReady = (image: TextureInput | undefined): image is TextureLike => {
     // 资源状态和尺寸必须同时有效，才能安全进行外部图像复制。
     if (
         image !== undefined &&
+        !(image instanceof RenderTarget) &&
         image.loaded &&
         image.source !== null &&
         Number.isInteger(image.width) &&

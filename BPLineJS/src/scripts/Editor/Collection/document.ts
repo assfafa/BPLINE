@@ -10,7 +10,7 @@ import Mesh from "../../Mesh";
 import type Scene from "../../Scene";
 import type Style from "../../Style";
 import Text, { Font } from "../../Text";
-import type { TextureLike } from "../../Texture";
+import type { TextureInput } from "../../Texture";
 import type { NGonEditRecord } from "../NGonEditTool/data";
 import type { TextEditRecord } from "../TextEditTool/data";
 import EditorGroup from "./EditorGroup";
@@ -267,7 +267,7 @@ interface EditorDocument {
 
 /** 跨会话加载无 URL 纹理时，按保存编号提供 DOM/视频等外部资源。 */
 interface EditorLoadOptions {
-    textures?: ReadonlyMap<number, TextureLike>;
+    textures?: ReadonlyMap<number, TextureInput>;
 }
 
 interface DocumentOwner {

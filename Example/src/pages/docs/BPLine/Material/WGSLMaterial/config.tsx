@@ -22,7 +22,7 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
     properties: [
         entry("raw.vertexShader: string", "完整的 @vertex main WGSL；空值使用内置顶点阶段。", "Complete @vertex main WGSL; empty uses the built-in vertex stage."),
         entry("raw.fragmentShader: string", "完整的 @fragment main WGSL；空值输出白色。", "Complete @fragment main WGSL; empty returns white."),
-        entry("raw.value: Record<string, ShaderValue>", "number、Vec2、Mat3、Float32Array、多个 Texture 的具名值。", "Named values of number, Vec2, Mat3, Float32Array, or multiple Textures."),
+        entry("raw.value: Record<string, ShaderValue>", "支持 number、Vec2、Mat3、Float32Array、多个 Texture 或 RenderTarget。直接传目标，不取 target.texture；先用同一 Render 绘制来源。", "Named number, Vec2, Mat3, Float32Array, and multiple Texture or RenderTarget values. Pass the target itself, not target.texture, after rendering its source with the same Render."),
     ],
     methods: [
         entry("new WGSLMaterial(style?: Style)", "创建可分别设置两个着色器阶段的材质。", "Create a material with independent shader-stage sources."),
@@ -32,6 +32,8 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
         { label: "Material", to: "/docs/bpline/material" },
         { label: "CompositeMaterial", to: "/docs/bpline/material/composite-material" },
         { label: "Base2D", to: "/docs/bpline/geometry/base2d" },
+        { label: "RenderTarget", to: "/docs/bpline/render-target" },
+        { label: "WgslPass", to: "/docs/bpline/post-process/wgsl" },
         { label: "Custom shader example", to: "/example/material/wgsl" },
     ],
 };

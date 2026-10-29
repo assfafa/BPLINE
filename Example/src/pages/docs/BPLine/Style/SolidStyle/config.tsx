@@ -16,7 +16,7 @@ style.solid.borderWidth = 3;
 style.solid.borderColor.setHex("#ffffff");`,
     properties: [
         entry("enabled: boolean; color: Color; opacity: number", "实体面开关、填充色与透明度。", "Fill switch, color, and opacity."),
-        entry("texture: Texture | undefined", "可选实体贴图。", "Optional fill texture."),
+        entry("texture: Texture | RenderTarget | undefined", "实体贴图可直接接收离屏目标；先用同一 Render 的 renderPass(target) 更新目标，再绘制使用该材质的场景。", "Fill textures accept an offscreen target directly. Update it with the same Render's renderPass(target) before drawing the consuming scene."),
         entry("borderWidth: number; borderColor: Color", "SDF 边框宽度与颜色。", "SDF border width and color."),
         entry("borderAlign: BorderAlign", "SDF 边框的 inset、normal 或 outset 对齐。", "SDF border alignment: inset, normal, or outset."),
         entry("pixelAligned: PixelAligned", "边框使用固定像素或随相机缩放。", "Border size in fixed pixels or camera zoom units."),

@@ -1,10 +1,12 @@
 /// <reference types="@webgpu/types" preserve="true" />
+import type RenderTarget from "../RenderTarget";
 import type Camera from "../Camera";
 import type { GeoData } from "../Geometry";
 import type { Material2d } from "../global-types";
 import type { MeshLike } from "../Mesh";
 import type Scene from "../Scene";
 import type { TextureResource } from "../Texture/Layers";
+import type { HDRMode, HDRChangeCallback } from "./CanvasOutput";
 
 /**
  * Render 运行模式。
@@ -144,6 +146,8 @@ interface SceneResourcesLike {
  * 单个 Texture 对应的 WebGPU 贴图资源。
  */
 interface GPUTextureResourceLike {
+    /** IMesh 离屏输入的逐层输出视图，不随每帧内容变化重建。 */
+    layerViews?: Map<number, GPUTextureView>;
     textureId: number;
     /** 层内源图 ID，显式销毁图片时同时失效引用它的层组。 */
     sourceIds?: ReadonlySet<number>;
@@ -159,6 +163,8 @@ interface GPUTextureResourceLike {
  * 相同材质 key 共享的 WebGPU 管线模板。
  */
 interface PipelineTemplateLike {
+    /** 未添加附件签名的材质键，供跨目标 trim 使用。 */
+    materialKey: string;
     key: string;
     renderPipeline?: GPURenderPipeline;
     lineRenderPipeline?: GPURenderPipeline;
@@ -183,11 +189,27 @@ interface CustomValueResourcesLike {
     resources?: readonly unknown[];
 }
 
+/** 一个离屏目标的 Render 私有附件，不与场景贴图一起自动 trim。 */
+interface RenderTargetResourceLike {
+    target: RenderTarget;
+    version: number;
+    color: GPUTexture;
+    colorView: GPUTextureView;
+    sampleView: GPUTextureView;
+    sample: GPUTextureResourceLike;
+    depth: DepthTextureLike;
+}
+
 interface PipelineLike {
+    renderTargets: Map<number, RenderTargetResourceLike>;
+    /** 每个材质键的附件变体，避免每次 Mesh 绘制重复拼接完整 Shader 键。 */
+    targetPipelineKeys: Map<string, Map<string, string>>;
     adapter?: GPUAdapter;
     device?: GPUDevice;
     context?: GPUCanvasContext;
     format?: GPUTextureFormat;
+    /** Canvas 实际配置；离屏目标只决定格式，不单独执行显示映射。 */
+    toneMapping?: GPUCanvasToneMapping;
     pipelineTemplates: Map<string, PipelineTemplateLike>;
     defaultBindGroupLayout?: GPUBindGroupLayout;
     baseMaterialBindGroupLayout?: GPUBindGroupLayout;
@@ -212,6 +234,16 @@ interface RenderLike {
     canvas: HTMLCanvasElement;
     backgroundColor: GPUColorDict;
     alphaMode: GPUCanvasAlphaMode;
+    /** 请求模式，默认 auto；不支持时自动回退。 */
+    hdr: HDRMode;
+    /** 浏览器媒体查询报告的 HDR 能力。 */
+    readonly hdrAvailable: boolean;
+    /** Canvas 是否接受 rgba16float + extended 配置。 */
+    readonly hdrEnabled: boolean;
+    /** @param key 订阅身份 @param callback HDR 状态变化回调 @example render.onHDR("ui", Draw); @returns 无返回值。 */
+    onHDR(key: string, callback: HDRChangeCallback): void;
+    /** @param key 订阅身份 @example render.deleteHDR("ui"); @returns 是否移除。 */
+    deleteHDR(key: string): boolean;
     pipeline: PipelineLike;
     readonly ready: Promise<void>;
     /**
@@ -237,8 +269,10 @@ interface RenderLike {
      * @returns 无返回值
      */
     warmup(scene: Scene, camera: Camera): void;
+    /** @param target 含场景和相机的离屏目标 @example render.warmupPass(target); @returns 无返回值，只准备缓存和附件。 */
+    warmupPass(target: RenderTarget): void;
     /**
-     * 预热缓存并绘制当前场景。
+     * 预热缓存并将当前场景绘制到 Canvas。
      * @param scene 场景对象
      * @param camera 相机对象
      * @example
@@ -246,6 +280,8 @@ interface RenderLike {
      * @returns 无返回值
      */
     render(scene: Scene, camera: Camera): void;
+    /** @param target 含场景和相机的离屏目标 @example render.renderPass(target); @returns 无返回值，绘制到目标附件，尺寸跟随相机 viewport。 */
+    renderPass(target: RenderTarget): void;
     /**
      * 创建或更新当前场景的 GPUBuffer。
      * @param scene 场景对象
@@ -354,7 +390,7 @@ interface RenderLike {
 }
 
 export type {
-    DepthTextureLike, GeometryBufferLike, GeometryBufferPartLike, GPUTextureResourceLike, MeshDepthBufferLike, MeshMatrixBufferLike,
+    RenderTargetResourceLike, DepthTextureLike, GeometryBufferLike, GeometryBufferPartLike, GPUTextureResourceLike, MeshDepthBufferLike, MeshMatrixBufferLike,
     MeshStyleBufferLike,
     PipelineBuffersLike,
     PipelineLike,

@@ -148,6 +148,44 @@ const Left = ({ section: activeSection, onNavigate }: LeftProps): JSX.Element =>
                     {translator.translate(language, "menu.wgslMaterial")}
                 </NavLink>
                 <span className="mt-3 block border-t border-border px-4 py-2 text-sm font-semibold text-foreground">
+                    {translator.translate(language, "menu.postProcess")}
+                </span>
+                <NavLink
+                    to="/example/post-process/bloom"
+                    onClick={onNavigate}
+                    className="block py-2 pr-4 pl-8 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+                >
+                    {translator.translate(language, "menu.bloom")}
+                </NavLink>
+                <NavLink
+                    to="/example/post-process/shadow"
+                    onClick={onNavigate}
+                    className="block py-2 pr-4 pl-8 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+                >
+                    {translator.translate(language, "menu.shadow")}
+                </NavLink>
+                <NavLink
+                    to="/example/post-process/smaa"
+                    onClick={onNavigate}
+                    className="block py-2 pr-4 pl-8 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+                >
+                    {translator.translate(language, "menu.smaa")}
+                </NavLink>
+                <NavLink
+                    to="/example/post-process/fxaa"
+                    onClick={onNavigate}
+                    className="block py-2 pr-4 pl-8 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+                >
+                    {translator.translate(language, "menu.fxaa")}
+                </NavLink>
+                <NavLink
+                    to="/example/post-process/wgsl"
+                    onClick={onNavigate}
+                    className="block py-2 pr-4 pl-8 text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+                >
+                    {translator.translate(language, "menu.wgslPass")}
+                </NavLink>
+                <span className="mt-3 block border-t border-border px-4 py-2 text-sm font-semibold text-foreground">
                     {translator.translate(language, "menu.instancing")}
                 </span>
                 <NavLink

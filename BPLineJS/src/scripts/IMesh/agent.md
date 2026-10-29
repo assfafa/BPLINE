@@ -23,7 +23,7 @@
 | `type`（公开） | `string`；`"IMesh"` | 对象类型；Scene 仍通过 Mesh 基类识别。 |
 | `_count`（公开） | `number`；`0` | 实例批次从空集合开始，覆盖普通 Mesh 的单实体默认值。 |
 | `_capacity`（公开） | `number`；`0` | 由构造参数 capacity 触发首次分配；字段初始值不占用实例槽位。 |
-| `_raw`（内部） | `boolean`；`由构造参数或初始化过程赋值` | 是否保留并订阅原始值，只读。（raw 的内部状态）。 |
+| `_raw`（内部） | `boolean`；`由构造参数或初始化过程赋值` | 是否订阅原始记录。（raw 的内部状态）。 |
 | `_raws`（内部） | `Raws`；`new Raws()` | 原始记录按稳定 ID 查询；raw=false 时 Map 为空。（raws 的内部状态）。 |
 | `_growthFactor`（内部） | `number`；`2` | 扩容倍率，默认 2；达到 100000 槽后每批追加 100000。（growthFactor 的内部状态）。 |
 | `_ids`（内部） | `number[]`；`[]` | 状态由 `push`、`updateAt`、`updateInstanceData`、`clear` 读取或维护；完整处理见对应函数。 |
@@ -31,9 +31,10 @@
 | `_pendingStyles`（内部） | `按初始化值推断`；`new Set<number>()` | 状态由 `updateAt`、`onRawChange`、`updateInstanceData`、`clear` 读取或维护；完整处理见对应函数。 |
 | `_local`（内部） | `Mat3`；`new Mat3()` | 状态由 `writeMatrix` 读取或维护；完整处理见对应函数。 |
 | `_world`（内部） | `Mat3`；`new Mat3()` | 状态由 `writeMatrix` 读取或维护；完整处理见对应函数。 |
-| `_sources`（内部） | `(TextureLike \| undefined)[][]`；`[]` | 状态由 `clear`、`setSources`、`updateTextureLayers`、`writeLayers` 读取或维护；完整处理见对应函数。 |
+| `_effects`（内部） | `EffectData[]`；`[]` | 状态由 `effectAt`、`clear`、`writeStyle` 读取或维护；完整处理见对应函数。 |
+| `_sources`（内部） | `(TextureInput \| undefined)[][]`；`[]` | 状态由 `clear`、`setSources`、`updateTextureLayers`、`writeLayers` 读取或维护；完整处理见对应函数。 |
 | `_textures`（内部） | `readonly TextureLayers[]`；`[ new TextureLayers(), new TextureLayers(), new TextureLayers(), ]` | 三套独立图片层表；普通 Mesh 在相同绑定位置只使用一层。（textures 的内部状态）。 |
-| `_layerIndices`（内部） | `Map<TextureLike \| undefined, number>[]`；`[ new Map<TextureLike \| undefined, number>(), new Map<TextureLike \| undefined, number>(), new Map<TextureLike \| undefined, number>(), ]` | 状态由 `clear`、`updateTextureLayers`、`writeLayers` 读取或维护；完整处理见对应函数。 |
+| `_layerIndices`（内部） | `Map<TextureInput \| undefined, number>[]`；`[ new Map<TextureInput \| undefined, number>(), new Map<TextureInput \| undefined, number>(), new Map<TextureInput \| undefined, number>(), ]` | 状态由 `clear`、`updateTextureLayers`、`writeLayers` 读取或维护；完整处理见对应函数。 |
 | `_layersPending`（内部） | `boolean`；`false` | 状态由 `clear`、`setSources`、`updateTextureLayers` 读取或维护；完整处理见对应函数。 |
 | `_instanceBounds`（内部） | `MeshBoundingBox \| null`；`null` | 状态由 `aggregateBounds` 读取或维护；完整处理见对应函数。 |
 | `_boundsGeometry`（内部） | `Geometry2d \| undefined`；`由构造参数或初始化过程赋值` | 状态由 `aggregateBounds` 读取或维护；完整处理见对应函数。 |
@@ -60,7 +61,8 @@ const iMesh = new IMesh(data, material, options);
 | `override get boundingBox(): MeshBoundingBox \| null`  | 全部实例共用的整体包围盒；空实例集合返回 null。 |
 | `override getRenderBoundingBox(camera: CameraLike): MeshBoundingBox \| null`  | 含 ignoreZoom 补偿的实例整体范围。 |
 | `aggregateBounds(zoom: number): MeshBoundingBox \| null` （内部） | 共享局部范围及所有实例的世界并集。 |
-| `get raw(): boolean`  | 是否保留并订阅原始值，只读。 |
+| `effectAt(index: number): EffectData \| undefined`  | 已同步的纯数据效果；raw=false 不持有 Style 引用。 |
+| `get raw(): boolean`  | 是否订阅原始记录。 |
 | `get raws(): Raws`  | 原始记录按稳定 ID 查询；raw=false 时 Map 为空。 |
 | `get growthFactor(): number`  | 扩容倍率，默认 2；达到 100000 槽后每批追加 100000。 |
 | `set growthFactor(value: number)`  | 扩容倍率，默认 2；达到 100000 槽后每批追加 100000。 |
@@ -114,6 +116,7 @@ export type { IMeshOptions };
 - 库构建把 src/scripts 的目录说明复制到 lib 同名目录；TS 对应 JS/声明，WGSL 作为导入资源编译。Examples 说明只保留在源码，不进入 npm。
 
 <!-- agent-notes:start -->
+- 每个有效实例槽位保存 Bloom/Shadow 的纯值快照，供后处理按相同参数合批；raw=false 不因此持有 Style/Color 引用。全槽位同组时仍使用一次 instanced draw。
 暂无额外目录约定。
 <!-- agent-notes:end -->
 

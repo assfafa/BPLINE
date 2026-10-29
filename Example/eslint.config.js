@@ -8,7 +8,7 @@ import tseslint from "typescript-eslint";
 import readability from "../eslint/readability.mjs";
 
 export default defineConfig([
-    globalIgnores(["dist/**", "lib/**", "node_modules/**", "eslint.config.js"]),
+    globalIgnores(["dist/**", "lib/**", "node_modules/**", ".local/**", "eslint.config.js"]),
     {
         files: ["**/*.{ts,tsx}"],
         extends: [

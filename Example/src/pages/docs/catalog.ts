@@ -101,8 +101,16 @@ export const lineDocumentation: readonly DocumentationItem[] = [
     ]),
     page("Mesh", "/docs/bpline/mesh", "BPLine/Mesh"),
     page("Object", "/docs/bpline/object", "BPLine/Object"),
+    page("PostProcess", "/docs/bpline/post-process", "BPLine/PostProcess", [
+        page("Bloom", "/docs/bpline/post-process/bloom", "BPLine/PostProcess/Bloom"),
+        page("Shadow", "/docs/bpline/post-process/shadow", "BPLine/PostProcess/Shadow"),
+        page("SMAA", "/docs/bpline/post-process/smaa", "BPLine/PostProcess/SMAA"),
+        page("FXAA", "/docs/bpline/post-process/fxaa", "BPLine/PostProcess/FXAA"),
+        page("WgslPass", "/docs/bpline/post-process/wgsl", "BPLine/PostProcess/WgslPass"),
+    ]),
     page("Raws", "/docs/bpline/raws", "BPLine/Raws"),
     page("Render", "/docs/bpline/render", "BPLine/Render"),
+    page("RenderTarget", "/docs/bpline/render-target", "BPLine/RenderTarget"),
     page("Scene", "/docs/bpline/scene", "BPLine/Scene", [
         page("QuadTree", "/docs/bpline/scene/quad-tree", "BPLine/Scene/QuadTree"),
     ]),
@@ -122,6 +130,8 @@ export const lineDocumentation: readonly DocumentationItem[] = [
         page("EdgeStyle", "/docs/bpline/style/edge-style", "BPLine/Style/EdgeStyle"),
         page("PointsStyle", "/docs/bpline/style/points-style", "BPLine/Style/PointsStyle"),
         page("JoinStyle", "/docs/bpline/style/join-style", "BPLine/Style/JoinStyle"),
+        page("BloomStyle", "/docs/bpline/style/bloom-style", "BPLine/Style/BloomStyle"),
+        page("ShadowStyle", "/docs/bpline/style/shadow-style", "BPLine/Style/ShadowStyle"),
     ]),
     page("Texture", "/docs/bpline/texture", "BPLine/Texture"),
 ];

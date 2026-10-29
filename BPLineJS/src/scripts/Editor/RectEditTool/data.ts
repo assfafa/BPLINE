@@ -2,6 +2,7 @@ import Rect2D from "../../Geometry/Rect2D";
 import BaseMaterial from "../../Material/baseMaterial";
 import Mesh from "../../Mesh";
 import Style from "../../Style";
+import Effects, { type EffectData } from "../../Style/Effects";
 
 /** 可直接传给前端状态管理器的颜色、启用状态和不透明度。 */
 interface RectEditPartData {
@@ -12,6 +13,8 @@ interface RectEditPartData {
 
 /** 矩形编辑器支持的可序列化显示参数。 */
 interface RectEditStyleData {
+    /** 后处理效果；旧文档省略时使用默认关闭配置。 */
+    effects?: EffectData;
     solid: RectEditPartData & { borderColor: string; borderWidth: number; borderAlign: "inset" | "normal" | "outset"; pixelAligned: "px" | "zoom" };
     wireframe: RectEditPartData;
     edge: RectEditPartData & { width: number; borderAlign: "inset" | "normal" | "outset"; pixelAligned: "px" | "zoom"; uvRepeat: number };
@@ -57,6 +60,7 @@ interface RectEditDocument {
  */
 const CaptureRectStyle = (style: Style): RectEditStyleData => {
     return {
+        effects: Effects.capture(style),
         solid: {
             enabled: style.solid.enabled,
             color: style.solid.color.toHex(true),
@@ -105,6 +109,10 @@ const CaptureRectStyle = (style: Style): RectEditStyleData => {
  * @returns 无返回值。
  */
 const ApplyRectStyle = (style: Style, data: RectEditStyleData): void => {
+    // 旧版数据没有效果字段，保持向前兼容。
+    if (data.effects !== undefined) {
+        Effects.apply(style, data.effects);
+    }
     style.solid.enabled = data.solid.enabled;
     style.solid.color.setHex(data.solid.color);
     style.solid.opacity = data.solid.opacity;

@@ -1,10 +1,10 @@
 /// <reference types="@webgpu/types" preserve="true" />
-import type { TextureLike, TextureSubscriber } from "../Texture";
+import type { TextureInput, TextureSubscriber } from "../Texture";
 import PartStyle from "./PartStyle";
 
 /** 面、实体边框和关键点使用的贴图参数，各分区独立持有。 */
 class TexturedStyle extends PartStyle implements TextureSubscriber {
-    private _texture: TextureLike | undefined;
+    private _texture: TextureInput | undefined;
     /** U 轴默认重复；子样式可以在字段声明中指定自己的默认值。 */
     protected _addressModeU: GPUAddressMode = "repeat";
     /** V 轴默认重复；子样式可以在字段声明中指定自己的默认值。 */
@@ -15,7 +15,7 @@ class TexturedStyle extends PartStyle implements TextureSubscriber {
      * const value = texturedStyle.texture;
      * @returns 当前贴图，undefined 使用白色后备贴图。
      */
-    public get texture(): TextureLike | undefined {
+    public get texture(): TextureInput | undefined {
         return this._texture;
     }
     /**
@@ -25,7 +25,7 @@ class TexturedStyle extends PartStyle implements TextureSubscriber {
      * texturedStyle.texture = value;
      * @returns 无返回值。
      */
-    public set texture(value: TextureLike | undefined) {
+    public set texture(value: TextureInput | undefined) {
         // 仅在属性实际改变时更新状态，避免重复订阅和版本递增。
         if (this._texture !== value) {
             this._texture?.delete(this);
@@ -67,7 +67,7 @@ class TexturedStyle extends PartStyle implements TextureSubscriber {
      * texturedStyle.onTextureChange(texture);
      * @returns 无返回值。
      */
-    public onTextureChange(texture: TextureLike): void {
+    public onTextureChange(texture: TextureInput): void {
         // 只转发当前贴图的变化通知，忽略已经替换的旧来源。
         if (texture === this._texture) {
             this.notify("textureData");

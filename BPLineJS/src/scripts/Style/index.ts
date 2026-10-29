@@ -1,3 +1,5 @@
+import BloomStyle from "./BloomStyle";
+import ShadowStyle from "./ShadowStyle";
 import EdgeStyle from "./EdgeStyle";
 import JoinStyle from "./JoinStyle";
 import PointsStyle from "./PointsStyle";
@@ -9,6 +11,8 @@ import WireframeStyle from "./WireframeStyle";
 class Style implements PartSubscriber {
     /** 对象类型。 */
     public readonly type: string = "Style";
+    private readonly _bloom = new BloomStyle();
+    private readonly _shadow = new ShadowStyle();
     private readonly _solid: SolidStyle = new SolidStyle();
     private readonly _wireframe: WireframeStyle = new WireframeStyle();
     private readonly _edge: EdgeStyle = new EdgeStyle();
@@ -24,6 +28,8 @@ class Style implements PartSubscriber {
      * @returns 创建的 Style 对象。
      */
     public constructor() {
+        this._bloom.add(this);
+        this._shadow.add(this);
         this._solid.add(this);
         this._wireframe.add(this);
         this._edge.add(this);
@@ -38,6 +44,8 @@ class Style implements PartSubscriber {
      * @returns 当前样式。
      */
     public copy(source: Style): this {
+        this._bloom.copy(source.bloom);
+        this._shadow.copy(source.shadow);
         this._solid.copy(source.solid);
         this._wireframe.copy(source.wireframe);
         this._edge.copy(source.edge);
@@ -74,6 +82,14 @@ class Style implements PartSubscriber {
      */
     public get solid(): SolidStyle {
         return this._solid;
+    }
+    /** @example style.bloom.enabled = true; @returns 对象发光配置；需要添加 Bloom 通道。 */
+    public get bloom(): BloomStyle {
+        return this._bloom;
+    }
+    /** @example style.shadow.enabled = true; @returns 对象内外阴影配置；需要添加 Shadow 通道。 */
+    public get shadow(): ShadowStyle {
+        return this._shadow;
     }
     /**
      * 原生线框样式。
@@ -157,6 +173,8 @@ class Style implements PartSubscriber {
      * @returns 无返回值。
      */
     public dispose(): void {
+        this._bloom.dispose();
+        this._shadow.dispose();
         this._solid.dispose();
         this._wireframe.dispose();
         this._edge.dispose();
@@ -199,4 +217,4 @@ export type {
     StyleSubscriber,
 } from "./types";
 export { STYLE_STRIDE, WriteStyleData } from "./WriteStyleData";
-export { EdgeStyle, JoinStyle, PointsStyle, SolidStyle, WireframeStyle };
+export { BloomStyle, ShadowStyle, EdgeStyle, JoinStyle, PointsStyle, SolidStyle, WireframeStyle };

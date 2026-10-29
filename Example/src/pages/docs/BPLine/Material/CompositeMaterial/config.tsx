@@ -27,7 +27,7 @@ material.raw.edgeShader = "return vec4f(1.0, 0.5, 0.2, 1.0);";`,
         entry("raw.solidShader: string", "实体面 WGSL 函数体，空值返回白色。", "Fill WGSL function body; empty means white."),
         entry("raw.edgeShader: string", "实体边框 WGSL 函数体，空值返回白色。", "Edge WGSL function body; empty means white."),
         entry("raw.pointShader: string", "关键点 WGSL 函数体，空值返回白色。", "Point WGSL function body; empty means white."),
-        entry("raw.value: Record<string, ShaderValue>", "支持 number、Vec2、Mat3、Float32Array 和多个 Texture；字段名生成 value_名称 绑定。", "Supports number, Vec2, Mat3, Float32Array, and multiple Textures; each name becomes a value_name binding."),
+        entry("raw.value: Record<string, ShaderValue>", "支持 number、Vec2、Mat3、Float32Array、多个 Texture 或 RenderTarget；字段名生成 value_名称 绑定，纹理另有 valueSampler_名称。离屏来源须由同一个 Render 先绘制。", "Supports number, Vec2, Mat3, Float32Array, and multiple Texture or RenderTarget inputs. Names generate value_name and texture valueSampler_name bindings. Render offscreen sources first using the same Render."),
     ],
     methods: [
         entry("new CompositeMaterial(style?: Style)", "创建基于内置矩形、多边形和正多边形模板的分区材质。", "Create a section shader material using the built-in shape templates."),
@@ -36,6 +36,7 @@ material.raw.edgeShader = "return vec4f(1.0, 0.5, 0.2, 1.0);";`,
     links: [
         { label: "Material", to: "/docs/bpline/material" },
         { label: "WGSLMaterial", to: "/docs/bpline/material/wgsl-material" },
+        { label: "RenderTarget", to: "/docs/bpline/render-target" },
         { label: "Custom shader example", to: "/example/material/custom" },
     ],
 };

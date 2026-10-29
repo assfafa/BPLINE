@@ -1,6 +1,7 @@
 import { Mat3, Vec2 } from "bpmatrixjs/Math";
 import type { Material2d } from "../global-types";
 import type Style from "../Style";
+import RenderTarget from "../RenderTarget";
 import Texture from "../Texture";
 import BaseMaterial from "./baseMaterial";
 import CompositeMaterial from "./CompositeMaterial";
@@ -24,7 +25,7 @@ const CloneValues = (values: ShaderValueRecord): ShaderValueRecord => {
         } else if (value instanceof Float32Array) {
             // 原始数组可能由调用方继续更新，副本需持有独立存储。
             copied[name] = new Float32Array(value);
-        } else if (value instanceof Texture) {
+        } else if (value instanceof Texture || value instanceof RenderTarget) {
             // 纹理 GPU 资源由引擎管理，这里保留共享引用。
             copied[name] = value;
         } else {

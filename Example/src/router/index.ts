@@ -214,6 +214,36 @@ const loadVideoPage = async () => {
     return { Component: page.default };
 };
 
+/** @example await loadBloomExample(); @returns The Bloom post-processing example route. */
+const loadBloomExample = async () => {
+    const page = await import("@/pages/example/PostProcess/Bloom/index.tsx");
+    return { Component: page.default };
+};
+
+/** @example await loadShadowExample(); @returns The Shadow post-processing example route. */
+const loadShadowExample = async () => {
+    const page = await import("@/pages/example/PostProcess/Shadow/index.tsx");
+    return { Component: page.default };
+};
+
+/** @example await loadSMAAExample(); @returns The SMAA post-processing example route. */
+const loadSMAAExample = async () => {
+    const page = await import("@/pages/example/PostProcess/SMAA/index.tsx");
+    return { Component: page.default };
+};
+
+/** @example await loadFXAAExample(); @returns The FXAA post-processing example route. */
+const loadFXAAExample = async () => {
+    const page = await import("@/pages/example/PostProcess/FXAA/index.tsx");
+    return { Component: page.default };
+};
+
+/** @example await loadWgslPassExample(); @returns The WgslPass post-processing example route. */
+const loadWgslPassExample = async () => {
+    const page = await import("@/pages/example/PostProcess/WgslPass/index.tsx");
+    return { Component: page.default };
+};
+
 /** Keep all public example routes inside the URL hash for static hosting. */
 export const router = createHashRouter([
     {
@@ -270,6 +300,26 @@ export const router = createHashRouter([
             {
                 path: "example/material/custom",
                 lazy: loadCustomMaterialPage,
+            },
+            {
+                path: "example/post-process/bloom",
+                lazy: loadBloomExample,
+            },
+            {
+                path: "example/post-process/shadow",
+                lazy: loadShadowExample,
+            },
+            {
+                path: "example/post-process/smaa",
+                lazy: loadSMAAExample,
+            },
+            {
+                path: "example/post-process/fxaa",
+                lazy: loadFXAAExample,
+            },
+            {
+                path: "example/post-process/wgsl",
+                lazy: loadWgslPassExample,
             },
             {
                 path: "example/instancing/imesh",

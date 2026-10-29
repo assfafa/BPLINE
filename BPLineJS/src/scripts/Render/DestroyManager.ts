@@ -1,3 +1,4 @@
+import RenderTargetManager from "./RenderTargetManager";
 import type { GeoData } from "../Geometry";
 import type { Material2d } from "../global-types";
 import type { MeshLike } from "../Mesh";
@@ -11,15 +12,18 @@ import type { GeometryBufferLike, GeometryBufferPartLike, PipelineLike, SceneRes
  */
 class DestroyManager implements DestroyManagerLike {
     private readonly pipeline: PipelineLike;
+    private readonly targetManager: RenderTargetManager;
     /**
      * 创建销毁管理器。
      * @param pipeline 当前 Render 的共享管线资源
+     * @param targetManager 当前 Render 共用的离屏资源管理器
      * @example
      * const destroyManager = new DestroyManager(pipeline);
      * @returns 创建的 DestroyManager 对象。
      */
-    public constructor(pipeline: PipelineLike) {
+    public constructor(pipeline: PipelineLike, targetManager: RenderTargetManager = new RenderTargetManager(pipeline)) {
         this.pipeline = pipeline;
+        this.targetManager = targetManager;
     }
     /**
      * 销毁指定 Mesh 的模型矩阵缓冲及可取得的关联资源。
@@ -93,7 +97,7 @@ class DestroyManager implements DestroyManagerLike {
         } else {
             textureId = texture.id;
         }
-        let destroyed: boolean = false;
+        let destroyed: boolean = this.targetManager.destroy(textureId);
         // 遍历当前缓存条目，按实际引用关系处理资源。
         for (const [id, resource] of this.pipeline.textures) {
             // 检查集合中的关联关系，避免重复处理或遗漏引用。
@@ -315,18 +319,19 @@ class DestroyManager implements DestroyManagerLike {
         // 遍历当前缓存条目，按实际引用关系处理资源。
         for (const [textureId, texture] of this.pipeline.textures) {
             // trim 只清理这个资源；源图单层缓存闲置不代表其他层组也闲置。
-            if (!usedResources.textureIds.has(textureId)) {
+            if (!usedResources.textureIds.has(textureId) && !this.pipeline.renderTargets.has(textureId)) {
                 this.releaseTextureBindings(texture.view);
                 texture.texture.destroy();
                 this.pipeline.textures.delete(textureId);
             }
         }
         // 逐项处理 this.pipeline.pipelineTemplates.keys()，保持集合中的既定顺序。
-        for (const pipelineKey of this.pipeline.pipelineTemplates.keys()) {
+        for (const [pipelineKey, template] of this.pipeline.pipelineTemplates) {
             // 检查集合中的关联关系，避免重复处理或遗漏引用。
-            if (!usedResources.pipelineKeys.has(pipelineKey)) {
+            if (!usedResources.pipelineKeys.has(template.materialKey)) {
                 // GPURenderPipeline 没有 destroy()，删除引用后交由浏览器回收。
                 this.pipeline.pipelineTemplates.delete(pipelineKey);
+                this.pipeline.targetPipelineKeys.delete(template.materialKey);
             }
         }
     }
@@ -339,6 +344,7 @@ class DestroyManager implements DestroyManagerLike {
     public destroyAll(): void {
         const device: GPUDevice | undefined = this.pipeline.device;
         this.pipeline.context?.unconfigure();
+        this.targetManager.destroyAll();
         // 遍历当前缓存条目，按实际引用关系处理资源。
         for (const matrixBuffer of this.pipeline.buffers.meshMatrix.values()) {
             matrixBuffer.buffer.destroy();
@@ -383,11 +389,13 @@ class DestroyManager implements DestroyManagerLike {
         this.pipeline.textures.clear();
         this.pipeline.samplers.clear();
         this.pipeline.pipelineTemplates.clear();
+        this.pipeline.targetPipelineKeys.clear();
         this.pipeline.sceneResources.clear();
         this.pipeline.adapter = undefined;
         this.pipeline.device = undefined;
         this.pipeline.context = undefined;
         this.pipeline.format = undefined;
+        this.pipeline.toneMapping = undefined;
         this.pipeline.defaultBindGroupLayout = undefined;
         this.pipeline.baseMaterialBindGroupLayout = undefined;
         this.pipeline.fallbackTexture = undefined;
@@ -409,12 +417,12 @@ class DestroyManager implements DestroyManagerLike {
             }
         }
         /**
-         * 释放当前几何分区已经创建的 GPU 缓冲。
-         * @param part 当前几何分区
-         * @example
-         * DestroyPart(part);
-         * @returns 无返回值。
-         */
+     * 释放当前几何分区已经创建的 GPU 缓冲。
+     * @param part 当前几何分区
+     * @example
+     * DestroyPart(part);
+     * @returns 无返回值。
+     */
         const DestroyPart = (part: GeometryBufferPartLike | undefined): void => {
             part?.vertex.destroy();
             part?.normal.destroy();

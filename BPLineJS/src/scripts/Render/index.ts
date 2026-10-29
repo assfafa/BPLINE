@@ -1,4 +1,6 @@
 import { GetInner } from "bpmatrixjs/Utils";
+import type RenderTarget from "../RenderTarget";
+import RenderTargetManager from "./RenderTargetManager";
 import type Camera from "../Camera";
 import type { GeoData } from "../Geometry";
 import type { Material2d } from "../global-types";
@@ -8,10 +10,11 @@ import type Scene from "../Scene";
 import type { TextureResource } from "../Texture/Layers";
 import BufferManager from "./BufferManager";
 import BoxManager from "./BoxManager";
+import CanvasOutput, { type HDRMode, type HDRState, type HDRChangeCallback } from "./CanvasOutput";
 import DepthManager from "./DepthManager";
 import DestroyManager from "./DestroyManager";
 import DevelopmentValidator from "./DevelopmentValidator";
-import DrawCallManager from "./DrawCallManager";
+import DrawCallManager, { type DrawSelection } from "./DrawCallManager";
 import PipelineManager from "./PipelineManager";
 import PrecisionManager from "./PrecisionManager";
 import SamplerManager from "./SamplerManager";
@@ -60,6 +63,8 @@ class Render implements RenderLike {
      */
     public pipeline: PipelineLike = {
         pipelineTemplates: new Map<string, PipelineTemplateLike>(),
+        renderTargets: new Map(),
+        targetPipelineKeys: new Map(),
         textures: new Map<number, GPUTextureResourceLike>(),
         samplers: new Map<string, GPUSampler>(),
         sceneResources: new Map<number, SceneResourcesLike>(),
@@ -77,6 +82,8 @@ class Render implements RenderLike {
      */
     public readonly ready: Promise<void>;
     private _alphaMode: GPUCanvasAlphaMode = "premultiplied";
+    private readonly outputManager: CanvasOutput;
+    private readonly _onHDR = new Map<string, HDRChangeCallback>();
     private _resizeTimer: number | null = null;
     private _destroyed: boolean = false;
     private _dpr: number = GetInner().dpr;
@@ -87,11 +94,13 @@ class Render implements RenderLike {
     private readonly precisionManager: PrecisionManager = new PrecisionManager();
     private _renderScene: Scene | null = null;
     private _renderCamera: Camera | null = null;
+    private _renderTarget: RenderTarget | null = null;
+    private readonly targetManager: RenderTargetManager = new RenderTargetManager(this.pipeline);
     private readonly bufferManager: BufferManager = new BufferManager(this.pipeline);
-    private readonly destroyManager: DestroyManager = new DestroyManager(this.pipeline);
-    private readonly textureManager: TextureManager = new TextureManager(this.pipeline);
+    private readonly destroyManager: DestroyManager = new DestroyManager(this.pipeline, this.targetManager);
+    private readonly textureManager: TextureManager = new TextureManager(this.pipeline, this.targetManager);
     private readonly samplerManager: SamplerManager = new SamplerManager(this.pipeline);
-    private readonly drawCallManager: DrawCallManager = new DrawCallManager(this.pipeline, this.samplerManager);
+    private readonly drawCallManager: DrawCallManager = new DrawCallManager(this.pipeline, this.samplerManager, this.targetManager, this.textureManager);
     private readonly pipelineManager: PipelineManager = new PipelineManager(this.pipeline, this.textureManager, this.samplerManager);
     /**
      * 创建渲染器并开始异步初始化 WebGPU。
@@ -122,7 +131,51 @@ class Render implements RenderLike {
         this.canvas.height = Math.max(1, Math.round(this.container.clientHeight * initialDpr));
         this.container.appendChild(this.canvas);
         this._renderMode = renderMode;
+        this.outputManager = new CanvasOutput(this.pipeline, this.updateHDR.bind(this));
         this.ready = this.initWebGPU();
+    }
+    /** @example render.hdr; @returns HDR 请求模式，默认 auto：跟随浏览器当前显示状态。 */
+    public get hdr(): HDRMode {
+        return this.outputManager.mode;
+    }
+    /** @param value auto 自动检测，true 请求 HDR，false 使用 SDR @example render.hdr = true; @returns 同步输出配置；不支持 extended 时保留 SDR。 */
+    public set hdr(value: HDRMode) {
+        // 公开接口也验证 JavaScript 调用者，避免未知字符串默默关闭 HDR。
+        if (value === "auto" || typeof value === "boolean") {
+            // 同一模式重复设置不清空 Canvas 或触发重复通知。
+            if (this._destroyed === false && this.outputManager.mode !== value) {
+                this.outputManager.mode = value;
+                this.updateHDR();
+            }
+        } else {
+            throw new TypeError("hdr must be auto, true or false.");
+        }
+    }
+    /** @example render.hdrAvailable; @returns 浏览器报告的当前 HDR 输出能力，不能验证屏幕实际亮度。 */
+    public get hdrAvailable(): boolean {
+        return this.outputManager.available;
+    }
+    /** @example render.hdrEnabled; @returns Canvas 已接受 HDR 配置；ready 前或回退 SDR 时为 false。 */
+    public get hdrEnabled(): boolean {
+        return this.outputManager.enabled;
+    }
+    /** @param key 订阅身份，同名替换 @param callback 配置或检测状态变化后的处理函数 @example render.onHDR("preview", Draw); @returns 注册监听，不立即调用；静态后处理页面可在此重新绘制整条链。 */
+    public onHDR(key: string, callback: HDRChangeCallback): void {
+        this._onHDR.set(key, callback);
+    }
+    /** @param key 订阅身份 @example render.deleteHDR("preview"); @returns 是否移除了监听。 */
+    public deleteHDR(key: string): boolean {
+        return this._onHDR.delete(key);
+    }
+    /** @example this.updateHDR(); @returns 重新配置输出并通知状态订阅者，不自行重绘来源或后处理链。 */
+    private updateHDR(): void {
+        this.outputManager.configure(this._alphaMode);
+        const state: HDRState = Object.freeze({ mode: this.hdr, available: this.hdrAvailable, enabled: this.hdrEnabled,
+            format: this.pipeline.format, toneMapping: this.pipeline.toneMapping?.mode ?? "standard" });
+        // 使用快照允许回调注销自身；应用可选择重绘或仅更新状态文字。
+        for (const callback of [...this._onHDR.values()]) {
+            callback(state);
+        }
     }
     /** @example render.boxDebounce; @returns 视口查询防抖毫秒，默认 100；等待期间保守绘制完整列表。 */
     public get boxDebounce(): number {
@@ -181,17 +234,11 @@ class Render implements RenderLike {
                 if (context === null) {
                     throw new Error("WebGPU canvas context could not be created.");
                 }
-                const format: GPUTextureFormat = webGPU.getPreferredCanvasFormat();
-                context.configure({
-                    device,
-                    format,
-                    alphaMode: this._alphaMode,
-                });
                 this.pipeline.adapter = adapter;
                 this.pipeline.device = device;
                 this.pipeline.context = context;
-                this.pipeline.format = format;
                 this.pipelineManager.initResources(device);
+                this.updateHDR();
             } else {
                 device.destroy();
                 return;
@@ -211,13 +258,7 @@ class Render implements RenderLike {
         // 仅处理新的属性或引用，保持现有关联与版本在重复赋值时不变。
         if (this._alphaMode !== alphaMode) {
             this._alphaMode = alphaMode;
-            const device: GPUDevice | undefined = this.pipeline.device;
-            const context: GPUCanvasContext | undefined = this.pipeline.context;
-            const format: GPUTextureFormat | undefined = this.pipeline.format;
-            // GPU 设备及上下文就绪后才能创建或提交渲染资源。
-            if (device !== undefined && context !== undefined && format !== undefined) {
-                context.configure({ device, format, alphaMode });
-            }
+            this.updateHDR();
         } else {
             return;
         }
@@ -269,22 +310,47 @@ class Render implements RenderLike {
      * @returns 无返回值
      */
     public warmup(scene: Scene, camera: Camera): void {
-        this.prepare(scene, camera, false);
+        this.prepare(scene, camera, false, null);
     }
-    /** @param scene 场景 @param camera 相机 @param redraw 精度更新后是否重绘当前画面 @example this.prepare(scene, camera, false); @returns 无返回值，准备阶段不提交 DrawCall。 */
-    private prepare(scene: Scene, camera: Camera, redraw: boolean): void {
+    /**
+     * 预热离屏场景及附件，不提交绘制或改变当前输出。
+     * @param target 包含场景和相机的离屏目标
+     * @example render.warmupPass(target);
+     * @returns 无返回值。
+     */
+    public warmupPass(target: RenderTarget): void {
+        this.prepare(target.scene, target.camera, false, target);
+    }
+    /**
+     * @param scene 场景
+     * @param camera 相机
+     * @param redraw 精度更新后是否重绘当前画面
+     * @param target 离屏目标；null 表示 Canvas
+     * @example this.prepare(scene, camera, false, target);
+     * @returns 无返回值，准备阶段不提交 DrawCall。
+     */
+    private prepare(scene: Scene, camera: Camera, redraw: boolean, target: RenderTarget | null): void {
         // 检查生命周期状态，防止已释放对象重新建立订阅或资源。
         if (!this._destroyed && this.pipeline.device !== undefined) {
             this.initScene(scene);
+            // 离屏输入不能包含自己的输出，包括自定义传值和 IMesh 层表。
+            if (target !== null) {
+                this.targetManager.validateInputs(scene.textureList, target);
+                this.targetManager.ensure(target);
+            }
             this.matrixUpdate(scene);
             this.initCamera(camera);
-            /** @param pendingScene 延迟处理的场景 @param pendingCamera 延迟处理的相机 @example RebuildPendingPrecision(scene, camera); @returns 无返回值，旧场景仅预热缓存。 */
+            /** @param pendingScene 延迟处理的场景 @param pendingCamera 延迟处理的相机 @example RebuildPendingPrecision(scene, camera); @returns 无返回值，当前场景重绘到最近使用的输出，旧场景仅预热。 */
             const RebuildPendingPrecision = (pendingScene: Scene, pendingCamera: Camera): void => {
                 // 切换页面/场景后，旧防抖任务不能覆盖当前画面；warmup 也始终不提交绘制。
-                if (redraw && this._renderScene === pendingScene && this._renderCamera === pendingCamera) {
-                    this.render(pendingScene, pendingCamera);
-                } else {
+                if (redraw && this._renderScene === pendingScene && this._renderCamera === pendingCamera && this._renderTarget?.destroyed !== true) {
+                    this.redrawCurrent();
+                } else if (target === null) {
+                    // Canvas 的旧场景只预热，不影响当前显示内容。
                     this.warmup(pendingScene, pendingCamera);
+                } else if (target.destroyed === false && target.scene === pendingScene && target.camera === pendingCamera) {
+                    // 目标已更换场景或相机时，旧任务不能准备或覆盖新的目标配置。
+                    this.warmupPass(target);
                 }
             };
             this.precisionManager.update(scene, camera, this._precisionDebounce, RebuildPendingPrecision);
@@ -293,8 +359,8 @@ class Render implements RenderLike {
             /** @param pendingScene 已完成查询的场景 @example RedrawBox(scene); @returns 无返回值，保持 warmup 与旧场景不提交绘制。 */
             const RedrawBox = (pendingScene: Scene): void => {
                 // 只有当前画面的查询完成才触发重绘，避免旧场景覆盖新页面。
-                if (redraw && this._renderScene === pendingScene && this._renderCamera === camera) {
-                    this.render(pendingScene, camera);
+                if (redraw && this._renderScene === pendingScene && this._renderCamera === camera && this._renderTarget?.destroyed !== true) {
+                    this.redrawCurrent();
                 }
             };
             this.boxManager.update(scene, this._boxDebounce, RedrawBox);
@@ -304,14 +370,14 @@ class Render implements RenderLike {
             }
             this.drawBuffers(scene, camera);
             this.drawTextures(scene);
-            this.drawPipelines(scene);
-            this.drawCallManager.prepare(this.canvas.width, this.canvas.height);
+            this.pipelineManager.draw(scene, target?.format ?? this.pipeline.format, target !== null && target.data === false);
+            this.drawCallManager.prepare(this.canvas.width, this.canvas.height, target);
         } else {
             return;
         }
     }
     /**
-     * 预热缓存并绘制当前场景。
+     * 预热缓存并将当前场景绘制到 Canvas。
      * @param scene 场景对象
      * @param camera 相机对象
      * @example
@@ -319,14 +385,54 @@ class Render implements RenderLike {
      * @returns 无返回值
      */
     public render(scene: Scene, camera: Camera): void {
+        this.submit(scene, camera, null);
+    }
+    /** @internal @param target 遮罩附件 @param selection Mesh 与实例槽位集合 @param occlude 是否保留其他对象对本组的遮挡 @example render.renderMask(target, selection, true); @returns 透明背景绘制指定对象，可按原场景顺序擦除被遮挡部分；不接管延迟重绘。 */
+    public renderMask(target: RenderTarget, selection: DrawSelection, occlude: boolean = false): void {
+        this.prepare(target.scene, target.camera, false, target);
+        // 额外变体保留原片元 Shader，只改变混合，不篡改共享材质或 Style。
+        if (occlude) {
+            this.pipelineManager.draw(target.scene, target.format, true, true);
+        }
+        this.drawCallManager.draw(target.scene, { r: 0, g: 0, b: 0, a: 0 }, "premultiplied", target, selection, occlude);
+    }
+
+    /** @param target 场景与相机组成的离屏目标 @example render.renderPass(target); @returns 无返回值，提交离屏画面。 */
+    public renderPass(target: RenderTarget): void {
+        this.submit(target.scene, target.camera, target);
+    }
+    /**
+     * 统一准备和提交，两个公开入口各自确定输出位置。
+     * @param scene 本次场景
+     * @param camera 本次相机
+     * @param target 离屏目标；null 表示 Canvas
+     * @example this.submit(scene, camera, null);
+     * @returns 无返回值。
+     */
+    private submit(scene: Scene, camera: Camera, target: RenderTarget | null): void {
         // 检查生命周期状态，防止已释放对象重新建立订阅或资源。
-        if (!this._destroyed && this.pipeline.device !== undefined) {
+        if (this._destroyed === false && this.pipeline.device !== undefined) {
             this._renderScene = scene;
             this._renderCamera = camera;
-            this.prepare(scene, camera, true);
-            this.drawCall(scene);
-        } else {
-            return;
+            this._renderTarget = target;
+            this.prepare(scene, camera, true, target);
+            this.drawCallManager.draw(scene, this.backgroundColor, this._alphaMode, target);
+        }
+    }
+    /** @example this.redrawCurrent(); @returns 无返回值，延迟任务沿用最近输出且不绘制已更换配置的目标。 */
+    private redrawCurrent(): void {
+        const scene = this._renderScene;
+        const camera = this._renderCamera;
+        const target = this._renderTarget;
+        // 只有已经执行过的当前画面可以被防抖任务重绘。
+        if (scene !== null && camera !== null) {
+            // Canvas 与离屏入口分离，且防止旧相机任务写入新场景。
+            if (target === null) {
+                this.render(scene, camera);
+            } else if (target.destroyed === false && target.scene === scene && target.camera === camera) {
+                // 目标配置与原任务仍一致，才使用公开离屏入口重绘。
+                this.renderPass(target);
+            }
         }
     }
     /**
@@ -460,6 +566,8 @@ class Render implements RenderLike {
         // 检查生命周期状态，防止已释放对象重新建立订阅或资源。
         if (!this._destroyed) {
             this._destroyed = true;
+            this.outputManager.destroy();
+            this._onHDR.clear();
             this.precisionManager.destroy();
             this.boxManager.destroy();
             // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
@@ -539,6 +647,7 @@ export type { DrawCallManagerLike } from "./DrawCallManager";
 export type { PipelineManagerLike } from "./PipelineManager";
 export type { SamplerManagerLike } from "./SamplerManager";
 export type { TextureManagerLike } from "./TextureManager";
+export type { HDRMode, HDRState, HDRChangeCallback } from "./CanvasOutput";
 export type {
     DepthTextureLike, GeometryBufferLike, GeometryBufferPartLike, GPUTextureResourceLike, MeshDepthBufferLike, MeshMatrixBufferLike,
     MeshStyleBufferLike,

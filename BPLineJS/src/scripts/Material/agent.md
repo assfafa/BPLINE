@@ -330,7 +330,7 @@ const values = new ShaderValues(onChange);
 | `get version(): number`  | 当前数值修订号。 |
 | `get schemaKey(): string`  | 字段名和类型组成的稳定布局键，不包含数值及 Texture 身份。 |
 | `get entries(): ShaderValueEntry[]`  | 按字段名排序后的绑定列表。 |
-| `get textures(): Texture[]`  | 自定义贴图列表，供 Scene 收集和按引用销毁。 |
+| `get textures(): (Texture \| RenderTarget)[]`  | 自定义贴图列表，供 Scene 收集和按引用销毁。 |
 | `get declarations(): string`  | 生成可以直接在 WGSL 中使用的 value_字段名声明。 |
 | `set(name: string, value: unknown): void`  | 按名字替换一个值；同名同类型 Texture 只改变绑定引用。 |
 | `delete(name: string): void`  | 删除字段并重建布局。 |
@@ -338,7 +338,7 @@ const values = new ShaderValues(onChange);
 | `getBufferData(entry: ShaderValueEntry): Float32Array<ArrayBuffer>`  | 获取一个值对应的上传数组。 |
 | `getKind(value: ShaderValue): ShaderValueKind` （内部） | 计算字段类型，Texture 与数值使用不同绑定资源。 |
 | `validate(name: string, value: unknown): void` （内部） | 校验字段名称与支持的数据类型。 |
-| `commit(previousSchema: string, previousTextures: Texture[]): void` （内部） | 提交布局与资源变化，保留同名同类型值的 Pipeline。 |
+| `commit(previousSchema: string, previousTextures: (Texture \| RenderTarget)[]): void` （内部） | 提交布局与资源变化，保留同名同类型值的 Pipeline。 |
 
 ### 类型索引
 

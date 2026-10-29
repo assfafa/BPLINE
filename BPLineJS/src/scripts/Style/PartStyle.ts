@@ -9,7 +9,7 @@ class PartStyle implements ColorSubscriber {
     private readonly _subscribers = new Set<PartSubscriber>();
     private _enabled: boolean = false;
     private _color: Color = new Color();
-    private _opacity: number = 1;
+    protected _opacity: number = 1;
     /**
      * 创建分区并订阅默认颜色。
      * @param area 分区身份

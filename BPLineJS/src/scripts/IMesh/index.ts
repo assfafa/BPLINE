@@ -8,7 +8,8 @@ import Mesh from "../Mesh";
 import type { RawChange, RawOptions, RawSubscriber } from "../Raws";
 import Raws, { Raw } from "../Raws";
 import Style, { STYLE_STRIDE, WriteStyleData } from "../Style";
-import type { TextureLike } from "../Texture";
+import Effects, { type EffectData } from "../Style/Effects";
+import type { TextureInput } from "../Texture";
 import TextureLayers from "../Texture/Layers";
 
 /** 共用 Geometry / Material 的实例网格，每个槽位独立储存世界矩阵和样式。 */
@@ -28,16 +29,17 @@ class IMesh extends Mesh implements RawSubscriber {
     private readonly _local: Mat3 = new Mat3();
     private readonly _world: Mat3 = new Mat3();
     // 不代理时也保留图片资源身份，但不保留 Vec2 / Style 或它们的订阅。
-    private readonly _sources: (TextureLike | undefined)[][] = [];
+    private readonly _effects: EffectData[] = [];
+    private readonly _sources: (TextureInput | undefined)[][] = [];
     private readonly _textures: readonly TextureLayers[] = [
         new TextureLayers(),
         new TextureLayers(),
         new TextureLayers(),
     ];
-    private readonly _layerIndices: Map<TextureLike | undefined, number>[] = [
-        new Map<TextureLike | undefined, number>(),
-        new Map<TextureLike | undefined, number>(),
-        new Map<TextureLike | undefined, number>(),
+    private readonly _layerIndices: Map<TextureInput | undefined, number>[] = [
+        new Map<TextureInput | undefined, number>(),
+        new Map<TextureInput | undefined, number>(),
+        new Map<TextureInput | undefined, number>(),
     ];
     private _layersPending: boolean = false;
     private _instanceBounds: MeshBoundingBox | null = null;
@@ -125,12 +127,11 @@ class IMesh extends Mesh implements RawSubscriber {
             return null;
         }
     }
-    /**
-     * 是否保留并订阅原始值，只读。
-     * @example
-     * const value = iMesh.raw;
-     * @returns 是否保留并订阅原始值，只读。
-     */
+    /** @internal @param index 实例槽位 @example iMesh.effectAt(0); @returns 已同步的纯数据效果；raw=false 不持有 Style 引用。 */
+    public effectAt(index: number): EffectData | undefined {
+        return this._effects[index];
+    }
+    /** @example iMesh.raw; @returns 是否订阅原始记录。 */
     public get raw(): boolean {
         return this._raw;
     }
@@ -401,6 +402,7 @@ class IMesh extends Mesh implements RawSubscriber {
         this._count = 0;
         this._ids.length = 0;
         this._sources.length = 0;
+        this._effects.length = 0;
         this._pendingMatrices.clear();
         this._pendingStyles.clear();
         // 遍历当前缓存条目，按实际引用关系处理资源。
@@ -519,6 +521,7 @@ class IMesh extends Mesh implements RawSubscriber {
      * @returns 无返回值。
      */
     private writeStyle(index: number, style: Style, enabled: boolean): void {
+        this._effects[index] = Effects.capture(style);
         const offset: number = index * STYLE_STRIDE;
         WriteStyleData(style, this._styleData, offset, this.ignoreZoom);
         // 禁用实例时清空显示开关槽，保留矩阵和其他原始数据。
@@ -546,7 +549,7 @@ class IMesh extends Mesh implements RawSubscriber {
          * HasSameTextureSource(texture, part);
          * @returns 当前分区的贴图引用是否未改变。
          */
-        const HasSameTextureSource = (texture: TextureLike | undefined, part: number): boolean =>
+        const HasSameTextureSource = (texture: TextureInput | undefined, part: number): boolean =>
             texture === previous?.[part];
         // 处理转向与退化边界，避免零面积三角面或不稳定法线。
         if (previous === undefined || !next.every(HasSameTextureSource)) {
@@ -569,7 +572,7 @@ class IMesh extends Mesh implements RawSubscriber {
             // 按索引顺序处理三角面，保持绕序及属性下标一致。
             for (let part = 0; part < 3; part++) {
                 const indices = this._layerIndices[part];
-                const layers: (TextureLike | undefined)[] = [];
+                const layers: (TextureInput | undefined)[] = [];
                 indices.clear();
                 // 逐项处理 this._sources，保持集合中的既定顺序。
                 for (const sources of this._sources) {

@@ -109,10 +109,14 @@ export type { LineSelection } from "./Select/LineSelectTool";
 export type { PointSelection } from "./Select/PointSelectTool";
 export type { RectSelectionMode } from "./Select/RectSelectTool";
 export type { TextSelection } from "./Select/TextSelectTool";
-export { EdgeStyle, JoinStyle, PointsStyle, SolidStyle, STYLE_STRIDE, WireframeStyle, WriteStyleData } from "./Style";
+export { BloomStyle, EdgeStyle, JoinStyle, PointsStyle, ShadowStyle, SolidStyle, STYLE_STRIDE, WireframeStyle, WriteStyleData } from "./Style";
 export type { JoinType, PartSubscriber, StyleArea, StyleChange, StyleSubscriber } from "./Style";
 export type { Text2DLike, Text2DOptions, TextGeometryFactory, TextWritingMode } from "./Text";
-export type { TextureLike, TextureSource, TextureSubscriber } from "./Texture";
+export { default as RenderTarget } from "./RenderTarget";
+export { default as PostProcess, WgslPass } from "./PostProcess";
+export type { WgslPassRaw } from "./PostProcess";
+export type { RenderTargetOptions, RenderTargetFormat } from "./RenderTarget";
+export type { TextureInput, TextureLike, TextureSource, TextureSubscriber } from "./Texture";
 export { default as TextureLayers } from "./Texture/Layers";
 export type { TextureResource } from "./Texture/Layers";
 export {
@@ -129,3 +133,7 @@ export {
     Scene, Select, Style, Text, TextEditTool,
     TextEditToolKey, TextSelectTool, Texture, WGSLMaterial,
 };
+
+export { Bloom, Shadow, SMAA, FXAA } from "./PostProcess";
+export type { PostProcessPass } from "./PostProcess";
+export type { HDRMode, HDRState, HDRChangeCallback } from "./Render";

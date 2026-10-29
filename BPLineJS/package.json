@@ -1,6 +1,6 @@
 {
     "name": "bplinejs",
-    "version": "0.1.104-beta.20",
+    "version": "0.1.104-beta.21",
     "description": "A WebGPU-first 2D rendering library focused on line and border rendering.",
     "type": "module",
     "main": "./lib/index.js",
@@ -13,6 +13,14 @@
         "src/scripts/Editor/cursors/LICENSE"
     ],
     "exports": {
+        "./PostProcess": {
+            "types": "./lib/PostProcess/index.d.ts",
+            "import": "./lib/PostProcess/index.js"
+        },
+        "./PostProcess/WgslPass": {
+            "types": "./lib/PostProcess/WgslPass/index.d.ts",
+            "import": "./lib/PostProcess/WgslPass/index.js"
+        },
         ".": {
             "types": "./lib/index.d.ts",
             "import": "./lib/index.js"
@@ -169,7 +177,27 @@
             "types": "./lib/Text/index.d.ts",
             "import": "./lib/Text/index.js"
         },
-        "./package.json": "./package.json"
+        "./package.json": "./package.json",
+        "./RenderTarget": {
+            "types": "./lib/RenderTarget/index.d.ts",
+            "import": "./lib/RenderTarget/index.js"
+        },
+        "./PostProcess/Bloom": {
+            "types": "./lib/PostProcess/Bloom/index.d.ts",
+            "import": "./lib/PostProcess/Bloom/index.js"
+        },
+        "./PostProcess/Shadow": {
+            "types": "./lib/PostProcess/Shadow/index.d.ts",
+            "import": "./lib/PostProcess/Shadow/index.js"
+        },
+        "./PostProcess/SMAA": {
+            "types": "./lib/PostProcess/SMAA/index.d.ts",
+            "import": "./lib/PostProcess/SMAA/index.js"
+        },
+        "./PostProcess/FXAA": {
+            "types": "./lib/PostProcess/FXAA/index.d.ts",
+            "import": "./lib/PostProcess/FXAA/index.js"
+        }
     },
     "sideEffects": [
         "**/Examples/**",

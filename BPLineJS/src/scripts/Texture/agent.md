@@ -88,7 +88,7 @@ IsVideoUrl("/movie.webm?version=1");
 
 ### 类型索引
 
-`TextureSource`、`TextureSubscriber`、`TextureLike`
+`TextureSource`、`TextureSubscriber`、`TextureLike`、`TextureInput`
 
 ### 导出关系
 
@@ -96,7 +96,7 @@ IsVideoUrl("/movie.webm?version=1");
 export default Texture;
 export { default as TextureLayers } from "./Layers";
 export type { TextureResource } from "./Layers";
-export type { TextureLike, TextureSource, TextureSubscriber };
+export type { TextureInput, TextureLike, TextureSource, TextureSubscriber };
 ```
 
 ## 3. 其他源码文件
@@ -114,7 +114,7 @@ export type { TextureLike, TextureSource, TextureSubscriber };
 | `id`（公开） | `number`；`GETID()` | 数组资源 ID，与层内图片 ID 独立。 |
 | `type`（公开） | `string`；`"TextureLayers"` | 对象类型。 |
 | `_version`（内部） | `number`；`0` | 任一源图或层表变化时递增。（version 的内部状态）。 |
-| `_layers`（内部） | `readonly (TextureLike \| undefined)[]`；`[]` | 有序层表；undefined 对应白色，不改变其他层的编号。（layers 的内部状态）。 |
+| `_layers`（内部） | `readonly (TextureInput \| undefined)[]`；`[]` | 有序层表；undefined 对应白色，不改变其他层的编号。（layers 的内部状态）。 |
 
 #### 构造与案例
 
@@ -125,9 +125,9 @@ export type { TextureLike, TextureSource, TextureSubscriber };
 | 签名 | 作用 |
 | --- | --- |
 | `get version(): number`  | 任一源图或层表变化时递增。 |
-| `get layers(): readonly (TextureLike \| undefined)[]`  | 有序层表；undefined 对应白色，不改变其他层的编号。 |
-| `set(layers: readonly (TextureLike \| undefined)[]): void`  | 原子替换层表；相同引用序列不更新，不保留废弃源的订阅。 |
-| `onTextureChange(texture: TextureLike): void`  | 接收贴图来源变化，通知依赖的样式或图层缓存。 |
+| `get layers(): readonly (TextureInput \| undefined)[]`  | 有序层表；undefined 对应白色，不改变其他层的编号。 |
+| `set(layers: readonly (TextureInput \| undefined)[]): void`  | 原子替换层表；相同引用序列不更新，不保留废弃源的订阅。 |
+| `onTextureChange(texture: TextureInput): void`  | 接收贴图来源变化，通知依赖的样式或图层缓存。 |
 | `dispose(): void`  | 解除图片订阅，不销毁共享图片或 GPU 缓存。 |
 
 ### 类型索引

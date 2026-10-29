@@ -1,5 +1,5 @@
 import { GETID } from "../ID";
-import type { TextureLike, TextureSubscriber } from "./index";
+import type { TextureInput, TextureSubscriber } from "./index";
 
 /** 多层纹理的 CPU 引用集合，GPUTexture 仍只属于 Render。 */
 class TextureLayers implements TextureSubscriber {
@@ -8,7 +8,7 @@ class TextureLayers implements TextureSubscriber {
     /** 对象类型。 */
     public readonly type: string = "TextureLayers";
     private _version: number = 0;
-    private _layers: readonly (TextureLike | undefined)[] = [];
+    private _layers: readonly (TextureInput | undefined)[] = [];
     /**
      * 任一源图或层表变化时递增。
      * @example
@@ -24,7 +24,7 @@ class TextureLayers implements TextureSubscriber {
      * const value = textureLayers.layers;
      * @returns 有序层表；undefined 对应白色，不改变其他层的编号。
      */
-    public get layers(): readonly (TextureLike | undefined)[] {
+    public get layers(): readonly (TextureInput | undefined)[] {
         return this._layers;
     }
     /**
@@ -34,7 +34,7 @@ class TextureLayers implements TextureSubscriber {
      * textureLayers.set(layers);
      * @returns 无返回值。
      */
-    public set(layers: readonly (TextureLike | undefined)[]): void {
+    public set(layers: readonly (TextureInput | undefined)[]): void {
         /**
          * 比较同一下标处的新旧贴图引用，避免重复建立订阅。
          * @param item 当前处理的元素
@@ -43,7 +43,7 @@ class TextureLayers implements TextureSubscriber {
          * HasSameLayer(item, index);
          * @returns 该层贴图引用是否未改变。
          */
-        const HasSameLayer = (item: TextureLike | undefined, index: number): boolean =>
+        const HasSameLayer = (item: TextureInput | undefined, index: number): boolean =>
             item === this._layers[index];
         // 处理转向与退化边界，避免零面积三角面或不稳定法线。
         if (layers.length !== this._layers.length || !layers.every(HasSameLayer)) {
@@ -68,7 +68,7 @@ class TextureLayers implements TextureSubscriber {
      * textureLayers.onTextureChange(texture);
      * @returns 无返回值。
      */
-    public onTextureChange(texture: TextureLike): void {
+    public onTextureChange(texture: TextureInput): void {
         // 仍被层表引用的图片变化才使层表版本失效。
         if (this._layers.includes(texture)) {
             this._version++;
@@ -86,7 +86,7 @@ class TextureLayers implements TextureSubscriber {
 }
 
 /** 可上传贴图资源：单图也以一层的 2d-array 视图绑定。 */
-type TextureResource = TextureLike | TextureLayers;
+type TextureResource = TextureInput | TextureLayers;
 
 export default TextureLayers;
 export type { TextureResource };

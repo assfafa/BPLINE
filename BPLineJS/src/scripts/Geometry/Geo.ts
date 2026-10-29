@@ -170,7 +170,7 @@ class Geo implements GeoData {
             }
             // 根据变化字段选择更新范围，避免无关属性触发资源重建。
             if (
-                change.field === "enabled" ||
+                (change.field === "enabled" && ["solid", "wireframe", "edge", "points"].includes(change.area)) ||
                 (change.area === "join" && this.type === "Poly2D" && change.field !== "seg") ||
                 (change.area === "edge" && ["width", "borderAlign", "uvRepeat"].includes(change.field)) ||
                 (change.area === "points" &&

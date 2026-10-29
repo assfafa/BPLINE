@@ -23,8 +23,10 @@
 | `Material/` | 标准材质、自定义 WGSL、具名传值和管线身份。 详见该目录的 agent.md。 |
 | `Mesh/` | 几何与材质资源、变换、实例打包和包围盒。 详见该目录的 agent.md。 |
 | `Object/` | 局部 TRS、显式矩阵和世界变换缓存。 详见该目录的 agent.md。 |
+| `PostProcess/` | 有序 WgslPass 与 Bloom/Shadow/SMAA/FXAA 预置、离屏附件复用和 Canvas 呈现。 详见该目录的 agent.md。 |
 | `Raws/` | 稳定编号的单条 Raw 与记录集合。 详见该目录的 agent.md。 |
-| `Render/` | 资源准备、GPU 上传、绘制提交和开发诊断。 详见该目录的 agent.md。 |
+| `Render/` | 资源准备、GPU 上传、绘制提交、HDR 输出和开发诊断。 详见该目录的 agent.md。 |
+| `RenderTarget/` | 可直接传给材质的离屏画面描述；GPU 颜色、采样及深度附件由 Render 维护。 详见该目录的 agent.md。 |
 | `Scene/` | 资源归属列表、视口筛选和世界四叉树。 详见该目录的 agent.md。 |
 | `Select/` | 集合点选、框选、边线和顶点命中。 详见该目录的 agent.md。 |
 | `Style/` | 实体面、线框、边框、关键点和连接的订阅链。 详见该目录的 agent.md。 |
@@ -110,10 +112,14 @@ export type { LineSelection } from "./Select/LineSelectTool";
 export type { PointSelection } from "./Select/PointSelectTool";
 export type { RectSelectionMode } from "./Select/RectSelectTool";
 export type { TextSelection } from "./Select/TextSelectTool";
-export { EdgeStyle, JoinStyle, PointsStyle, SolidStyle, STYLE_STRIDE, WireframeStyle, WriteStyleData } from "./Style";
+export { BloomStyle, EdgeStyle, JoinStyle, PointsStyle, ShadowStyle, SolidStyle, STYLE_STRIDE, WireframeStyle, WriteStyleData } from "./Style";
 export type { JoinType, PartSubscriber, StyleArea, StyleChange, StyleSubscriber } from "./Style";
 export type { Text2DLike, Text2DOptions, TextGeometryFactory, TextWritingMode } from "./Text";
-export type { TextureLike, TextureSource, TextureSubscriber } from "./Texture";
+export { default as RenderTarget } from "./RenderTarget";
+export { default as PostProcess, WgslPass } from "./PostProcess";
+export type { WgslPassRaw } from "./PostProcess";
+export type { RenderTargetOptions, RenderTargetFormat } from "./RenderTarget";
+export type { TextureInput, TextureLike, TextureSource, TextureSubscriber } from "./Texture";
 export { default as TextureLayers } from "./Texture/Layers";
 export type { TextureResource } from "./Texture/Layers";
 export {
@@ -130,6 +136,9 @@ export {
     Scene, Select, Style, Text, TextEditTool,
     TextEditToolKey, TextSelectTool, Texture, WGSLMaterial,
 };
+export { Bloom, Shadow, SMAA, FXAA } from "./PostProcess";
+export type { PostProcessPass } from "./PostProcess";
+export type { HDRMode, HDRState, HDRChangeCallback } from "./Render";
 ```
 
 ## 3. 其他源码文件

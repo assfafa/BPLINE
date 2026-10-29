@@ -1,7 +1,7 @@
 import type Style from "./index";
 
 /** 样式通知区域，whole 表示更换整个 Style。 */
-type StyleArea = "solid" | "wireframe" | "edge" | "points" | "join" | "whole";
+type StyleArea = "solid" | "wireframe" | "edge" | "points" | "join" | "bloom" | "shadow" | "whole";
 
 /** 边框对齐方式。 */
 type BorderAlign = "inset" | "normal" | "outset";

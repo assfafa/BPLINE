@@ -25,7 +25,12 @@ const CopyGuides = (directory) => {
         } else {
             throw new Error("Missing directory guide: " + guide);
         }
-        // 文件只复制 agent.md，模型和字体等大资源继续留在源码目录。
+        // 随附第三方许可必须与编译后的实现一起发布；模型和字体不在此复制。
+        const license = join(directory, "LICENSE");
+        if (existsSync(license)) {
+            copyFileSync(license, join(output, path, "LICENSE"));
+        }
+        // 递归维护的源码目录，排除规则与目录说明保持一致。
         for (const entry of readdirSync(directory, { withFileTypes: true })) {
             if (entry.isDirectory()) {
                 count += CopyGuides(join(directory, entry.name));

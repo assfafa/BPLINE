@@ -3,7 +3,7 @@
 BPLineJS is a TypeScript WebGPU 2D renderer and vector editor for interactive graphics, CAD-style selection, editable shapes, and text. Build scenes with filled geometry, borders, vertex handles, image or video textures, GPU instancing, custom WGSL shaders, and mouse or touch camera controls.
 
 - [API documentation](https://assfafa.github.io/BPLINE/#/docs/bpline): public BPLineJS and BPMatrixJS APIs.
-- [Interactive examples](https://assfafa.github.io/BPLINE/#/example/basic-mesh/rectangle): geometry, text, materials, instancing, textures, camera controls, selection, editors, and helper grids.
+- [Interactive examples](https://assfafa.github.io/BPLINE/#/example/basic-mesh/rectangle): geometry, text, materials, post-processing, instancing, textures, camera controls, selection, editors, and helper grids.
 - [Website](https://assfafa.github.io/BPLINE/): documentation and example entry point.
 
 | Directory | npm package or purpose | Local port |
@@ -18,17 +18,18 @@ BPLineJS is a TypeScript WebGPU 2D renderer and vector editor for interactive gr
 - **Selection and editing:** combined face, edge, vertex, and text selection; rectangle, regular-polygon, polygon, and text editors; mixed selections; editable hierarchy groups; configurable mouse and touch interaction.
 - **Editor workflows:** vertex, edge, intersection, and grid snapping; world-origin movement steps and rotation steps; clipboard operations; undo/redo; keyed callbacks; JSON save/load; reversible conversion to Base2D.
 - **Rendering:** instanced meshes, image and video textures, CompositeMaterial and fully custom WGSLMaterial, fixed screen-size meshes, viewport culling, scene-based quadtrees, and adaptive curve precision with configurable limits and debounce.
+- **Offscreen and post-processing:** RenderTarget inputs for materials, custom WgslPass stages, per-object Bloom and Shadow, SMAA/FXAA anti-aliasing, and automatic or explicit HDR canvas output. Equal effect settings share rendering work; Bloom respects occlusion and keeps the strongest complete glow color.
 - **Helpers:** adaptive background grids, independent horizontal and vertical rulers, dark/light/custom themes, and observable color settings.
 
-Start with the [combined selector](https://assfafa.github.io/BPLINE/#/example/select), [collection editor](https://assfafa.github.io/BPLINE/#/example/editor), or [helper grid](https://assfafa.github.io/BPLINE/#/example/helper/grid). Each editor and helper example includes a complete standalone TypeScript entry, including the renderer, camera, animation loop, resize handling, and cleanup. Full examples include camera controls and GUI configuration.
+Start with the [combined selector](https://assfafa.github.io/BPLINE/#/example/select), [collection editor](https://assfafa.github.io/BPLINE/#/example/editor), or [helper grid](https://assfafa.github.io/BPLINE/#/example/helper/grid). Each editor and helper example includes a complete standalone TypeScript entry with renderer, camera, animation loop and resize handling. Full examples include camera controls and GUI configuration. The [post-processing API](https://assfafa.github.io/BPLINE/#/docs/bpline/post-process) links to live Bloom, Shadow, SMAA, FXAA and custom WgslPass examples with simple and full GUI versions.
 
 Text fonts must be registered before creating text geometry. Poly uses a single nonzero-winding contour without separate holes; Base2D can retain inner and outer contours from an existing triangulated mesh. BPMatrixJS provides Boolean operations separately through `Utils/Bool`, with source tracking and support for mixed contours and triangle meshes. Editor JSON preserves hierarchy, original order, appearance, transforms, and geometry parameters; fonts and URL-less external textures need to be supplied again across sessions.
 
 ## Search keywords
 
-WebGPU 2D renderer, TypeScript graphics library, vector graphics editor, CAD-style picking, geometry editing, text geometry, WOFF2 fonts, WGSL shaders, GPU instancing, vertex snapping, scene graph, viewport culling, quadtree, adaptive tessellation, background grid, rulers.
+WebGPU 2D renderer, TypeScript graphics library, vector graphics editor, CAD-style picking, geometry editing, text geometry, WOFF2 fonts, WGSL shaders, GPU instancing, vertex snapping, scene graph, viewport culling, quadtree, adaptive tessellation, background grid, rulers, offscreen rendering, post-processing, bloom, shadow, SMAA, FXAA, HDR.
 
-中文检索：WebGPU 二维渲染器、TypeScript 图形库、矢量图形编辑器、CAD 框选、几何编辑、文字几何、字体解析、实例化渲染、顶点吸附、场景树、视口裁剪、四叉树、动态精度、辅助网格、标尺。
+中文检索：WebGPU 二维渲染器、TypeScript 图形库、矢量图形编辑器、CAD 框选、几何编辑、文字几何、字体解析、实例化渲染、顶点吸附、场景树、视口裁剪、四叉树、动态精度、辅助网格、标尺、离屏渲染、后处理、发光、阴影、抗锯齿、高动态范围。
 
 ## Install from npm
 
@@ -41,15 +42,17 @@ npm install bplinejs@0.1.103
 
 `bplinejs` depends on `bpmatrixjs`; install both explicitly when importing from both packages.
 
-The current beta adds the editor and helper workflows described above:
+The current beta includes the editor, helper, offscreen rendering, and post-processing workflows described above:
 
 ~~~bash
-npm install bplinejs@0.1.104-beta.20 bpmatrixjs@0.1.104-beta.16
+npm install bplinejs@0.1.104-beta.21 bpmatrixjs@0.1.104-beta.16
 # For the complete examples with GUI controls:
 npm install lil-gui
 ~~~
 
-Release notes: [BPLineJS 0.1.104-beta.20](BPLineJS/releases/0.1.104-beta.20.md) and [BPMatrixJS 0.1.104-beta.16](BPMatrixJS/releases/0.1.104-beta.16.md). Text parsing, shaping, and triangulation use WebAssembly with reusable caches. Await font registration before creating text synchronously. BPMatrixJS provides WASM Boolean operations for contours and triangle meshes through `bpmatrixjs/Utils/Bool`; await `Bool.ready()` before use. The collection editor supports subtraction and union with shared undo history; select A, hold `-` and click B to cut A while retaining B, or hold `=` and click B to merge both. Its complete example includes all keyboard tips. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
+Release notes: [BPLineJS 0.1.104-beta.21](BPLineJS/releases/0.1.104-beta.21.md) and [BPMatrixJS 0.1.104-beta.16](BPMatrixJS/releases/0.1.104-beta.16.md). Text parsing, shaping, and triangulation use WebAssembly with reusable caches. Await font registration before creating text synchronously. BPMatrixJS provides WASM Boolean operations for contours and triangle meshes through `bpmatrixjs/Utils/Bool`; await `Bool.ready()` before use. The collection editor supports subtraction and union with shared undo history; select A, hold `-` and click B to cut A while retaining B, or hold `=` and click B to merge both. Its complete example includes all keyboard tips. Run browser examples in a WebGPU-capable browser using HTTPS or localhost.
+
+Create offscreen inputs with `new RenderTarget(scene, camera)` and draw them with `render.renderPass(target)`. Materials accept the target directly. Add built-in or custom passes to `new PostProcess(render)`, then call `post.render(target)` to display the result. Bloom and Shadow settings belong to `style.bloom` and `style.shadow`. `render.hdr` defaults to `"auto"` and also accepts `true` or `false`; `hdrAvailable` reports browser detection, while `hdrEnabled` reports an accepted extended canvas configuration. Ordinary material colors stay unchanged; actual HDR brightness still depends on the browser and display path.
 
 ## Docker
 
@@ -112,3 +115,7 @@ In BPMatrixJS, `npm pack` and `npm publish` run `prepack` automatically: build W
 Editor cursors and rotation handles use SVG artwork from [Phosphor Icons](https://phosphoricons.com/), including adapted and rotated arrow icons. Phosphor Icons is licensed under the [MIT License](https://github.com/phosphor-icons/core/blob/main/LICENSE), copyright © 2023 Phosphor Icons.
 
 The original copyright and permission notice is retained in [BPLineJS/src/scripts/Editor/cursors/LICENSE](BPLineJS/src/scripts/Editor/cursors/LICENSE) and included in the npm package. Keep that notice when redistributing these icons or their modified versions.
+
+## SMAA attribution
+
+The SMAA 1x Medium pass uses the MIT-licensed [iryoku/smaa](https://github.com/iryoku/smaa) implementation and lookup tables. Its copyright and permission notice is retained in [PostProcess/SMAA/LICENSE](BPLineJS/src/scripts/PostProcess/SMAA/LICENSE) and copied into the npm package.

@@ -1,5 +1,6 @@
 import { Mat3, Vec2 } from "bpmatrixjs/Math";
 import Texture from "../Texture";
+import RenderTarget from "../RenderTarget";
 
 /** 为自定义材质维护稳定的 WGSL 绑定顺序和可替换的具名值。 */
 class ShaderValues {
@@ -131,12 +132,12 @@ class ShaderValues {
      * const textures = values.textures;
      * @returns 当前值中的所有 Texture。
      */
-    public get textures(): Texture[] {
-        const textures: Texture[] = [];
+    public get textures(): (Texture | RenderTarget)[] {
+        const textures: (Texture | RenderTarget)[] = [];
         // 场景上传与释放都使用全部已注册纹理。
         for (const value of Object.values(this._record)) {
             // 数值字段无需纹理生命周期管理。
-            if (value instanceof Texture) {
+            if (value instanceof Texture || value instanceof RenderTarget) {
                 textures.push(value);
             }
         }
@@ -306,8 +307,8 @@ class ShaderValues {
             }
         }
         // 其余对象只能是已支持的数学类型或贴图。
-        if (!(value instanceof Vec2) && !(value instanceof Mat3) && !(value instanceof Texture) && typeof value !== "number" && !(value instanceof Float32Array)) {
-            throw new TypeError("Shader values support number, Vec2, Mat3, Float32Array, and Texture.");
+        if (!(value instanceof Vec2) && !(value instanceof Mat3) && !(value instanceof Texture) && !(value instanceof RenderTarget) && typeof value !== "number" && !(value instanceof Float32Array)) {
+            throw new TypeError("Shader values support number, Vec2, Mat3, Float32Array, Texture, and RenderTarget.");
         }
     }
 
@@ -319,7 +320,7 @@ class ShaderValues {
      * this.commit(previousSchema, previousTextures);
      * @returns 无返回值。
      */
-    private commit(previousSchema: string, previousTextures: Texture[]): void {
+    private commit(previousSchema: string, previousTextures: (Texture | RenderTarget)[]): void {
         /**
          * 缓存键只包含声明名和类型，不包含值或资源身份。
          * @param entry 已排序的值描述
@@ -339,14 +340,14 @@ class ShaderValues {
          * previousTextures.some(TextureChanged);
          * @returns 对应位置的资源是否变化。
          */
-        const TextureChanged = (texture: Texture, index: number): boolean => texture !== nextTextures[index];
+        const TextureChanged = (texture: Texture | RenderTarget, index: number): boolean => texture !== nextTextures[index];
         const textureChanged = previousTextures.length !== nextTextures.length ||
             previousTextures.some(TextureChanged);
         this._onChange(previousSchema !== this._schemaKey, textureChanged);
     }
 }
 
-type ShaderValue = number | Vec2 | Mat3 | Float32Array | Texture;
+type ShaderValue = number | Vec2 | Mat3 | Float32Array | Texture | RenderTarget;
 
 type ShaderValueKind = "f32" | "vec2f" | "mat3x3f" | "array<f32>" | "texture";
 

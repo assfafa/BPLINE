@@ -1,0 +1,12 @@
+import{n as e}from"./index-DpiUqL2G.js";import t from"./reference-BkWidWEx.js";import{t as n}from"./types-DQN6DUYN.js";var r={title:`ShadowStyle`,intro:{cn:`style.shadow 的对象阴影参数。内阴影和外阴影分别开关，需同时启用 Shadow 通道和对象的 enabled。`,en:`Per-object shadow parameters at style.shadow. Inner and outer shadows have separate switches; enable both the Shadow pass and the object's enabled flag.`},detail:{cn:`长度参数使用屏幕 CSS px，内部乘 render.dpr，不随相机 zoom 放大。相同参数按联合轮廓合批。复制样式与编辑器保存/加载会保留这些参数；颜色仍通过 Color 修改以保持通知。`,en:`Distances use screen CSS pixels, scaled internally by render.dpr, independent of camera zoom. Equal settings batch using a combined silhouette. Style copying and editor save/load retain these parameters; update Color through its observable API.`},code:`import { Style } from "bplinejs";
+
+const style = new Style();
+style.shadow.enabled = true;
+style.shadow.color.setHex("#000000");
+style.shadow.opacity = 0.6;
+style.shadow.blur = 18;
+style.shadow.spread = 2;
+style.shadow.offsetX = 12;
+style.shadow.offsetY = -12;
+style.shadow.inner = true;
+style.shadow.outer = true;`,properties:[n(`enabled: boolean = false`,`对象阴影总开关。`,`Object shadow master switch.`),n(`color: Color = black; opacity: number = 0.5`,`阴影色默认不透明黑色，效果透明度默认 0.5，钳制到 0–1。`,`Shadow color defaults to opaque black; effect opacity defaults to 0.5 and is clamped to 0–1.`),n(`blur: number = 12`,`非负模糊半径，0 为不模糊。`,`Nonnegative blur radius; 0 disables blur.`),n(`spread: number = 0`,`非负扩散距离；外阴影膨胀，内阴影使用向内收缩后的轮廓。`,`Nonnegative spread; outer shadows dilate, while inner shadows use an eroded silhouette.`),n(`offsetX: number = 4; offsetY: number = -4`,`有符号有限偏移，X 正值向右，Y 正值向上。`,`Signed finite offsets; positive X points right and positive Y points up.`),n(`inner: boolean = false; outer: boolean = true`,`分别显示内、外阴影；两个都关闭时跳过该组。`,`Independent inner/outer switches; skip the group when both are off.`)],methods:[n(`new ShadowStyle()`,`通常通过 style.shadow 使用。`,`Usually access through style.shadow.`),n(`copy(source: ShadowStyle): this / clone(): ShadowStyle`,`复制独立 Color 及全部阴影参数；clone 创建新实例。`,`Copy an independent Color and all shadow parameters; clone creates a new instance.`)],links:[{label:`Style`,to:`/docs/bpline/style`},{label:`Shadow`,to:`/docs/bpline/post-process/shadow`}]},i=e(),a=()=>(0,i.jsx)(t,{config:r});export{a as default};

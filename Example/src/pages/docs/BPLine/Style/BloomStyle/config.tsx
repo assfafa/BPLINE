@@ -1,0 +1,40 @@
+import { entry } from "@/pages/docs/reference/types.ts";
+import type { ReferenceConfig } from "@/pages/docs/reference/types.ts";
+
+export const config: ReferenceConfig = {
+    title: "BloomStyle",
+    intro: {
+        cn: "style.bloom 的对象发光参数。默认关闭；同时启用对象效果和 PostProcess 中的 Bloom 才会显示。",
+        en: "Per-object glow parameters at style.bloom. Disabled by default; both the object effect and the Bloom pass in PostProcess must be enabled.",
+    },
+    detail: {
+        cn: "使用 Color.setHex/setRGB 或属性 setter 会通知样式消费者。独立 Style 的参数值完全相同也能合批；copy/clone 复制独立的颜色对象。对象编辑器保存、加载与 IMesh 实例记录也会保留这些效果值。",
+        en: "Color.setHex/setRGB and property setters notify style consumers. Separate Styles with identical effect values can batch together; copy/clone create independent colors. Editor save/load and IMesh records retain these effect values.",
+    },
+    code: `import { Style } from "bplinejs";
+
+const style = new Style();
+style.bloom.enabled = true;
+style.bloom.color.setHex("#45baff");
+style.bloom.radius = 24;
+style.bloom.intensity = 1.2;
+style.bloom.opacity = 1;
+style.bloom.threshold = 0;
+const independent = style.clone();`,
+    properties: [
+        entry("enabled: boolean = false", "对象是否参与 Bloom。", "Whether this object contributes to Bloom."),
+        entry("color: Color = white", "自定义发光 RGBA 色，Alpha 参与发光遮罩。", "Custom glow RGBA color; alpha contributes to the glow mask."),
+        entry("opacity: number = 1", "效果透明度，钳制到 0–1；同时影响最强发光比较。", "Effect opacity, clamped to 0–1; also affects the strongest-glow comparison."),
+        entry("radius: number = 20", "非负屏幕 CSS px 模糊半径，按 render.dpr 换算，不随相机 zoom 放大。", "Nonnegative blur radius in screen CSS pixels, converted using render.dpr, independent of camera zoom."),
+        entry("intensity: number = 1", "非负强度；0 不生成发光。HDR 下可产生超过 1 的 RGB。", "Nonnegative intensity; 0 skips glow. HDR output may exceed RGB 1."),
+        entry("threshold: number = 0", "非负亮度阈值；0 让全部可见像素参与，包括黑色对象的自定义发光。正值根据原片元亮度过滤，未超过阈值的部分不发光。", "Nonnegative luminance threshold; 0 includes all visible pixels, including tinted glow from black objects. Positive values filter source fragment luminance; pixels below the threshold do not emit."),
+    ],
+    methods: [
+        entry("new BloomStyle()", "一般直接使用 new Style().bloom。", "Usually access it through new Style().bloom."),
+        entry("copy(source: BloomStyle): this / clone(): BloomStyle", "复制所有效果参数与独立 Color；clone 返回新实例。", "Copy all effect parameters and an independent Color; clone returns a new instance."),
+    ],
+    links: [
+        { label: "Style", to: "/docs/bpline/style" },
+        { label: "Bloom", to: "/docs/bpline/post-process/bloom" },
+    ],
+};

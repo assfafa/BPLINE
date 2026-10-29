@@ -93,11 +93,14 @@ class PipelineManager implements PipelineManagerLike {
     /**
      * 按 materialList 创建材质管线和采样器，几何类型组合由 Scene 维护。
      * @param scene 场景对象
+     * @param format 输出附件格式
+     * @param offscreen 是否输出预乘离屏颜色
+     * @param occluder 是否仅按原片元覆盖度擦除遮罩，不写入自身颜色
      * @example
      * pipelineManager.draw(scene);
      * @returns 无返回值
      */
-    public draw(scene: Scene): void {
+    public draw(scene: Scene, format: GPUTextureFormat | undefined = this.pipeline.format, offscreen: boolean = false, occluder: boolean = false): void {
         // 按去重后的材质列表处理共享状态。
         for (const material of scene.materialList) {
             this.samplerManager.get(material.style.solid.addressModeU, material.style.solid.addressModeV);
@@ -105,10 +108,10 @@ class PipelineManager implements PipelineManagerLike {
             this.samplerManager.get(material.style.points.addressModeU, material.style.points.addressModeV);
             // 逐项处理 scene.getMaterialGeometryTypes(material.id)，保持集合中的既定顺序。
             for (const geometryType of scene.getMaterialGeometryTypes(material.id)) {
-                const key: string = material.getPipelineKey(geometryType);
+                const key = GetTargetPipelineKey(this.pipeline, material.getPipelineKey(geometryType), format, offscreen, occluder);
                 // 检查集合中的关联关系，避免重复处理或遗漏引用。
                 if (!this.pipeline.pipelineTemplates.has(key)) {
-                    const template = this.createPipelineTemplate(material, geometryType);
+                    const template = this.createPipelineTemplate(material, geometryType, format, offscreen, occluder);
                     // 存在有效引用时处理对应资源，缺省情况由备用分支接管。
                     if (template !== undefined) {
                         this.pipeline.pipelineTemplates.set(key, template);
@@ -124,16 +127,21 @@ class PipelineManager implements PipelineManagerLike {
      * 未支持的几何不会误用矩形 Shader。
      * @param material 材质状态和源码集合
      * @param geometryType Geometry.type
+     * @param format 输出附件格式
+     * @param offscreen 是否输出预乘离屏颜色
+     * @param occluder 是否创建遮罩擦除变体，保留原材质的透明度、discard 和深度行为
      * @example
-     * this.createPipelineTemplate(material, geometryType);
+     * this.createPipelineTemplate(material, geometryType, format, offscreen);
      * @returns 模板，设备或 Layout 未就绪时为 undefined
      */
     private createPipelineTemplate(
         material: Material2d,
         geometryType: string,
+        format: GPUTextureFormat | undefined,
+        offscreen: boolean,
+        occluder: boolean,
     ): PipelineTemplateLike | undefined {
         const device = this.pipeline.device;
-        const format = this.pipeline.format;
         const defaultBindGroupLayout = this.pipeline.defaultBindGroupLayout;
         const materialBindGroupLayout = this.pipeline.baseMaterialBindGroupLayout;
         // GPU 设备及上下文就绪后才能创建或提交渲染资源。
@@ -182,25 +190,43 @@ class PipelineManager implements PipelineManagerLike {
             const layout: GPUPipelineLayout = device.createPipelineLayout({ bindGroupLayouts: layouts });
             let blend: GPUBlendState | undefined;
             // 区分深度和透明状态，保持当前阶段的遮挡与混合约定。
-            if (material.transparent) {
+            if (occluder) {
+                // 非本组物体只移除下面的发光覆盖，不把自身 Alpha 留给阈值提取。
+                let destination: GPUBlendFactor = "zero";
+                // 半透明物体按真实透明度透出下层；不透明材质沿用原来的覆盖行为。
+                if (material.transparent) {
+                    destination = "one-minus-src-alpha";
+                }
+                blend = {
+                    color: { srcFactor: "zero", dstFactor: destination, operation: "add" },
+                    alpha: { srcFactor: "zero", dstFactor: destination, operation: "add" },
+                };
+            } else if (material.transparent) {
+                // 正常颜色输出继续使用原有 Alpha 混合。
                 blend = {
                     color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha", operation: "add" },
                     alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
+                };
+            } else if (offscreen) {
+                // 不透明材质仍覆盖目标，但离屏附件统一存预乘颜色。
+                blend = {
+                    color: { srcFactor: "src-alpha", dstFactor: "zero", operation: "add" },
+                    alpha: { srcFactor: "one", dstFactor: "zero", operation: "add" },
                 };
             } else {
                 blend = undefined;
             }
             /**
-             * 创建一套图元管线，顶点缓冲槽位顺序由 attributes 决定。
-             * @param label 调试标签
-             * @param vertex 顶点源码
-             * @param fragment 片元源码
-             * @param topology 图元类型
-             * @param attributes 顶点属性布局
-             * @example
-             * CreatePipeline(label, vertex, fragment, topology, attributes);
-             * @returns 已创建的管线，源码未提供时为 undefined
-             */
+     * 创建一套图元管线，顶点缓冲槽位顺序由 attributes 决定。
+     * @param label 调试标签
+     * @param vertex 顶点源码
+     * @param fragment 片元源码
+     * @param topology 图元类型
+     * @param attributes 顶点属性布局
+     * @example
+     * CreatePipeline(label, vertex, fragment, topology, attributes);
+     * @returns 已创建的管线，源码未提供时为 undefined
+     */
             const CreatePipeline = (
                 label: string,
                 vertex: string | undefined,
@@ -251,12 +277,12 @@ class PipelineManager implements PipelineManagerLike {
                 }
             };
             /**
-             * 为二维向量属性生成八字节步长的顶点缓冲布局。
-             * @param location 顶点属性槽位
-             * @example
-             * CreateVectorAttribute(location);
-             * @returns 指定槽位的顶点属性布局。
-             */
+     * 为二维向量属性生成八字节步长的顶点缓冲布局。
+     * @param location 顶点属性槽位
+     * @example
+     * CreateVectorAttribute(location);
+     * @returns 指定槽位的顶点属性布局。
+     */
             const CreateVectorAttribute = (location: number): GPUVertexBufferLayout => ({
                 arrayStride: 8,
                 attributes: [{ shaderLocation: location, offset: 0, format: "float32x2" }],
@@ -286,7 +312,8 @@ class PipelineManager implements PipelineManagerLike {
                 [vectorAttributes[0], vectorAttributes[2]],
             );
             return {
-                key: material.getPipelineKey(geometryType),
+                key: GetTargetPipelineKey(this.pipeline, material.getPipelineKey(geometryType), format, offscreen, occluder),
+                materialKey: material.getPipelineKey(geometryType),
                 renderPipeline,
                 lineRenderPipeline,
                 defaultBindGroupLayout,
@@ -311,12 +338,34 @@ interface PipelineManagerLike {
     /**
      * 按 materialList 创建材质管线和采样器，几何类型组合由 Scene 维护。
      * @param scene 场景对象
+     * @param format 可选离屏输出配置
+     * @param offscreen 可选离屏输出配置
+     * @param occluder 是否仅按原片元覆盖度擦除遮罩
      * @example
      * pipelineManager.draw(scene);
      * @returns 无返回值
      */
-    draw(scene: Scene): void;
+    draw(scene: Scene, format?: GPUTextureFormat, offscreen?: boolean, occluder?: boolean): void;
 }
 
+/** @param pipeline Render 私有缓存 @param materialKey 材质与几何键 @param format 输出附件格式 @param offscreen 是否输出预乘离屏画面 @param occluder 是否按 Alpha 擦除遮罩 @example GetTargetPipelineKey(pipeline, key, "rgba8unorm", true); @returns Render 内的管线变体键。 */
+const GetTargetPipelineKey = (pipeline: PipelineLike, materialKey: string, format: GPUTextureFormat | undefined, offscreen: boolean, occluder: boolean = false): string => {
+    let variants = pipeline.targetPipelineKeys.get(materialKey);
+    // 材质源码键可能很长，只在首次创建变体时序列化。
+    if (variants === undefined) {
+        variants = new Map();
+        pipeline.targetPipelineKeys.set(materialKey, variants);
+    }
+    const signature = String(format) + ":" + String(offscreen) + ":" + String(occluder);
+    let key = variants.get(signature);
+    // 同格式的各个目标共享管线，与目标 ID、像素内容无关。
+    if (key === undefined) {
+        key = JSON.stringify([materialKey, signature]);
+        variants.set(signature, key);
+    }
+    return key;
+};
+
+export { GetTargetPipelineKey };
 export default PipelineManager;
 export type { PipelineManagerLike };

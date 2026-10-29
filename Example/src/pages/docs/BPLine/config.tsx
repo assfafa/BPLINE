@@ -28,6 +28,8 @@ if (container) {
         { label: "ObjectNode", to: "/docs/bpline/object" },
         { label: "Raws", to: "/docs/bpline/raws" },
         { label: "Render", to: "/docs/bpline/render" },
+        { label: "RenderTarget", to: "/docs/bpline/render-target" },
+        { label: "PostProcess", to: "/docs/bpline/post-process" },
         { label: "Scene", to: "/docs/bpline/scene" },
         { label: "Select", to: "/docs/bpline/select" },
         { label: "Style", to: "/docs/bpline/style" },

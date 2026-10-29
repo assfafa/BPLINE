@@ -1,3 +1,4 @@
+import type RenderTarget from "../RenderTarget";
 import { GETID } from "../ID";
 
 /**
@@ -348,7 +349,7 @@ interface TextureSubscriber {
      * textureSubscriber.onTextureChange(texture);
      * @returns 无返回值。
      */
-    onTextureChange(texture: TextureLike): void;
+    onTextureChange(texture: TextureInput): void;
 }
 
 interface TextureLike {
@@ -580,4 +581,7 @@ const IsVideoReady = (video: HTMLVideoElement): boolean =>
 export default Texture;
 export { default as TextureLayers } from "./Layers";
 export type { TextureResource } from "./Layers";
-export type { TextureLike, TextureSource, TextureSubscriber };
+/** 可直接赋给材质的图片或离屏目标。 */
+type TextureInput = TextureLike | RenderTarget;
+
+export type { TextureInput, TextureLike, TextureSource, TextureSubscriber };

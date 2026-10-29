@@ -5,14 +5,16 @@ import CompositeMaterial from "../../Material/CompositeMaterial";
 import type { ShaderValueRecord } from "../../Material/ShaderValues";
 import WGSLMaterial from "../../Material/WGSLMaterial";
 import Style from "../../Style";
-import type { TextureLike } from "../../Texture";
+import Effects from "../../Style/Effects";
+import type { TextureInput } from "../../Texture";
+import RenderTarget from "../../RenderTarget";
 import Texture from "../../Texture";
 import type { RectEditStyleData } from "../RectEditTool/data";
 import { ApplyRectStyle, CaptureRectStyle } from "../RectEditTool/data";
 
 /** 保存时去重纹理，加载时重建独立样式与材质。 */
 class DocumentResources {
-    private readonly _knownTextures = new Map<number, TextureLike>();
+    private readonly _knownTextures = new Map<number, TextureInput>();
     private readonly _records = new Map<number, EditorTextureData>();
     private readonly _baseDefaults: BaseMaterial = new BaseMaterial();
 
@@ -76,13 +78,18 @@ class DocumentResources {
      * @example const textures = resources.resolveTextures(doc.textures, options.textures);
      * @returns 文档编号到纹理对象的映射。
      */
-    public resolveTextures(records: readonly EditorTextureData[], supplied?: ReadonlyMap<number, TextureLike>): Map<number, TextureLike> {
-        const textures = new Map<number, TextureLike>();
+    public resolveTextures(records: readonly EditorTextureData[], supplied?: ReadonlyMap<number, TextureInput>): Map<number, TextureInput> {
+        const textures = new Map<number, TextureInput>();
         // 全部引用先解析，缺失 DOM 资源不能在清空旧场景后才报错。
         for (const record of records) {
             let texture = supplied?.get(record.id) ?? this._knownTextures.get(record.id);
+            let sourceUrl: string | null = null;
+            // 离屏资源没有 URL，只能按资源编号恢复引用。
+            if (texture !== undefined && texture instanceof RenderTarget === false) {
+                sourceUrl = texture.url;
+            }
             // 缓存只在地址仍相同时复用；外部显式资源始终优先。
-            if (texture !== undefined && supplied?.has(record.id) !== true && texture.url !== record.url) {
+            if (texture !== undefined && supplied?.has(record.id) !== true && sourceUrl !== record.url) {
                 texture = undefined;
             }
             // 地址资源按 Texture 的既有异步加载流程上传，几何可先回显。
@@ -104,7 +111,7 @@ class DocumentResources {
     }
 
     /** @param data JSON 样式 @param textures 已解析的纹理 @example resources.createStyle(data, textures); @returns 独立 Style。 */
-    public createStyle(data: EditorStyleData, textures: ReadonlyMap<number, TextureLike>): Style {
+    public createStyle(data: EditorStyleData, textures: ReadonlyMap<number, TextureInput>): Style {
         ValidateStyle(data);
         const style = new Style();
         ApplyRectStyle(style, data);
@@ -122,7 +129,7 @@ class DocumentResources {
     }
 
     /** @param data JSON 材质 @param style 独立样式 @param textures 已解析的纹理 @example resources.createMaterial(data, style, textures); @returns 独立材质。 */
-    public createMaterial(data: EditorMaterialData, style: Style, textures: ReadonlyMap<number, TextureLike>): Material2d {
+    public createMaterial(data: EditorMaterialData, style: Style, textures: ReadonlyMap<number, TextureInput>): Material2d {
         ValidateMaterial(data);
         let material: Material2d;
         // 对应类型先恢复 raw，再覆盖可选的显式形状阶段。
@@ -167,12 +174,17 @@ class DocumentResources {
     }
 
     /** @param texture 可选纹理 @example this.captureTexture(style.solid.texture); @returns 文档资源编号或 null。 */
-    private captureTexture(texture: TextureLike | undefined): number | null {
+    private captureTexture(texture: TextureInput | undefined): number | null {
         let id: number | null = null;
         // 同一会话保留无 URL 的 DOM 引用，JSON 只包含可外部解析的编号。
         if (texture !== undefined) {
             this._knownTextures.set(texture.id, texture);
-            this._records.set(texture.id, { id: texture.id, url: texture.url });
+            let url: string | null = null;
+            // 离屏内容需要调用方重绘；文档仅保存可外部解析的资源编号。
+            if (texture instanceof RenderTarget === false) {
+                url = texture.url;
+            }
+            this._records.set(texture.id, { id: texture.id, url });
             id = texture.id;
         }
         return id;
@@ -255,7 +267,7 @@ const ShaderFields: readonly ShaderField[] = ["rectVertexShader", "rectFragmentS
     "polyFragmentShader", "ngonVertexShader", "ngonFragmentShader"];
 
 /** @param id 文档纹理编号 @param textures 已解析资源 @example RequiredTexture(1, textures); @returns 必须存在的纹理。 */
-const RequiredTexture = (id: number, textures: ReadonlyMap<number, TextureLike>): TextureLike => {
+const RequiredTexture = (id: number, textures: ReadonlyMap<number, TextureInput>): TextureInput => {
     const texture = textures.get(id);
     // 引用错误需要明确报出编号，不能静默回退白色纹理。
     if (texture === undefined) {
@@ -266,7 +278,7 @@ const RequiredTexture = (id: number, textures: ReadonlyMap<number, TextureLike>)
 };
 
 /** @param data JSON 具名值 @param textures 已解析资源 @example RestoreValues(data, textures); @returns 各类型独立的 Shader 值。 */
-const RestoreValues = (data: Record<string, EditorValueData>, textures: ReadonlyMap<number, TextureLike>): ShaderValueRecord => {
+const RestoreValues = (data: Record<string, EditorValueData>, textures: ReadonlyMap<number, TextureInput>): ShaderValueRecord => {
     const values = Object.create(null) as ShaderValueRecord;
     // 恢复订阅对象和数组，而不是把 JSON 普通数组直接交给 ShaderValues。
     for (const [name, item] of Object.entries(data)) {
@@ -293,7 +305,7 @@ const RestoreValues = (data: Record<string, EditorValueData>, textures: Readonly
         } else {
             const texture = RequiredTexture(item.value, textures);
             // ShaderValues 当前只支持 Texture 类，结构化纹理仍可用于标准样式。
-            if (texture instanceof Texture) {
+            if (texture instanceof Texture || texture instanceof RenderTarget) {
                 values[name] = texture;
             } else {
                 throw new TypeError("Shader texture values require a Texture instance.");
@@ -324,6 +336,10 @@ const Finite = (value: unknown): value is number => typeof value === "number" &&
 /** @param data 待回显的样式 @example ValidateStyle(data); @returns 无返回值，验证样式分区和必要类型。 */
 const ValidateStyle = (data: EditorStyleData): void => {
     Check(IsObject(data) && IsObject(data.textures), "missing style/texture settings");
+    // 新文档的效果在清空当前编辑内容前完成校验；旧文档允许省略。
+    if (data.effects !== undefined) {
+        Effects.validate(data.effects);
+    }
     // 所有分区均有启用状态、颜色和不透明度。
     for (const area of ["solid", "wireframe", "edge", "points"] as const) {
         const part = data[area];

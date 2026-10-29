@@ -695,7 +695,7 @@ export type { OrderSource };
 
 | 字段 | 类型 / 默认值 | 用途 |
 | --- | --- | --- |
-| `_knownTextures`（内部） | `按初始化值推断`；`new Map<number, TextureLike>()` | 状态由 `resolveTextures`、`captureTexture` 读取或维护；完整处理见对应函数。 |
+| `_knownTextures`（内部） | `按初始化值推断`；`new Map<number, TextureInput>()` | 状态由 `resolveTextures`、`captureTexture` 读取或维护；完整处理见对应函数。 |
 | `_records`（内部） | `按初始化值推断`；`new Map<number, EditorTextureData>()` | 独立的纹理地址记录。（records 的内部状态）。 |
 | `_baseDefaults`（内部） | `BaseMaterial`；`new BaseMaterial()` | 状态由 `captureMaterial` 读取或维护；完整处理见对应函数。 |
 
@@ -711,11 +711,11 @@ export type { OrderSource };
 | `get records(): EditorTextureData[]`  | 独立的纹理地址记录。 |
 | `captureStyle(style: Style): EditorStyleData`  | JSON 样式和纹理引用。 |
 | `captureMaterial(material: Material2d): EditorMaterialData`  | 保留材质类型和具名值的 JSON 数据。 |
-| `resolveTextures(records: readonly EditorTextureData[], supplied?: ReadonlyMap<number, TextureLike>): Map<number, TextureLike>`  | 解析纹理引用；同一文档引用保持同一资源，材质和样式仍独立创建。 |
-| `createStyle(data: EditorStyleData, textures: ReadonlyMap<number, TextureLike>): Style`  | 独立 Style。 |
-| `createMaterial(data: EditorMaterialData, style: Style, textures: ReadonlyMap<number, TextureLike>): Material2d`  | 独立材质。 |
+| `resolveTextures(records: readonly EditorTextureData[], supplied?: ReadonlyMap<number, TextureInput>): Map<number, TextureInput>`  | 解析纹理引用；同一文档引用保持同一资源，材质和样式仍独立创建。 |
+| `createStyle(data: EditorStyleData, textures: ReadonlyMap<number, TextureInput>): Style`  | 独立 Style。 |
+| `createMaterial(data: EditorMaterialData, style: Style, textures: ReadonlyMap<number, TextureInput>): Material2d`  | 独立材质。 |
 | `captureTextureStyle(part: Style["solid"] \| Style["edge"] \| Style["points"]): EditorTextureStyleData` （内部） | 分区的 JSON 绑定设置。 |
-| `captureTexture(texture: TextureLike \| undefined): number \| null` （内部） | 文档资源编号或 null。 |
+| `captureTexture(texture: TextureInput \| undefined): number \| null` （内部） | 文档资源编号或 null。 |
 | `captureValues(values: ShaderValueRecord): Record<string, EditorValueData>` （内部） | 有类型标记的纯数据。 |
 
 ### 顶层函数
